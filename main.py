@@ -12,7 +12,7 @@ def cosine_similarity(a, b):
 
 # ArgumentParserオブジェクトを作成
 parser = argparse.ArgumentParser(description='このスクリプトの説明')
-parser.add_argument('--model_name', type=str, choices=['t5-11b', 't5-3b', 't5-small', 't5-base', 't5-large'], default='t5-large')
+parser.add_argument('--model_name', type=str, choices=['t5-11b', 't5-3b', 't5-small', 't5-base', 't5-large'], default='t5-11b')
 args = parser.parse_args()
 
 print("Loading model...")
