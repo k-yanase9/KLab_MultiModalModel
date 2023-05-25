@@ -7,6 +7,7 @@ def parse_arguments():
     parser.add_argument('--lr', type=float, default=0.001, help='学習率')
     parser.add_argument('--data_dir', type=str, default='/data/dataset/v-coco/coco/', help='データのディレクトリ')
     parser.add_argument('--batch_size', type=int, default=128, help='バッチサイズ')
-    parser.add_argument('--num_epochs', type=int, default=10, help='エポック数')
+    parser.add_argument('--num_epochs', type=int, default=100, help='エポック数')
+    parser.add_argument('--result_dir', type=str, default='results', help='結果を保存するディレクトリ')
     args = parser.parse_args()
     return args
