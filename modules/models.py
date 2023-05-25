@@ -36,12 +36,10 @@ class MyTransformer(nn.Module):
         self.loss_function = nn.CrossEntropyLoss()
 
     def forward(self, concated_embeddings, tgt_texts):
-        print(self.transformer)
-        print(concated_embeddings.shape)
         # outputs = self.transformer(concated_embeddings)
         tgts = self.tokenizer(tgt_texts, return_tensors='pt', padding=True).to(self.device) # ['pt', 'tf', 'np', 'jax']
         # loss = self.loss_function(outputs, tgts['input_ids'])
 
-        loss = self.transformer(input_ids=concated_embeddings, labels=tgts['input_ids']).loss
+        loss = self.transformer(inputs_embeds=concated_embeddings, labels=tgts['input_ids']).loss
 
         return loss
