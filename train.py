@@ -28,6 +28,7 @@ val_loss_list = []
 for epoch in range(args.num_epochs):
     # 学習ループ
     train_loop = tqdm(train_loader, desc=f'Epoch ({epoch+1}/{args.num_epochs})')
+    model.train()
     for images, src_texts, tgt_texts in train_loop:
         loss = model(images, src_texts, tgt_texts)
 
@@ -45,6 +46,7 @@ for epoch in range(args.num_epochs):
 
     val_loss = torch.mean(torch.tensor(val_losses))
     val_loss_list.append(val_loss)
+    model.eval()
     if val_loss < min_val_loss:
         min_val_loss = val_loss
         model.save(args.result_dir)
