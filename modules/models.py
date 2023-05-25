@@ -33,3 +33,9 @@ class MyModel(nn.Module):
         loss = self.transformer(inputs_embeds=concated_embeddings, labels=tgts['input_ids']).loss
 
         return loss
+    
+    def save(self, result_dir):
+        torch.save(self.transformer.state_dict(), f"{result_dir}/best.pth")
+
+    def load(self, result_dir):
+        self.transformer.load_state_dict(torch.load(f"{result_dir}/best.pth"))

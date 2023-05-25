@@ -47,7 +47,7 @@ for epoch in range(args.num_epochs):
     val_loss_list.append(val_loss)
     if val_loss < min_val_loss:
         min_val_loss = val_loss
-        torch.save(model.transformer.state_dict(), f"{args.result_dir}/best.pth")
+        model.save(args.result_dir)
     print(f'{epoch+1}: {val_loss}')
 
 # Plot the loss values.
