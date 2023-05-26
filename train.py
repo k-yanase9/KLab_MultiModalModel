@@ -51,7 +51,7 @@ def train():
             target_encoding = tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
             loss = model(images, source_encoding, target_encoding)
 
-            # 勾配の計算とパラメータの更新
+            # パラメータの更新
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -71,14 +71,14 @@ def train():
 
         if rank == 0:
             val_loss = torch.mean(torch.tensor(val_losses))
+            print(f'[Epoch ({epoch+1}/{args.num_epochs})] Val loss : {val_loss}')
             val_loss_list.append(val_loss)
         
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
                 model.module.save(args.result_dir)
                 print('Model saved')
-            print(f'[Epoch ({epoch+1}/{args.num_epochs})] Val loss : {val_loss}')
-
+            
     if rank == 0:
         # Plot the loss values.
         plt.plot(val_loss_list)
