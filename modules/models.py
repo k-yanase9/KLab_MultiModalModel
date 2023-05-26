@@ -8,9 +8,9 @@ class MyModel(nn.Module):
     def __init__(self, args):
         super().__init__()
         
-        self.image_model = Swinv2Model.from_pretrained(args.image_model_name)
+        self.image_model = Swinv2Model.from_pretrained(args.image_model_name).requires_grad_(False)
 
-        self.language_model = T5EncoderModel.from_pretrained(args.language_model_name) # device_map="auto"
+        self.language_model = T5EncoderModel.from_pretrained(args.language_model_name).requires_grad_(False) # device_map="auto"
 
         self.transformer = T5ForConditionalGeneration.from_pretrained(args.language_model_name)
         self.loss_function = nn.CrossEntropyLoss()
