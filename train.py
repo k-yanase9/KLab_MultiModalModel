@@ -4,7 +4,6 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from transformers import AutoImageProcessor, AutoTokenizer
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 
 from modules import *
 from models.model import MyModel
@@ -38,11 +37,9 @@ def train():
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, sampler=val_sampler)
 
     min_val_loss = 100
-    train_losses = []
-    val_losses = []
+    loss_counter = LossCounter(len(train_loader), len(val_loader))
     for epoch in range(args.num_epochs):
         # 学習ループ
-        total_train_loss = 0.0
         model.module.transformer.train()
         train_loop = tqdm(train_loader, desc=f'Train (Epoch {epoch+1}/{args.num_epochs})', disable=(rank != 0))
         for images, src_texts, tgt_texts in train_loop:
@@ -56,14 +53,9 @@ def train():
             loss.backward()
             optimizer.step()
 
-            total_train_loss += loss.item()
-
-        if rank == 0:
-            train_losses.append(total_train_loss/len(train_loader))
-            print(f'[Epoch ({epoch+1}/{args.num_epochs})] Train loss : {train_losses[-1]}')
+            loss_counter.add_loss('train', loss.item())
 
         # 検証ループ
-        total_val_loss = 0.0
         model.module.transformer.eval()
         val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch+1}/{args.num_epochs})', disable=(rank != 0))
         for images, src_texts, tgt_texts in val_loop:
@@ -72,29 +64,19 @@ def train():
                 source_encoding = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
                 target_encoding = tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
                 loss = model(images, source_encoding, target_encoding)
-                total_val_loss += loss.item()
+                loss_counter.add_loss('val', loss.item())
 
         if rank == 0:
-            val_losses.append(total_val_loss/len(val_loader))
-            print(f'[Epoch ({epoch+1}/{args.num_epochs})] Val loss : {val_losses[-1]}')
+            train_loss, val_loss = loss_counter.count_and_get_loss["train"]
+            print(f'[Epoch ({epoch+1}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}')
         
-            if val_losses[-1] < min_val_loss:
-                min_val_loss = val_losses[-1]
+            if val_loss < min_val_loss:
+                min_val_loss = val_loss
+                print('Model saving...')
                 model.module.save(args.result_dir)
                 print('Model saved')
             
-    if rank == 0:
-        # Plot the loss values.
-        plt.plot(train_losses, label='Train')
-        plt.plot(val_losses, label='Val')
-
-        # Set the title and axis labels.
-        plt.title('Loss Curve')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-
-        # Show the plot.
-        plt.savefig(f"{args.result_dir}/val_loss.png")
+    if rank == 0: loss_counter.plot_loss(args.result_dir)
 
 if __name__=="__main__":
     train()
