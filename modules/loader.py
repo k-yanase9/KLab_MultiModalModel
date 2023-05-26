@@ -13,15 +13,13 @@ class DatasetLoader(torch.utils.data.Dataset):
         coco = SilentCOCO(anno_path)
         img_dir = os.path.join(args.data_dir, 'images', f'{phase}2014')
 
-        for id, value in coco.imgs.items():
-            img_name = value['file_name']
-
+        for image_id in coco.getImgIds():
+            image_info = coco.loadImgs(image_id)[0]
+            img_name = image_info['file_name']
             img_path = os.path.join(img_dir, img_name)
             
-            try:
-                caption = coco.loadAnns(id)[0]['caption']
-            except:
-                continue
+            caption = coco.loadAnns(coco.getAnnIds(image_id))[0]['caption']
+            
             self.images.append(img_path)
             self.tgt_texts.append(caption)
 
