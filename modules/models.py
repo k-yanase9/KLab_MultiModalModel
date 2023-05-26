@@ -7,6 +7,8 @@ class MyModel(nn.Module):
     def __init__(self, args):
         super().__init__()
         self.device = args.device
+        self.max_source_length = 256
+        self.max_target_length = 128
         
         self.image_processor = AutoImageProcessor.from_pretrained(args.image_model_name)
         self.image_model = Swinv2Model.from_pretrained(args.image_model_name).to(self.device)
@@ -23,14 +25,14 @@ class MyModel(nn.Module):
 
             image_embeddings = self.image_model(**images).last_hidden_state
 
-            srcs = self.tokenizer(src_texts, return_tensors='pt', padding=True).to(self.device) # ['pt', 'tf', 'np', 'jax']
-            language_embeddings = self.language_model(srcs['input_ids']).last_hidden_state
+            source_encoding = self.tokenizer(src_texts, padding="longest", max_length=self.max_source_length, return_tensors='pt').to(self.device) # ['pt', 'tf', 'np', 'jax']
+            language_embeddings = self.language_model(source_encoding['input_ids']).last_hidden_state
 
             concated_embeddings = torch.cat((image_embeddings,language_embeddings), dim=1)
 
-        tgts = self.tokenizer(tgt_texts, return_tensors='pt', padding=True).to(self.device) # ['pt', 'tf', 'np', 'jax']
+        target_encoding = self.tokenizer(tgt_texts, padding="longest", max_length=self.max_target_length, return_tensors='pt').to(self.device) # ['pt', 'tf', 'np', 'jax']
 
-        loss = self.transformer(inputs_embeds=concated_embeddings, labels=tgts['input_ids']).loss
+        loss = self.transformer(inputs_embeds=concated_embeddings, labels=target_encoding['input_ids']).loss
 
         return loss
     

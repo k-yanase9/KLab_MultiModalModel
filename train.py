@@ -12,10 +12,11 @@ os.makedirs(args.result_dir, exist_ok=True)
 
 # デバイスをGPUに設定
 args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
 # モデルの読み込み
 model = MyModel(args)
-optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+optimizer = torch.optim.Adam(model.transformer.parameters(), lr=args.lr)
 
 # データローダーの設定
 train_dataset = DatasetLoader(args, phase="train")
