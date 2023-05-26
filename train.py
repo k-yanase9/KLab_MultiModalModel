@@ -17,8 +17,7 @@ def train():
     device_id = rank % torch.cuda.device_count()
 
     args = parse_arguments()
-    if rank == 0:
-        os.makedirs(args.result_dir, exist_ok=True)
+    if rank == 0: os.makedirs(args.result_dir, exist_ok=True)
 
     # create local model
     model = MyModel(args).to(device_id)

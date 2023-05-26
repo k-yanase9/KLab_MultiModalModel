@@ -1,7 +1,7 @@
 import os
 import torch
 from torchvision.transforms import ToTensor
-from pycocotools.coco import COCO
+from .coco import SilentCOCO
 from PIL import Image
 
 class DatasetLoader(torch.utils.data.Dataset):
@@ -10,7 +10,7 @@ class DatasetLoader(torch.utils.data.Dataset):
         self.transform = ToTensor()
 
         anno_path = os.path.join(args.data_dir, 'annotations', f'captions_{phase}2014.json')
-        coco = COCO(anno_path)
+        coco = SilentCOCO(anno_path)
         img_dir = os.path.join(args.data_dir, 'images', f'{phase}2014')
 
         for id, value in coco.imgs.items():
