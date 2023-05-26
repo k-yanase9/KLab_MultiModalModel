@@ -12,8 +12,7 @@ class MyModel(nn.Module):
 
         self.language_model = T5EncoderModel.from_pretrained(args.language_model_name).requires_grad_(False) # device_map="auto"
 
-        self.transformer = T5ForConditionalGeneration.from_pretrained(args.language_model_name)
-        self.loss_function = nn.CrossEntropyLoss()
+        self.transformer = T5ForConditionalGeneration.from_pretrained(args.transformer_model_name)
 
     def forward(self, images, source_encoding, target_encoding):
         with torch.no_grad():
