@@ -18,6 +18,9 @@ def train():
     args = parse_arguments()
     if rank == 0: os.makedirs(args.result_dir, exist_ok=True)
 
+    logger = get_logger(args)
+    if rank == 0: logger.info(args)
+
     # create local model
     model = MyModel(args).to(device_id)
     # construct DDP model
@@ -68,7 +71,7 @@ def train():
 
         if rank == 0:
             train_loss, val_loss = loss_counter.count_and_get_loss()
-            print(f'[Epoch ({epoch+1}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}')
+            logger.info(f'[Epoch ({epoch+1}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}')
         
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
