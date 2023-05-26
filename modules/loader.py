@@ -9,9 +9,9 @@ class DatasetLoader(torch.utils.data.Dataset):
         self.images, self.tgt_texts = [], []
         self.transform = ToTensor()
 
-        anno_path = os.path.join(args.data_dir, 'annotations', f'captions_{phase}2014.json')
+        anno_path = os.path.join(args.data_dir, 'annotations', f'captions_{phase}2017.json')
         coco = SilentCOCO(anno_path)
-        img_dir = os.path.join(args.data_dir, 'images', f'{phase}2014')
+        img_dir = os.path.join(args.data_dir, f'{phase}2017')
 
         for image_id in coco.getImgIds():
             image_info = coco.loadImgs(image_id)[0]
