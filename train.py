@@ -7,60 +7,64 @@ from modules.config import parse_arguments
 from modules.models import *
 from modules.loader import DatasetLoader
 
-args = parse_arguments()
-os.makedirs(args.result_dir, exist_ok=True)
+def train():
+    args = parse_arguments()
+    os.makedirs(args.result_dir, exist_ok=True)
 
-# デバイスをGPUに設定
-args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-os.environ["TOKENIZERS_PARALLELISM"] = "true"
+    # デバイスをGPUに設定
+    args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
-# モデルの読み込み
-model = MyModel(args)
-optimizer = torch.optim.Adam(model.transformer.parameters(), lr=args.lr)
+    # モデルの読み込み
+    model = MyModel(args)
+    optimizer = torch.optim.Adam(model.transformer.parameters(), lr=args.lr)
 
-# データローダーの設定
-train_dataset = DatasetLoader(args, phase="train")
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=2, pin_memory=True, shuffle=True, drop_last=True)
-val_dataset = DatasetLoader(args, phase="val")
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, num_workers=2, pin_memory=True, shuffle=False, drop_last=False)
+    # データローダーの設定
+    train_dataset = DatasetLoader(args, phase="train")
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=2, pin_memory=True, shuffle=True, drop_last=True)
+    val_dataset = DatasetLoader(args, phase="val")
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, num_workers=2, pin_memory=True, shuffle=False, drop_last=False)
 
-min_val_loss = 100
-val_loss_list = []
-for epoch in range(args.num_epochs):
-    # 学習ループ
-    train_loop = tqdm(train_loader, desc=f'Train (Epoch {epoch+1}/{args.num_epochs})')
-    model.train()
-    for images, src_texts, tgt_texts in train_loop:
-        loss = model(images, src_texts, tgt_texts)
-
-        # 勾配の計算とパラメータの更新
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-    # 検証ループ
-    val_losses = []
-    val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch+1}/{args.num_epochs})')
-    for images, src_texts, tgt_texts in val_loader:
-        with torch.no_grad():
+    min_val_loss = 100
+    val_loss_list = []
+    for epoch in range(args.num_epochs):
+        # 学習ループ
+        train_loop = tqdm(train_loader, desc=f'Train (Epoch {epoch+1}/{args.num_epochs})')
+        model.train()
+        for images, src_texts, tgt_texts in train_loop:
             loss = model(images, src_texts, tgt_texts)
-            val_losses.append(loss)
 
-    val_loss = torch.mean(torch.tensor(val_losses))
-    val_loss_list.append(val_loss)
-    model.eval()
-    if val_loss < min_val_loss:
-        min_val_loss = val_loss
-        model.save(args.result_dir)
-    print(f'{epoch+1}: {val_loss}')
+            # 勾配の計算とパラメータの更新
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-# Plot the loss values.
-plt.plot(val_loss_list)
+        # 検証ループ
+        val_losses = []
+        val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch+1}/{args.num_epochs})')
+        for images, src_texts, tgt_texts in val_loader:
+            with torch.no_grad():
+                loss = model(images, src_texts, tgt_texts)
+                val_losses.append(loss)
 
-# Set the title and axis labels.
-plt.title('Val Loss Curve')
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
+        val_loss = torch.mean(torch.tensor(val_losses))
+        val_loss_list.append(val_loss)
+        model.eval()
+        if val_loss < min_val_loss:
+            min_val_loss = val_loss
+            model.save(args.result_dir)
+        print(f'{epoch+1}: {val_loss}')
 
-# Show the plot.
-plt.savefig(f"{args.result_dir}/val_loss.png")
+    # Plot the loss values.
+    plt.plot(val_loss_list)
+
+    # Set the title and axis labels.
+    plt.title('Val Loss Curve')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+
+    # Show the plot.
+    plt.savefig(f"{args.result_dir}/val_loss.png")
+
+if __name__=="__main__":
+    train()
