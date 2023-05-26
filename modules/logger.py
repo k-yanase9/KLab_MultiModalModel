@@ -13,7 +13,7 @@ def get_logger(args):
     logger.addHandler(sh)
 
     # ログのファイル出力先を設定
-    fh = logging.FileHandler(os.path.join(args.result_dir, 'train.log'))
+    fh = logging.FileHandler(os.path.join(args.result_dir, 'train.log'), mode='w')
     fh.setLevel(logging.INFO)
     fh.setFormatter(formatter)
     logger.addHandler(fh)
