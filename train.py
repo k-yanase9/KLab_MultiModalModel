@@ -6,9 +6,8 @@ from transformers import AutoImageProcessor, AutoTokenizer
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-from modules.config import parse_arguments
-from modules.models import *
-from modules.loader import DatasetLoader
+from modules import *
+from models.model import MyModel
 
 def train():
     dist.init_process_group("nccl")
