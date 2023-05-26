@@ -28,7 +28,7 @@ min_val_loss = 100
 val_loss_list = []
 for epoch in range(args.num_epochs):
     # 学習ループ
-    train_loop = tqdm(train_loader, desc=f'Epoch ({epoch+1}/{args.num_epochs})')
+    train_loop = tqdm(train_loader, desc=f'Train (Epoch {epoch+1}/{args.num_epochs})')
     model.train()
     for images, src_texts, tgt_texts in train_loop:
         loss = model(images, src_texts, tgt_texts)
@@ -40,6 +40,7 @@ for epoch in range(args.num_epochs):
 
     # 検証ループ
     val_losses = []
+    val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch+1}/{args.num_epochs})')
     for images, src_texts, tgt_texts in val_loader:
         with torch.no_grad():
             loss = model(images, src_texts, tgt_texts)
