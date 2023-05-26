@@ -43,7 +43,8 @@ def train():
     val_loss_list = []
     for epoch in range(args.num_epochs):
         # 学習ループ
-        train_loop = tqdm(train_loader, desc=f'Train (Epoch {epoch+1}/{args.num_epochs})')
+        model.module.transformer.train()
+        train_loop = tqdm(train_loader, desc=f'Train (Epoch {epoch+1}/{args.num_epochs})', disable=(rank != 0))
         for images, src_texts, tgt_texts in train_loop:
             images = image_processor(images, return_tensors="pt").to(device_id)
             source_encoding = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
@@ -58,7 +59,8 @@ def train():
         # 検証ループ
         val_losses = []
 
-        val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch+1}/{args.num_epochs})')
+        model.module.transformer.eval()
+        val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch+1}/{args.num_epochs})', disable=(rank != 0))
         for images, src_texts, tgt_texts in val_loop:
             with torch.no_grad():
                 images = image_processor(images, return_tensors="pt").to(device_id)
@@ -67,15 +69,15 @@ def train():
                 loss = model(images, source_encoding, target_encoding)
                 val_losses.append(loss)
 
-        if device_id == 0:
+        if rank == 0:
             val_loss = torch.mean(torch.tensor(val_losses))
             val_loss_list.append(val_loss)
         
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
-                model.save(args.result_dir)
+                model.module.save(args.result_dir)
                 print('Model saved')
-            print(f'{epoch+1}: {val_loss}')
+            print(f'[Epoch ({epoch+1}/{args.num_epochs})] Val loss : {val_loss}')
 
     if rank == 0:
         # Plot the loss values.
