@@ -14,15 +14,16 @@ class MyModel(nn.Module):
 
         self.transformer = T5ForConditionalGeneration.from_pretrained(args.transformer_model_name)
 
-    def forward(self, images, source_encoding, target_encoding):
+    def forward(self, images, source_encoding, target_encoding=None, return_loss=True):
         with torch.no_grad():
             image_embeddings = self.image_model(**images).last_hidden_state
             language_embeddings = self.language_model(source_encoding['input_ids']).last_hidden_state
             concated_embeddings = torch.cat((image_embeddings,language_embeddings), dim=1)
 
-        loss = self.transformer(inputs_embeds=concated_embeddings, labels=target_encoding['input_ids']).loss
-
-        return loss
+        if return_loss:
+            return self.transformer(inputs_embeds=concated_embeddings, labels=target_encoding['input_ids']).loss
+        else:
+            return self.transformer.generate(inputs_embeds=concated_embeddings)
     
     def save(self, result_dir):
         torch.save(self.transformer.state_dict(), f"{result_dir}/best.pth")
