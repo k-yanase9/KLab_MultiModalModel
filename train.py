@@ -67,7 +67,7 @@ def train():
                 loss_counter.add_loss('val', loss.item())
 
         if rank == 0:
-            train_loss, val_loss = loss_counter.count_and_get_loss["train"]
+            train_loss, val_loss = loss_counter.count_and_get_loss()
             print(f'[Epoch ({epoch+1}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}')
         
             if val_loss < min_val_loss:
