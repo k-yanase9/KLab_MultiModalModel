@@ -5,13 +5,13 @@ from .coco import SilentCOCO
 from PIL import Image
 
 class DatasetLoader(torch.utils.data.Dataset):
-    def __init__(self, args, phase):
+    def __init__(self, data_dir, phase):
         self.images, self.tgt_texts = [], []
         self.transform = ToTensor()
 
-        anno_path = os.path.join(args.data_dir, 'annotations', f'captions_{phase}2017.json')
+        anno_path = os.path.join(data_dir, 'annotations', f'captions_{phase}2017.json')
         coco = SilentCOCO(anno_path)
-        img_dir = os.path.join(args.data_dir, f'{phase}2017')
+        img_dir = os.path.join(data_dir, f'{phase}2017')
 
         for image_id in coco.getImgIds():
             image_info = coco.loadImgs(image_id)[0]
@@ -33,3 +33,9 @@ class DatasetLoader(torch.utils.data.Dataset):
     
     def __len__(self):
         return len(self.images)
+    
+def get_dataloader(args, phase, rank):
+    dataset = DatasetLoader(args.data_dir, phase)
+    sampler = torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=torch.cuda.device_count(), rank=rank, shuffle=True)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, num_workers=os.cpu_count()//4, pin_memory=True, sampler=sampler)
+    return dataloader

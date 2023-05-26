@@ -21,23 +21,17 @@ def train():
     logger = get_logger(args)
     if rank == 0: logger.info(args)
 
-    # create local model
+    # create model
     model = MyModel(args).to(device_id)
-    # construct DDP model
     model = DDP(model, device_ids=[device_id])
-    # define optimizer
+    
     optimizer = torch.optim.Adam(model.module.transformer.parameters(), lr=args.lr)
 
     image_processor = AutoImageProcessor.from_pretrained(args.image_model_name)
     tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=512)
 
-    # データローダーの設定
-    train_dataset = DatasetLoader(args, phase="train")
-    train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset, num_replicas=torch.cuda.device_count(), rank=rank, shuffle=True)
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, sampler=train_sampler)
-    val_dataset = DatasetLoader(args, phase="val")
-    val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset, num_replicas=torch.cuda.device_count(), rank=rank, shuffle=False)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, sampler=val_sampler)
+    # データの設定
+    train_loader, val_loader = get_dataloader(args, phase="train", rank=rank), get_dataloader(args, phase="val", rank=rank)
 
     min_val_loss = 100
     loss_counter = LossCounter(len(train_loader), len(val_loader))
