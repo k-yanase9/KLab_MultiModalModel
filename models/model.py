@@ -1,3 +1,4 @@
+import os
 import torch
 from torch import nn
 from transformers import T5EncoderModel, Swinv2Model, T5ForConditionalGeneration, logging
@@ -7,9 +8,9 @@ logging.set_verbosity_error()
 class MyModel(nn.Module):
     def __init__(self, args):
         super().__init__()
+        self.result_path = os.path.join(args.result_dir, "best.pth")
         
         self.image_model = Swinv2Model.from_pretrained(args.image_model_name).requires_grad_(False)
-
         self.language_model = T5EncoderModel.from_pretrained(args.language_model_name).requires_grad_(False) # device_map="auto"
 
         self.transformer = T5ForConditionalGeneration.from_pretrained(args.transformer_model_name)
@@ -25,8 +26,8 @@ class MyModel(nn.Module):
         else:
             return self.transformer.generate(inputs_embeds=concated_embeddings)
     
-    def save(self, result_dir):
-        torch.save(self.transformer.state_dict(), f"{result_dir}/best.pth")
+    def save(self):
+        torch.save(self.transformer.state_dict(), self.result_path)
 
-    def load(self, result_dir):
-        self.transformer.load_state_dict(torch.load(f"{result_dir}/best.pth"))
+    def load(self):
+        self.transformer.load_state_dict(torch.load(self.result_path))

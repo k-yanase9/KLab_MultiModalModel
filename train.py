@@ -71,7 +71,7 @@ def train():
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
                 print('Model saving...')
-                model.module.save(args.result_dir)
+                model.module.save()
                 print('Model saved')
             
     if rank == 0: loss_counter.plot_loss(args.result_dir)

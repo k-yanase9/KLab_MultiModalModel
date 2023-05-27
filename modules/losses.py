@@ -1,3 +1,4 @@
+import os
 import matplotlib.pyplot as plt
 
 class LossCounter():
@@ -27,4 +28,4 @@ class LossCounter():
         plt.legend()
 
         # Show the plot.
-        plt.savefig(f"{result_dir}/loss.png")
+        plt.savefig(os.path.join(result_dir, "loss.png"))
