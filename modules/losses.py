@@ -24,6 +24,7 @@ class LossCounter():
         plt.title('Loss Curve')
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
+        plt.legend()
 
         # Show the plot.
-        plt.savefig(f"{result_dir}/val_loss.png")
+        plt.savefig(f"{result_dir}/loss.png")
