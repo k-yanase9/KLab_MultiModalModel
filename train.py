@@ -27,6 +27,7 @@ def train():
     
     optimizer = torch.optim.Adam(model.module.transformer.parameters(), lr=args.lr)
 
+    os.environ['TOKENIZERS_PARALLELISM'] = 'false'
     image_processor = AutoImageProcessor.from_pretrained(args.image_model_name)
     tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=512)
 
