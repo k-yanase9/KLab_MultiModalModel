@@ -16,7 +16,7 @@ def train():
     device_id = rank % torch.cuda.device_count()
 
     args = parse_arguments()
-    if rank == 0: os.makedirs(args.result_dir, exist_ok=True)
+    os.makedirs(args.result_dir, exist_ok=True)
 
     logger = get_logger(args)
     if rank == 0: logger.info(args)
