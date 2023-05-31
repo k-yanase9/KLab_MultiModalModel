@@ -13,6 +13,7 @@ def parse_arguments():
     parser.add_argument('--lr', type=float, default=0.001, help='学習率')
     parser.add_argument('--batch_size', type=int, default=64, help='1GPUあたりのバッチサイズ')
     parser.add_argument('--num_epochs', type=int, default=100, help='エポック数')
+    parser.add_argument('--save_interval', type=int, default=2, help='モデルの保存間隔')
     # Dir setting
     parser.add_argument('--data_dir', type=str, default='/user/data/mscoco2017/', help='データのディレクトリ')
     parser.add_argument('--result_dir', type=str, default='results/', help='結果を保存するディレクトリ')
