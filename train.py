@@ -70,14 +70,14 @@ def train():
         
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
-                print('Model saving...')
+                print('Best Model saving...')
                 model.module.save()
-                print('Model saved')
+                logger.info('Best Model saved')
 
             if (epoch) % args.save_interval == 0:
-                print('Model saving...')
+                print(f'Model {epoch} saving...')
                 model.module.save(result_name=f'epoch_{epoch}.pth')
-                print('Model saved')
+                print(f'Model {epoch} saved')
             
     if rank == 0: loss_counter.plot_loss(args.result_dir)
 
