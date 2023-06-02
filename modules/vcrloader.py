@@ -72,35 +72,46 @@ class Vcrdataset(torch.utils.data.Dataset):
         
         src_text = self._make_text(question,objects)
         tgt_text = self._make_text(answer,objects,is_q=False)
+        return image,src_text,tgt_text
+
+    def get_all(self,idx):
+        item= deepcopy(self.items[idx])
+        image = Image.open(os.path.join(f'{self.data_dir}',"vcr1images",f'{item["img_fn"]}')).convert("RGB").resize(self.imagesize)
+        image = self.transform(image)
+        question = item["question"]
+        answer = item["answer_choices"][item["answer_label"]]
+        namelist = random.sample(_GENDER_NEUTRAL_NAMES,item["objects"].count('person'))
+        with open(os.path.join(f'{self.data_dir}',"vcr1images",f'{item["metadata_fn"]}')) as f:
+            metadata = json.load(f)
+        xrasio = self.imagesize[0]/metadata["width"]
+        yrasio = self.imagesize[0]/metadata["height"]
+        objects = []
+        per_count = 0
+        for index,obj in enumerate(item["objects"]):
+            bbox = self._get_boxes(metadata["boxes"][index],xrasio,yrasio)
+            if obj=="person":
+                objects.append({"name":namelist[per_count],"bbox":bbox})
+                per_count+=1
+            else:
+                objects.append({"name":obj,"bbox":bbox})
+        
+        src_text = self._make_text(question,objects)
+        tgt_text = self._make_text(answer,objects,is_q=False)
         return image,src_text,tgt_text,objects
+
 
     def __len__(self):
         return len(self.items)
 
-def get_dataloader(args, phase, rank):
+def get_vcr_dataloader(args, phase, rank):
     dataset = Vcrdataset(args.data_dir, split=phase)
     sampler = torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=torch.cuda.device_count(), rank=rank, shuffle=True)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, num_workers=os.cpu_count()//4, pin_memory=True, sampler=sampler,collate_fn=lambda x: x)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, num_workers=os.cpu_count()//4, pin_memory=True, sampler=sampler)
     return dataloader
 
 if __name__ =="__main__":
     _DATADIR = "/data/dataset/vcr"
-    import argparse
-    parser = argparse.ArgumentParser(description='ローカル検証用')
-    parser.add_argument('--batch_size', type=int, default=64, help='1GPUあたりのバッチサイズ')
-    parser.add_argument('--data_dir', type=str, default=_DATADIR, help='データのディレクトリ')
-    args = parser.parse_args()
-    dist.init_process_group("nccl")
-    rank = dist.get_rank()
-    dataloader = get_dataloader(args,"train",rank)
-    # dataset = Vcrdataset(_DATADIR)
-    # dataloader = torch.utils.data.DataLoader(dataset,batch_size=16,num_workers=5,collate_fn=lambda x: x)
-    
-    # for index in range(40000,len(dataset)):
-    #     data = dataset[index]       
-    #     print(f"i:{index},q:{data[1]},a:{data[2]}")
-    
-    with open("./result.txt","a") as f:
-        for i,batch in enumerate(tqdm.tqdm(dataloader)):
-            for data in batch:
-                f.write(f"q:{data[1]},a:{data[2]} \n")
+    dataset = Vcrdataset(_DATADIR)
+    data = dataset.get_all(10)
+
+    print(data)
