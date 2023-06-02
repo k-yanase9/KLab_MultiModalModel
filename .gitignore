@@ -1,4 +1,9 @@
 __pycache__/
-results/
+<<<<<<< HEAD
+results*/
 try.ipynb
 work.ipynb
+=======
+results*/
+try.ipynb
+>>>>>>> origin

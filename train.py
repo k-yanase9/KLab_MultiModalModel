@@ -36,10 +36,10 @@ def train():
 
     min_val_loss = 100
     loss_counter = LossCounter(len(train_loader), len(val_loader))
-    for epoch in range(args.num_epochs):
+    for epoch in range(1, args.num_epochs+1):
         # 学習ループ
         model.module.transformer.train()
-        train_loop = tqdm(train_loader, desc=f'Train (Epoch {epoch+1}/{args.num_epochs})', disable=(rank != 0))
+        train_loop = tqdm(train_loader, desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
         for images, src_texts, tgt_texts in train_loop:
             images = image_processor(images, return_tensors="pt").to(device_id)
             source_encoding = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
@@ -55,7 +55,7 @@ def train():
 
         # 検証ループ
         model.module.transformer.eval()
-        val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch+1}/{args.num_epochs})', disable=(rank != 0))
+        val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
         for images, src_texts, tgt_texts in val_loop:
             with torch.no_grad():
                 images = image_processor(images, return_tensors="pt").to(device_id)
@@ -66,13 +66,18 @@ def train():
 
         if rank == 0:
             train_loss, val_loss = loss_counter.count_and_get_loss()
-            logger.info(f'[Epoch ({epoch+1}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}')
+            logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}')
         
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
-                print('Model saving...')
+                print('Best Model saving...')
                 model.module.save()
-                print('Model saved')
+                logger.info('Best Model saved')
+
+            if (epoch) % args.save_interval == 0:
+                print(f'Model {epoch} saving...')
+                model.module.save(result_name=f'epoch_{epoch}.pth')
+                print(f'Model {epoch} saved')
             
     if rank == 0: loss_counter.plot_loss(args.result_dir)
 

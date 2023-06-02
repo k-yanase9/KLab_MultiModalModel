@@ -8,7 +8,8 @@ logging.set_verbosity_error()
 class MyModel(nn.Module):
     def __init__(self, args):
         super().__init__()
-        self.result_path = os.path.join(args.result_dir, "best.pth")
+        self.args = args
+        self.result_dir = args.result_dir
         
         self.language_model = T5EncoderModel.from_pretrained(args.language_model_name).requires_grad_(False) # device_map="auto"
         self.image_model = Swinv2Model.from_pretrained(args.image_model_name).requires_grad_(args.image_model_train)
@@ -26,8 +27,16 @@ class MyModel(nn.Module):
         else:
             return self.transformer.generate(inputs_embeds=concated_embeddings)
     
-    def save(self):
-        torch.save(self.transformer.state_dict(), self.result_path)
+    def save(self, result_name="best.pth"):
+        result_path = os.path.join(self.args.result_dir, result_name)
+        checkpoints = {'transformer': self.transformer.state_dict()}
+        if self.args.image_model_train:
+            checkpoints['image_model'] = self.image_model.state_dict()
+        torch.save(checkpoints, result_path)
 
-    def load(self):
-        self.transformer.load_state_dict(torch.load(self.result_path))
+    def load(self, result_name="best.pth"):
+        result_path = os.path.join(self.args.result_dir, result_name)
+        checkpoints = torch.load(result_path)
+        self.transformer.load_state_dict(checkpoints['transformer'])
+        if self.args.image_model_train:
+            self.image_model.load_state_dict(checkpoints['image_model'])

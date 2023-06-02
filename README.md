@@ -4,6 +4,15 @@
 requirements.yml
 
 ## 実行
+
+### SwinTransformerの重みを凍結して学習
+
 ```console
-bash caption_train.sh
+bash run_scripts/caption/train_only_transformer.sh
+```
+
+### SwinTransformerを含めて学習
+
+```console
+bash run_scripts/caption/train_with_swin.sh
 ```
