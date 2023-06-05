@@ -5,10 +5,23 @@ from .coco import SilentCOCO
 from PIL import Image
 
 class DatasetLoader(torch.utils.data.Dataset):
-    def __init__(self, data_dir, phase):
-        self.images, self.tgt_texts = [], []
+    def __init__(self):
+        self.images, self.tgt_texts, self.src_texts = [], [], []
         self.transform = ToTensor()
 
+    def __getitem__(self, idx):
+        image, src_text, tgt_text = self.images[idx], self.src_texts[idx], self.tgt_texts[idx]
+        image = Image.open(image).convert('RGB').resize((256,256))
+        image = self.transform(image)
+
+        return image, src_text, tgt_text
+    
+    def __len__(self):
+        return len(self.images)
+
+class COCODatasetLoader(DatasetLoader):
+    def __init__(self, data_dir, phase):
+        super().__init__()
         anno_path = os.path.join(data_dir, 'annotations', f'captions_{phase}2017.json')
         coco = SilentCOCO(anno_path)
         img_dir = os.path.join(data_dir, f'{phase}2017')
@@ -22,17 +35,7 @@ class DatasetLoader(torch.utils.data.Dataset):
             
             self.images.append(img_path)
             self.tgt_texts.append(caption)
-
-    def __getitem__(self, idx):
-        image, tgt_text = self.images[idx], self.tgt_texts[idx]
-        src_text = 'What does th image describe ?'
-        image = Image.open(image).convert('RGB').resize((256,256))
-        image = self.transform(image)
-
-        return image, src_text, tgt_text
-    
-    def __len__(self):
-        return len(self.images)
+            self.src_texts.append('What does th image describe ?')
     
 def get_dataloader(args, phase, rank):
     dataset = DatasetLoader(args.data_dir, phase)
