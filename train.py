@@ -54,7 +54,7 @@ def train():
             loss.backward()
 
             # args.accumulation_steps回の勾配を蓄積してから、optimizer.step()を呼び出す
-            if (i + 1) % args.accumulation_steps == 0:
+            if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
                 optimizer.step()
                 optimizer.zero_grad()
                 pbar.update(1)
