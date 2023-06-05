@@ -11,6 +11,7 @@ def parse_arguments():
     parser.add_argument('--max_target_length', type=int, default=128)
     # Training setting
     parser.add_argument('--lr', type=float, default=0.001, help='学習率')
+    parser.add_argument('--lr_scheduler', type=str, default='', choices=['', 'cosine', 'linear', 'exponential', 'step'], help='学習率のスケジューラ')
     parser.add_argument('--batch_size', type=int, default=64, help='1GPUあたりのバッチサイズ')
     parser.add_argument('--accumulation_steps', type=int, default=1, help='勾配の蓄積回数')
     parser.add_argument('--num_epochs', type=int, default=None, help='エポック数')
