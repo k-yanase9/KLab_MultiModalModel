@@ -147,4 +147,4 @@ dependencies:
       - websocket-client==1.5.2
       - xxhash==3.2.0
       - yarl==1.9.2
-prefix: /opt/conda/envs/t5
+prefix: /opt/conda/envs/mmm
