@@ -1,0 +1,6 @@
+accelerate
+datasets
+transformers[torch]
+sentencepiece
+pycocotools
+notebook
