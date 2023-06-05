@@ -1,7 +1,9 @@
 # 加藤研究室マルチモーダルモデル
 
-## 環境
-requirements.yml
+## 環境構築
+```console
+conda env create -f=requirements.yml
+```
 
 ## 実行
 
