@@ -34,24 +34,31 @@ def train():
     # データの設定
     train_loader, val_loader = get_dataloader(args, phase="train", rank=rank), get_dataloader(args, phase="val", rank=rank)
 
+    if args.num_epochs is None:
+        args.num_epochs = int(args.num_steps / len(train_loader)) + 1
+    steps = 0
     min_val_loss = 100
     loss_counter = LossCounter(len(train_loader), len(val_loader))
     for epoch in range(1, args.num_epochs+1):
         # 学習ループ
         model.module.transformer.train()
-        train_loop = tqdm(train_loader, desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
-        for images, src_texts, tgt_texts in train_loop:
+        pbar = tqdm(total=int(len(train_loader)/args.accumulation_steps)+1, desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
+        for i, (images, src_texts, tgt_texts) in enumerate(train_loader):
             images = image_processor(images, return_tensors="pt").to(device_id)
             source_encoding = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
             target_encoding = tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
             loss = model(images, source_encoding, target_encoding)
-
-            # パラメータの更新
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
             loss_counter.add_loss('train', loss.item())
+
+            loss /= args.accumulation_steps
+            loss.backward()
+
+            # args.accumulation_steps回の勾配を蓄積してから、optimizer.step()を呼び出す
+            if (i + 1) % args.accumulation_steps == 0:
+                optimizer.step()
+                optimizer.zero_grad()
+                pbar.update(1)
+                steps += 1
 
         # 検証ループ
         model.module.transformer.eval()
@@ -74,10 +81,17 @@ def train():
                 model.module.save()
                 logger.info('Best Model saved')
 
-            if (epoch) % args.save_interval == 0:
-                print(f'Model {epoch} saving...')
-                model.module.save(result_name=f'epoch_{epoch}.pth')
-                print(f'Model {epoch} saved')
+            if args.save_interval is not None:
+                if args.num_steps is None:
+                    if (epoch) % args.save_interval == 0:
+                        print(f'Model {epoch} saving...')
+                        model.module.save(result_name=f'epoch_{epoch}.pth')
+                        print(f'Model {epoch} saved')
+                else:
+                    if steps % args.save_interval == 0:
+                        print(f'Model {steps} saving...')
+                        model.module.save(result_name=f'step_{steps}.pth')
+                        print(f'Model {steps} saved')
             
     if rank == 0: loss_counter.plot_loss(args.result_dir)
 
