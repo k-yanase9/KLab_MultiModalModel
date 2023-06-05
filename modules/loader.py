@@ -36,9 +36,13 @@ class COCODatasetLoader(DatasetLoader):
             self.images.append(img_path)
             self.tgt_texts.append(caption)
             self.src_texts.append('What does th image describe ?')
-    
+
 def get_dataloader(args, phase, rank):
-    dataset = DatasetLoader(args.data_dir, phase)
+    if 'mscoco' in args.data_dir.lower():
+        dataset = COCODatasetLoader(args.data_dir, phase)
+    else:
+        raise NotImplementedError
+    
     sampler = torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=torch.cuda.device_count(), rank=rank, shuffle=True)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, num_workers=os.cpu_count()//4, pin_memory=True, sampler=sampler)
     return dataloader
