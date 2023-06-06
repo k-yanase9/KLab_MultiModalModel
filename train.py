@@ -5,6 +5,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from transformers import AutoImageProcessor, AutoTokenizer
 from tqdm import tqdm
 
+from datasets import *
 from modules import *
 from models.model import MyModel
 

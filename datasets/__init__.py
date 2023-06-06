@@ -1,1 +1,1 @@
-from .loader import get_dataloader
+from .get_loader import get_dataloader
