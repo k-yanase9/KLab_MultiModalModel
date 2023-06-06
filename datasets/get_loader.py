@@ -1,3 +1,5 @@
+import torch
+from .redcaps import RedCapsDatasetLoader
 from .coco import COCODatasetLoader
 from .vcr import Vcrdataset
 from .vqa2 import Vqa2dataset
