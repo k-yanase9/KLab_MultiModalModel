@@ -4,6 +4,8 @@ import torch
 from torchvision.transforms import ToTensor
 from .coco import SilentCOCO
 from PIL import Image
+from .vcrloader import Vcrdataset
+from .vqa2loader import Vqa2dataset
 
 class DatasetLoader(torch.utils.data.Dataset):
     def __init__(self):
@@ -75,12 +77,19 @@ class RedCapsDatasetLoader(DatasetLoader):
         image = self.transform(image)
 
         return image, src_text, tgt_text
+    
+
+
 
 def get_dataloader(args, phase, rank):
     if 'mscoco' in args.data_dir.lower():
         dataset = COCODatasetLoader(args.data_dir, phase)
     elif 'redcaps' in args.data_dir.lower():
         dataset = RedCapsDatasetLoader(args.data_dir, phase)
+    elif 'vrc' in args.data_dir.lower():
+        dataset = Vcrdataset(args.data_dir,phase=phase)
+    elif 'vqa2' in args.data_dir.lower():
+        dataset = Vqa2dataset(args.data_dir,phase=phase)
     else:
         raise NotImplementedError
     
