@@ -1,5 +1,7 @@
 __pycache__/
 results*/
+*A6000.sh
+*_step2.sh
 try.ipynb
 work.ipynb
-work.py
+
