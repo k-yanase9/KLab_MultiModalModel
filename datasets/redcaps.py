@@ -1,6 +1,7 @@
 import os
 import json
 import torch
+from PIL import Image
 from .dataset_loader import DatasetLoader
 
 class RedCapsDatasetLoader(DatasetLoader):
