@@ -17,14 +17,14 @@ _GENDER_NEUTRAL_NAMES = ['Casey', 'Riley', 'Jessie', 'Jackie', 'Avery', 'Jaime',
                         'Dylan', 'Ezra', 'Emery', 'Hunter', 'Kai', 'Nova', 'Ollie']
 
 class Vcrdataset(torch.utils.data.Dataset):
-    def __init__(self,data_dir,mode="vqa",split="train",imagesize=(256,256)):
+    def __init__(self,data_dir="/data/dataset/vcr",mode="vqa",phase="train",imagesize=(256,256)):
         self.mode = mode
-        self.split = split
+        self.phase = phase
         self.data_dir = data_dir
         self.transform = ToTensor()
         self.imagesize = imagesize
 
-        with open(os.path.join(self.data_dir,"vcr1annots",f"{self.split}.jsonl"),"r") as f:
+        with open(os.path.join(self.data_dir,"vcr1annots",f"{self.phase}.jsonl"),"r") as f:
             self.items = [json.loads(s) for s in f]
 
 
@@ -102,12 +102,6 @@ class Vcrdataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.items)
-
-def get_vcr_dataloader(args, phase, rank):
-    dataset = Vcrdataset(args.data_dir, split=phase)
-    sampler = torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=torch.cuda.device_count(), rank=rank, shuffle=True)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, num_workers=os.cpu_count()//4, pin_memory=True, sampler=sampler)
-    return dataloader
 
 if __name__ =="__main__":
     _DATADIR = "/data/dataset/vcr"
