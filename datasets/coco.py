@@ -64,5 +64,5 @@ class COCODatasetLoader(DatasetLoader):
             caption = coco.loadAnns(coco.getAnnIds(image_id))[0]['caption']
             
             self.images.append(img_path)
-            self.src_texts.append('What does th image describe ?')
+            self.src_texts.append('What does the image describe ?')
             self.tgt_texts.append(caption)
