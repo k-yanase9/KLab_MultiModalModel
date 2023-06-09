@@ -66,11 +66,11 @@ def train():
             if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
                 optimizer.step()
                 optimizer.zero_grad()
-                if args.lr_scheduler != '':
-                    scheduler.step()
                 pbar.update(1)
                 if rank == 0: steps += 1
 
+        if args.lr_scheduler != '':
+            scheduler.step()
         pbar.close()
         # 検証ループ
         model.module.transformer.eval()
