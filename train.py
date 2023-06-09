@@ -1,6 +1,7 @@
 import os
 import torch
 import torch.distributed as dist
+import numpy as np
 from torch.nn.parallel import DistributedDataParallel as DDP
 from transformers import AutoImageProcessor, AutoTokenizer
 from tqdm import tqdm
@@ -19,8 +20,7 @@ def train():
     args = parse_arguments()
     os.makedirs(args.result_dir, exist_ok=True)
 
-    logger = get_logger(args)
-    if rank == 0: logger.info(args)
+    if rank == 0: logger = get_logger(args)
 
     # create model
     model = MyModel(args).to(device_id)
@@ -51,7 +51,7 @@ def train():
     for epoch in range(1, args.num_epochs+1):
         # 学習ループ
         model.module.transformer.train()
-        pbar = tqdm(total=int(len(train_loader)/args.accumulation_steps)+1, desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
+        pbar = tqdm(total=int(np.ceil(len(train_loader)/args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
         for i, (images, src_texts, tgt_texts) in enumerate(train_loader):
             images = image_processor(images, return_tensors="pt").to(device_id)
             source_encoding = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
@@ -69,8 +69,9 @@ def train():
                 if args.lr_scheduler != '':
                     scheduler.step()
                 pbar.update(1)
-                steps += 1
+                if rank == 0: steps += 1
 
+        pbar.close()
         # 検証ループ
         model.module.transformer.eval()
         val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
