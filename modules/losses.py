@@ -2,19 +2,11 @@ import os
 import matplotlib.pyplot as plt
 
 class LossCounter():
-    def __init__(self, train_loader_len, val_loader_len):
-        self.loader_len = {'train':train_loader_len, 'val':val_loader_len}
+    def __init__(self):
         self.losses = {'train':[], 'val':[]}
-        self.total_loss = {'train':0.0, 'val':0.0}
 
-    def add_loss(self, phase, loss):
-        self.total_loss[phase] += loss
-
-    def count_and_get_loss(self):
-        for phase in ['train', 'val']:
-            self.losses[phase].append(self.total_loss[phase] / self.loader_len[phase])
-            self.total_loss[phase] = 0.0
-        return self.losses['train'][-1], self.losses['val'][-1]
+    def add(self, phase, loss):
+        self.losses[phase].append(loss)
 
     def plot_loss(self, result_dir):
         # Plot the loss values.
