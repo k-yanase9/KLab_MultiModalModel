@@ -27,14 +27,7 @@ def train():
     model = DDP(model, device_ids=[device_id])
     
     optimizer = torch.optim.Adam(model.module.transformer.parameters(), lr=args.lr)
-    if args.lr_scheduler == 'cosine':
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.num_epochs, eta_min=0)
-    elif args.lr_scheduler == 'linear':
-        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: 1 - (epoch / args.num_epochs))
-    elif args.lr_scheduler == 'exponential':
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
-    elif args.lr_scheduler == 'step':
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    scheduler = get_scheduler(args, optimizer)
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
     image_processor = AutoImageProcessor.from_pretrained(args.image_model_name)
@@ -66,11 +59,11 @@ def train():
             if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
                 optimizer.step()
                 optimizer.zero_grad()
-                if args.lr_scheduler != '':
-                    scheduler.step()
                 pbar.update(1)
                 if rank == 0: steps += 1
 
+        if args.lr_scheduler != '':
+            scheduler.step()
         pbar.close()
         # 検証ループ
         model.module.transformer.eval()
