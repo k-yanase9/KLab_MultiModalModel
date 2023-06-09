@@ -69,9 +69,10 @@ bash run_scripts/pretrain/train_with_swin.sh
 
 ## MSCOCOでのCaptionの学習
 
+```text
 入力：What does th image describe ?
-
 出力：Caption
+```
 
 ### SwinTransformerの重みを凍結して学習
 
