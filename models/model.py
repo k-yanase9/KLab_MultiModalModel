@@ -1,7 +1,7 @@
 import os
 import torch
 from torch import nn
-from transformers import T5EncoderModel, Swinv2Model, T5ForConditionalGeneration, logging
+from transformers import T5EncoderModel, Swinv2Model, T5ForConditionalGeneration, logging, T5Config
 logging.set_verbosity_error()
 
 # モデルの定義
@@ -16,10 +16,19 @@ class MyModel(nn.Module):
 
         self.transformer = T5ForConditionalGeneration.from_pretrained(args.transformer_model_name)
 
+        if args.ffn:
+            self.language_ffn = nn.Linear(self.language_model.config.d_model, self.transformer.config.d_model)
+            self.image_ffn = nn.Linear(self.image_model.num_features, self.transformer.config.d_model)
+
     def forward(self, images, source_encoding, target_encoding=None, return_loss=True):
         with torch.no_grad():
             language_embeddings = self.language_model(source_encoding['input_ids']).last_hidden_state
         image_embeddings = self.image_model(**images).last_hidden_state
+
+        if self.args.ffn:
+            language_embeddings = self.language_ffn(language_embeddings)
+            image_embeddings = self.image_ffn(image_embeddings)
+
         concated_embeddings = torch.cat((image_embeddings,language_embeddings), dim=1)
 
         if return_loss:
