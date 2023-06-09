@@ -20,8 +20,7 @@ def train():
     args = parse_arguments()
     os.makedirs(args.result_dir, exist_ok=True)
 
-    logger = get_logger(args)
-    if rank == 0: logger.info(args)
+    if rank == 0: logger = get_logger(args)
 
     # create model
     model = MyModel(args).to(device_id)
