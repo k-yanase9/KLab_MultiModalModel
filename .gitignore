@@ -1,6 +1,14 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
-results*/
-*A6000.sh
-*_step2.sh
+
+# IPython Notebook
+.ipynb_checkpoints
 try.ipynb
 work.ipynb
+
+# result files
+results*/
+
+# tuning shells
+train_only_transformer_*.sh
+train_with_swin_*.sh
