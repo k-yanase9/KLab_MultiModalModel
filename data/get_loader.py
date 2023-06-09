@@ -18,7 +18,7 @@ def get_dataset(args, phase):
         dataset = COCODatasetLoader(args.data_dir, phase)
     elif 'redcaps' in args.data_dir.lower():
         dataset = RedCapsDatasetLoader(args.data_dir, phase)
-    elif 'vrc' in args.data_dir.lower():
+    elif 'vcr' in args.data_dir.lower():
         dataset = Vcrdataset(args.data_dir,phase=phase)
     elif 'vqa2' in args.data_dir.lower():
         dataset = Vqa2dataset(args.data_dir,phase=phase)
