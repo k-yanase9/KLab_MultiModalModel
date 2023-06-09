@@ -29,6 +29,7 @@ pip install -r requirements.txt
 | parameter | 説明 | default |
 | - | - | - |
 | lr | 学習率 | 0.001 |
+| optimizer | Optimizer | AdamW |
 | lr_scheduler | 学習率のスケジューラ | なし |
 | batch_size | 1GPUあたりのバッチサイズ | 64 |
 | accumulation_steps | 勾配の蓄積回数 | 1 |
