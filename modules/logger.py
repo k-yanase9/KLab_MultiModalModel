@@ -18,4 +18,6 @@ def get_logger(args):
     fh.setFormatter(formatter)
     logger.addHandler(fh)
 
+    logger.info(f"Options: {args.__dict__}")
+
     return logger
