@@ -26,7 +26,7 @@ def train():
     model = MyModel(args).to(device_id)
     model = DDP(model, device_ids=[device_id])
     
-    optimizer = torch.optim.Adam(model.module.transformer.parameters(), lr=args.lr)
+    optimizer = get_optimizer(model, args)
     scheduler = get_scheduler(args, optimizer)
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
