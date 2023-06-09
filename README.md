@@ -8,6 +8,40 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 pip install -r requirements.txt
 ```
 
+
+## 指定可能なパラメータ
+modules/config.pyを参照
+
+### モデル設定
+
+| parameter | 説明 | default |
+| - | - | - |
+| image_model_name | 画像の特徴抽出モデル | microsoft/swinv2-base-patch4-window8-256 |
+| image_model_train | 画像の特徴抽出モデルを学習するかどうか | False |
+| language_model_name | 言語の特徴抽出モデル | t5-large |
+| transformer_model_name | メインTransformerのモデル | t5-large |
+| max_source_length | 入力文の最大長 | 256 |
+| max_target_length | 出力文の最大長 | 128 |
+
+### 学習設定
+
+| parameter | 説明 | default |
+| - | - | - |
+| lr | 学習率 | 0.001 |
+| lr_scheduler | 学習率のスケジューラ | なし |
+| batch_size | 1GPUあたりのバッチサイズ | 64 |
+| accumulation_steps | 勾配の蓄積回数 | 1 |
+| num_epochs | 学習エポック数 | なし |
+| num_steps | 学習ステップ数 | なし |
+| save_interval | モデルの保存間隔 | なし |
+
+### ディレクトリ設定
+| parameter | 説明 | default |
+| - | - | - |
+| data_dir | データセットのディレクトリ | /user/data/mscoco2017/ |
+| result_dir | 結果を保存するディレクトリ | results/ |
+
+
 ## RedCapsでのCaptionの自己教師あり事前学習（動作未確認）
 
 15%の単語をマスクして、復元するように学習
@@ -29,6 +63,7 @@ bash run_scripts/pretrain/train_only_transformer.sh
 ```console
 bash run_scripts/pretrain/train_with_swin.sh
 ```
+
 
 ## MSCOCOでのCaptionの学習
 
