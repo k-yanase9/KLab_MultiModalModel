@@ -20,6 +20,10 @@ def train():
     args = parse_arguments()
     os.makedirs(args.result_dir, exist_ok=True)
 
+    torch.manual_seed(args.seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+
     if rank == 0: logger = get_logger(args)
 
     # create model
@@ -43,6 +47,8 @@ def train():
     loss_counter = LossCounter(len(train_loader), len(val_loader))
     for epoch in range(1, args.num_epochs+1):
         # 学習ループ
+        if args.image_model_train:
+            model.module.image_model.train()
         model.module.transformer.train()
         pbar = tqdm(total=int(np.ceil(len(train_loader)/args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
         for i, (images, src_texts, tgt_texts) in enumerate(train_loader):
@@ -66,6 +72,8 @@ def train():
             scheduler.step()
         pbar.close()
         # 検証ループ
+        if args.image_model_train:
+            model.module.image_model.eval()
         model.module.transformer.eval()
         val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
         for images, src_texts, tgt_texts in val_loop:
