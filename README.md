@@ -8,9 +8,10 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 pip install -r requirements.txt
 ```
 
+<br>
 
 ## 指定可能なパラメータ
-modules/config.pyを参照
+`modules/config.py`を参照
 
 ### モデル設定
 
@@ -41,16 +42,16 @@ modules/config.pyを参照
 | data_dir | データセットのディレクトリ | /user/data/mscoco2017/ |
 | result_dir | 結果を保存するディレクトリ | results/ |
 
+<br>
 
 ## RedCapsでのCaptionの自己教師あり事前学習（動作未確認）
 
 15%の単語をマスクして、復元するように学習
 
+```text
 入力：I'm 18 <extra_id_0> And did this as my Senior Project . What does <extra_id_1> Think <extra_id_2>
-
 出力：<extra_id_0> . <extra_id_1> Reddit <extra_id_2> ? <extra_id_3>
-
-```console
+```
 
 ### SwinTransformerの重みを凍結して学習
 
@@ -64,6 +65,7 @@ bash run_scripts/pretrain/train_only_transformer.sh
 bash run_scripts/pretrain/train_with_swin.sh
 ```
 
+<br>
 
 ## MSCOCOでのCaptionの学習
 
