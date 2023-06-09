@@ -1,14 +1,9 @@
-import os
 import json
-import re
-import random
 from copy import deepcopy
 from PIL import Image
 import torch
 from torchvision.transforms import ToTensor,functional
-import time
-import tqdm
-import torch.distributed as dist
+
 
 
 class Vqa2dataset(torch.utils.data.Dataset):
