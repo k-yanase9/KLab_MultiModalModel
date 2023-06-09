@@ -3,7 +3,16 @@ import argparse
 def parse_arguments():
     parser = argparse.ArgumentParser(description='プログラムの説明')
     # Model setting
-    parser.add_argument('--image_model_name', type=str, default="microsoft/swinv2-base-patch4-window8-256", help='画像の特徴抽出モデル')
+    parser.add_argument('--image_model_name', type=str, default="microsoft/swinv2-base-patch4-window8-256", 
+                        choices=[
+                            "microsoft/resnet-50",
+                            "microsoft/resnet-101",
+                            "microsoft/resnet-152",
+                            "microsoft/swinv2-base-patch4-window8-256",
+                            "microsoft/swinv2-base-patch4-window16-256",
+                            "microsoft/swinv2-base-patch4-window12-192-22k",
+                            "microsoft/swinv2-large-patch4-window12-192-22k",
+                        ], help='画像の特徴抽出モデル')
     parser.add_argument('--image_model_train', action='store_true', help='画像の特徴抽出モデルを学習するかどうか')
     parser.add_argument('--language_model_name', type=str, default='t5-large', choices=['t5-small', 't5-base', 't5-large', 't5-3b', 't5-11b'], help='言語の特徴抽出モデル')
     parser.add_argument('--ffn', action='store_true', help='特徴抽出モデルの出力をFFNで変換するかどうか')

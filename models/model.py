@@ -1,7 +1,7 @@
 import os
 import torch
 from torch import nn
-from transformers import T5EncoderModel, Swinv2Model, T5ForConditionalGeneration, logging, T5Config
+from transformers import T5EncoderModel, Swinv2Model, T5ForConditionalGeneration, logging, ResNetModel
 logging.set_verbosity_error()
 
 # モデルの定義
@@ -12,7 +12,11 @@ class MyModel(nn.Module):
         self.result_dir = args.result_dir
         
         self.language_model = T5EncoderModel.from_pretrained(args.language_model_name).requires_grad_(False) # device_map="auto"
-        self.image_model = Swinv2Model.from_pretrained(args.image_model_name).requires_grad_(args.image_model_train)
+
+        if "resnet" in args.image_model_name:
+            self.image_model = ResNetModel.from_pretrained(args.image_model_name).requires_grad_(args.image_model_train)
+        elif "swinv2" in args.image_model_name:
+            self.image_model = Swinv2Model.from_pretrained(args.image_model_name).requires_grad_(args.image_model_train)
 
         self.transformer = T5ForConditionalGeneration.from_pretrained(args.transformer_model_name)
 
