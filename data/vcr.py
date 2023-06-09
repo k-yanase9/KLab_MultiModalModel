@@ -1,14 +1,11 @@
 import os
 import json
-import re
 import random
 from copy import deepcopy
 from PIL import Image
 import torch
 from torchvision.transforms import ToTensor,functional
-import time
-import tqdm
-import torch.distributed as dist
+
 
 _GENDER_NEUTRAL_NAMES = ['Casey', 'Riley', 'Jessie', 'Jackie', 'Avery', 'Jaime', 'Peyton', 'Kerry', 'Jody', 'Kendall',
                         'Skyler', 'Frankie', 'Pat', 'Quinn', 'Harper', 'Michael', 'Logan', 'Noah', 'James', 'Evelyn',
