@@ -12,6 +12,7 @@ class MyModel(nn.Module):
         self.result_dir = args.result_dir
         
         self.language_model = T5EncoderModel.from_pretrained(args.language_model_name).requires_grad_(False) # device_map="auto"
+        self.language_model.eval()
 
         if "resnet" in args.image_model_name:
             self.image_model = ResNetModel.from_pretrained(args.image_model_name).requires_grad_(args.image_model_train)

@@ -3,6 +3,7 @@ import argparse
 def parse_arguments():
     parser = argparse.ArgumentParser(description='プログラムの説明')
     # Model setting
+    parser.add_argument('--seed', type=int, default=999, help='乱数シード')
     parser.add_argument('--image_model_name', type=str, default="microsoft/swinv2-base-patch4-window8-256", 
                         choices=[
                             "microsoft/resnet-50",
