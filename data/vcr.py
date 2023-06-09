@@ -30,12 +30,19 @@ class Vcrdataset(torch.utils.data.Dataset):
             if type(txt)==list: #オブジェクトはリストで与えられる
                 source_txt[idx] = ""
                 for obj in txt:
+                    #質問にしかlocationを入れない
                     if is_q:
                         source_txt[idx] += f"loc{objects[obj]['bbox'][0]} loc{objects[obj]['bbox'][1]} loc{objects[obj]['bbox'][2]} loc{objects[obj]['bbox'][3]} {objects[obj]['name']}, " 
                     else:
                         source_txt[idx] += objects[obj]['name'] + ", "
+                #一番最後のカンマを消す
                 source_txt[idx] = source_txt[idx][:-2]
-        return " ".join(source_txt)
+        
+        #最後のピリオドや?をスペースで分けないために、ひとつ前に加えてから、一番最後をpopする
+        source_txt[-2] = source_txt[-2] + source_txt[-1]
+        source_txt = source_txt[:-1]
+
+        return " ".join(source_txt).replace(" ' ","'")
     
     def _get_boxes(self,box,xrasio,yrasio):
         x1,y1,x2,y2,_ = box
@@ -103,6 +110,5 @@ class Vcrdataset(torch.utils.data.Dataset):
 if __name__ =="__main__":
     _DATADIR = "/data/dataset/vcr"
     dataset = Vcrdataset(_DATADIR)
-    data = dataset.get_all(10)
-
+    data = dataset[11]
     print(data)
