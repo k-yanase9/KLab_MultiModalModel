@@ -78,7 +78,7 @@ def train():
 
         if rank == 0:
             train_loss /= train_count
-            loss_counter.add("train", train_loss)
+            loss_counter.add("train", train_loss.cpu().numpy().copy())
 
         if args.lr_scheduler != '':
             scheduler.step()
@@ -105,7 +105,7 @@ def train():
 
         if rank == 0:
             val_loss /= val_count
-            loss_counter.add("val", val_loss)
+            loss_counter.add("val", val_loss.cpu().numpy().copy())
             logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}')
         
             if val_loss < min_val_loss:
