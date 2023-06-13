@@ -46,6 +46,9 @@ class MyModel(nn.Module):
         checkpoints = {'transformer': self.transformer.state_dict()}
         if self.args.image_model_train:
             checkpoints['image_model'] = self.image_model.state_dict()
+        if self.args.ffn:
+            checkpoints['language_ffn'] = self.language_ffn.state_dict()
+            checkpoints['image_ffn'] = self.image_ffn.state_dict()
         torch.save(checkpoints, result_path)
 
     def load(self, result_name="best.pth"):
@@ -54,3 +57,6 @@ class MyModel(nn.Module):
         self.transformer.load_state_dict(checkpoints['transformer'])
         if self.args.image_model_train:
             self.image_model.load_state_dict(checkpoints['image_model'])
+        if self.args.ffn:
+            self.language_ffn.load_state_dict(checkpoints['language_ffn'])
+            self.image_ffn.load_state_dict(checkpoints['image_ffn'])
