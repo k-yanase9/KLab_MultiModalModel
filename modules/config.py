@@ -15,9 +15,17 @@ def parse_arguments():
                             "microsoft/swinv2-large-patch4-window12-192-22k",
                         ], help='画像の特徴抽出モデル')
     parser.add_argument('--image_model_train', action='store_true', help='画像の特徴抽出モデルを学習するかどうか')
-    parser.add_argument('--language_model_name', type=str, default='t5-large', choices=['t5-small', 't5-base', 't5-large', 't5-3b', 't5-11b'], help='言語の特徴抽出モデル')
+    parser.add_argument('--language_model_name', type=str, default='t5-large', 
+                        choices=[
+                            't5-small', 't5-base', 't5-large', 't5-3b', 't5-11b',
+                            'google/flan-t5-small', 'google/flan-t5-base', 'google/flan-t5-large', 'google/flan-t5-xl', 'google/flan-t5-xxl',
+                        ], help='言語の特徴抽出モデル')
     parser.add_argument('--ffn', action='store_true', help='特徴抽出モデルの出力をFFNで変換するかどうか')
-    parser.add_argument('--transformer_model_name', type=str, default='t5-large', choices=['t5-small', 't5-base', 't5-large', 't5-3b', 't5-11b'], help='メインTransformerのモデル')
+    parser.add_argument('--transformer_model_name', type=str, default='t5-large', 
+                        choices=[
+                            't5-small', 't5-base', 't5-large', 't5-3b', 't5-11b',
+                            'google/flan-t5-small', 'google/flan-t5-base', 'google/flan-t5-large', 'google/flan-t5-xl', 'google/flan-t5-xxl',
+                        ], help='メインTransformerのモデル')
     parser.add_argument('--max_source_length', type=int, default=256, help='入力文の最大長')
     parser.add_argument('--max_target_length', type=int, default=128, help='出力文の最大長')
     # Training setting
