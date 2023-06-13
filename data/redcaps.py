@@ -7,7 +7,7 @@ from .dataset_loader import DatasetLoader
 class RedCapsDatasetLoader(DatasetLoader):
     def __init__(self, data_dir='/data/dataset/redcaps', phase='train'):
         super().__init__()
-        anno_dir = os.path.join(data_dir, 'annotations')
+        anno_dir = os.path.join(data_dir, 'removed_annotations')
         img_dir = os.path.join(data_dir, 'images')
 
         for annotations_file_name in os.listdir(anno_dir):
