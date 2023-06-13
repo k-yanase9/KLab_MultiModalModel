@@ -20,6 +20,7 @@ pip install -r requirements.txt
 | image_model_name | 画像の特徴抽出モデル | microsoft/swinv2-base-patch4-window8-256 |
 | image_model_train | 画像の特徴抽出モデルを学習するかどうか | False |
 | language_model_name | 言語の特徴抽出モデル | t5-large |
+| ffn | 特徴抽出モデルの出力をFFNで変換するかどうか | False |
 | transformer_model_name | メインTransformerのモデル | t5-large |
 | max_source_length | 入力文の最大長 | 256 |
 | max_target_length | 出力文の最大長 | 128 |
@@ -29,6 +30,7 @@ pip install -r requirements.txt
 | parameter | 説明 | default |
 | - | - | - |
 | lr | 学習率 | 0.001 |
+| optimizer | Optimizer | AdamW |
 | lr_scheduler | 学習率のスケジューラ | なし |
 | batch_size | 1GPUあたりのバッチサイズ | 64 |
 | accumulation_steps | 勾配の蓄積回数 | 1 |
