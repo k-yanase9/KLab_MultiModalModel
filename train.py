@@ -20,13 +20,17 @@ def train():
     args = parse_arguments()
     os.makedirs(args.result_dir, exist_ok=True)
 
+    torch.manual_seed(args.seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+
     if rank == 0: logger = get_logger(args)
 
     # create model
     model = MyModel(args).to(device_id)
     model = DDP(model, device_ids=[device_id])
     
-    optimizer = torch.optim.Adam(model.module.transformer.parameters(), lr=args.lr)
+    optimizer = get_optimizer(model, args)
     scheduler = get_scheduler(args, optimizer)
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
@@ -40,20 +44,26 @@ def train():
         args.num_epochs = int(args.num_steps / len(train_loader)) + 1
     steps = 0
     min_val_loss = 100
-    loss_counter = LossCounter(len(train_loader), len(val_loader))
+    loss_counter = LossCounter()
     for epoch in range(1, args.num_epochs+1):
         # 学習ループ
+        if args.image_model_train:
+            model.module.image_model.train()
         model.module.transformer.train()
+        train_loss = torch.tensor(0.0).to(device_id)
+        train_count = torch.tensor(0).to(device_id)
         pbar = tqdm(total=int(np.ceil(len(train_loader)/args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
         for i, (images, src_texts, tgt_texts) in enumerate(train_loader):
             images = image_processor(images, return_tensors="pt").to(device_id)
             source_encoding = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
             target_encoding = tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
             loss = model(images, source_encoding, target_encoding)
-            loss_counter.add_loss('train', loss.item())
 
             loss /= args.accumulation_steps
             loss.backward()
+
+            train_loss += loss.item() * images["pixel_values"].size(0)
+            train_count += images["pixel_values"].size(0)
 
             # args.accumulation_steps回の勾配を蓄積してから、optimizer.step()を呼び出す
             if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
@@ -62,11 +72,23 @@ def train():
                 pbar.update(1)
                 if rank == 0: steps += 1
 
+        # 他のノードから集める
+        dist.all_reduce(train_loss, op=dist.ReduceOp.SUM)
+        dist.all_reduce(train_count, op=dist.ReduceOp.SUM)
+
+        if rank == 0:
+            train_loss /= train_count
+            loss_counter.add("train", train_loss.cpu().numpy().copy())
+
         if args.lr_scheduler != '':
             scheduler.step()
         pbar.close()
         # 検証ループ
+        if args.image_model_train:
+            model.module.image_model.eval()
         model.module.transformer.eval()
+        val_loss = torch.tensor(0.0).to(device_id)
+        val_count = torch.tensor(0).to(device_id)
         val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
         for images, src_texts, tgt_texts in val_loop:
             with torch.no_grad():
@@ -74,10 +96,16 @@ def train():
                 source_encoding = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
                 target_encoding = tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
                 loss = model(images, source_encoding, target_encoding)
-                loss_counter.add_loss('val', loss.item())
+                
+                val_loss += loss.item() * images["pixel_values"].size(0)
+                val_count += images["pixel_values"].size(0)
+        # 他のノードから集める
+        dist.all_reduce(val_loss, op=dist.ReduceOp.SUM)
+        dist.all_reduce(val_count, op=dist.ReduceOp.SUM)
 
         if rank == 0:
-            train_loss, val_loss = loss_counter.count_and_get_loss()
+            val_loss /= val_count
+            loss_counter.add("val", val_loss.cpu().numpy().copy())
             logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}')
         
             if val_loss < min_val_loss:
