@@ -38,7 +38,7 @@ def train():
     tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=512)
 
     # データの設定
-    train_loader, val_loader = get_dataloader(args, phase="train", rank=rank), get_dataloader(args, phase="val", rank=rank)
+    train_loader, val_loader = get_data(args, rank=rank)
 
     if args.num_epochs is None:
         args.num_epochs = int(args.num_steps / len(train_loader)) + 1
