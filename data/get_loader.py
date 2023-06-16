@@ -5,6 +5,7 @@ from .coco import COCODatasetLoader
 from .vcr import Vcrdataset
 from .vqa2 import Vqa2dataset
 from .imSitu import imSituDataset
+from .imagenet import ImageNetDatasetLoader
 
 def get_data(args, rank):
     if 'redcaps' in args.data_dir.lower():
@@ -32,11 +33,13 @@ def get_dataset(args, phase="train"):
     elif 'redcaps' in args.data_dir.lower():
         dataset = RedCapsDatasetLoader(args.data_dir)
     elif 'vcr' in args.data_dir.lower():
-        dataset = Vcrdataset(args.data_dir,phase=phase)
+        dataset = Vcrdataset(args.data_dir, phase=phase)
     elif 'vqa2' in args.data_dir.lower():
-        dataset = Vqa2dataset(args.data_dir,phase=phase)
+        dataset = Vqa2dataset(args.data_dir, phase=phase)
     elif 'imsitu' in args.data_dir.lower():
-        dataset = imSituDataset(args.data_dir,phase=phase)
+        dataset = imSituDataset(args.data_dir, phase=phase)
+    elif 'imagenet' in args.data_dir.lower():
+        dataset = ImageNetDatasetLoader(args.data_dir, phase=phase)
     else:
         raise NotImplementedError
     return dataset
