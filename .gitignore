@@ -12,3 +12,4 @@ results*/
 # tuning shells
 train_only_transformer_*.sh
 train_with_swin_*.sh
+A*.sh
