@@ -38,7 +38,7 @@ def train():
     tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=512)
 
     # データの設定
-    train_loader, val_loader = get_dataloader(args, phase="train", rank=rank), get_dataloader(args, phase="val", rank=rank)
+    train_loader, val_loader = get_data(args, rank=rank)
 
     if args.num_epochs is None:
         args.num_epochs = int(args.num_steps / len(train_loader)) + 1
@@ -50,14 +50,15 @@ def train():
         if args.image_model_train:
             model.module.image_model.train()
         model.module.transformer.train()
-        train_loss = torch.tensor(0.0).to(device_id)
-        train_count = torch.tensor(0).to(device_id)
+        train_loss = torch.tensor(0.0)
+        train_count = torch.tensor(0)
         pbar = tqdm(total=int(np.ceil(len(train_loader)/args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
         for i, (images, src_texts, tgt_texts) in enumerate(train_loader):
-            images = image_processor(images, return_tensors="pt").to(device_id)
+            images = image_processor(images, return_tensors="pt")
+            to_images = images.to(device_id)
             source_encoding = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
             target_encoding = tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
-            loss = model(images, source_encoding, target_encoding)
+            loss = model(to_images, source_encoding, target_encoding)
 
             loss /= args.accumulation_steps
             loss.backward()
@@ -87,15 +88,16 @@ def train():
         if args.image_model_train:
             model.module.image_model.eval()
         model.module.transformer.eval()
-        val_loss = torch.tensor(0.0).to(device_id)
-        val_count = torch.tensor(0).to(device_id)
+        val_loss = torch.tensor(0.0)
+        val_count = torch.tensor(0)
         val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
         for images, src_texts, tgt_texts in val_loop:
             with torch.no_grad():
                 images = image_processor(images, return_tensors="pt").to(device_id)
+                to_images = images.to(device_id)
                 source_encoding = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
                 target_encoding = tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
-                loss = model(images, source_encoding, target_encoding)
+                loss = model(to_images, source_encoding, target_encoding)
                 
                 val_loss += loss.item() * images["pixel_values"].size(0)
                 val_count += images["pixel_values"].size(0)
