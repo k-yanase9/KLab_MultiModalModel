@@ -4,7 +4,7 @@ from .dataset_loader import DatasetLoader
 class ImageNetDatasetLoader(DatasetLoader):
     def __init__(self, data_dir='/data/datatset/imagenet_2012', phase='train'):
         super().__init__()
-        img_folder_path = os.path.join(data_dir, f'ILSVRC2012_img_{phase}')
+        img_folder_path = os.path.join(data_dir, phase)
 
         # Load class names
         map_clsloc_path = os.path.join(data_dir, 'map_clsloc.txt')
