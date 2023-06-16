@@ -47,7 +47,7 @@ pip install -r requirements.txt
 
 <br>
 
-## RedCapsでのCaptionの自己教師あり事前学習（動作未確認）
+## RedCapsでのCaptionの自己教師ありPretrain（動作未確認）
 
 15%の単語をマスクして、復元するように学習
 
@@ -87,4 +87,25 @@ bash run_scripts/caption/train_only_transformer.sh
 
 ```console
 bash run_scripts/caption/train_with_swin.sh
+```
+
+<br>
+
+## ImageNetでのクラス分類の学習
+
+```text
+入力：What does th image describe ?
+出力：a photo of <image_label>
+```
+
+### SwinTransformerの重みを凍結して学習
+
+```console
+bash run_scripts/image_classify/train_only_transformer.sh
+```
+
+### SwinTransformerを含めて学習
+
+```console
+bash run_scripts/image_classify/train_with_swin.sh
 ```
