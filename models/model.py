@@ -28,7 +28,7 @@ class MyModel(nn.Module):
     def forward(self, images, source_encoding, target_encoding=None, return_loss=True):
         with torch.no_grad():
             language_embeddings = self.language_model(source_encoding['input_ids']).last_hidden_state
-        image_embeddings = self.image_model(**images).last_hidden_state
+        image_embeddings = self.image_model(images).last_hidden_state
 
         if self.args.ffn:
             language_embeddings = self.language_ffn(language_embeddings)

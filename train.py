@@ -3,7 +3,7 @@ import torch
 import torch.distributed as dist
 import numpy as np
 from torch.nn.parallel import DistributedDataParallel as DDP
-from transformers import AutoImageProcessor, AutoTokenizer
+from transformers import AutoTokenizer
 from tqdm import tqdm
 
 from data import *
@@ -34,7 +34,6 @@ def train():
     scheduler = get_scheduler(args, optimizer)
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
-    image_processor = AutoImageProcessor.from_pretrained(args.image_model_name)
     tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=512)
 
     # データの設定
@@ -56,7 +55,6 @@ def train():
         for i, (images, src_texts, tgt_texts) in enumerate(train_loader):
             if i % args.accumulation_steps == 0:
                 optimizer.zero_grad()
-            images = image_processor(images, return_tensors="pt")
             to_images = images.to(device_id)
             source_encoding = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
             target_encoding = tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
@@ -65,8 +63,8 @@ def train():
             loss /= args.accumulation_steps
             loss.backward()
 
-            train_loss += loss.item() * images["pixel_values"].size(0)
-            train_count += images["pixel_values"].size(0)
+            train_loss += loss.item() * images.shape[0]
+            train_count += images.shape[0]
 
             # args.accumulation_steps回の勾配を蓄積してから、optimizer.step()を呼び出す
             if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
@@ -100,8 +98,8 @@ def train():
                 target_encoding = tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
                 loss = model(to_images, source_encoding, target_encoding)
                 
-                val_loss += loss.item() * images["pixel_values"].size(0)
-                val_count += images["pixel_values"].size(0)
+                val_loss += loss.item() * images.shape[0]
+                val_count += images.shape[0]
         # 他のノードから集める
         dist.all_reduce(val_loss, op=dist.ReduceOp.SUM)
         dist.all_reduce(val_count, op=dist.ReduceOp.SUM)
