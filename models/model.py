@@ -25,10 +25,10 @@ class MyModel(nn.Module):
             self.language_ffn = nn.Linear(self.language_model.config.d_model, self.transformer.config.d_model)
             self.image_ffn = nn.Linear(self.image_model.num_features, self.transformer.config.d_model)
 
-    def forward(self, images, source_encoding, target_encoding=None, return_loss=True):
+    def forward(self, images, src_texts, tgt_texts=None, return_loss=True):
         with torch.no_grad():
-            language_embeddings = self.language_model(source_encoding['input_ids']).last_hidden_state
-        image_embeddings = self.image_model(**images).last_hidden_state
+            language_embeddings = self.language_model(src_texts).last_hidden_state
+        image_embeddings = self.image_model(images).last_hidden_state
 
         if self.args.ffn:
             language_embeddings = self.language_ffn(language_embeddings)
@@ -37,7 +37,7 @@ class MyModel(nn.Module):
         concated_embeddings = torch.cat((image_embeddings,language_embeddings), dim=1)
 
         if return_loss:
-            return self.transformer(inputs_embeds=concated_embeddings, labels=target_encoding['input_ids']).loss
+            return self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).loss
         else:
             return self.transformer.generate(inputs_embeds=concated_embeddings)
     
