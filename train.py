@@ -54,6 +54,8 @@ def train():
         train_count = torch.tensor(0)
         pbar = tqdm(total=int(np.ceil(len(train_loader)/args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
         for i, (images, src_texts, tgt_texts) in enumerate(train_loader):
+            if i % args.accumulation_steps == 0:
+                optimizer.zero_grad()
             images = image_processor(images, return_tensors="pt")
             to_images = images.to(device_id)
             source_encoding = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
@@ -69,7 +71,6 @@ def train():
             # args.accumulation_steps回の勾配を蓄積してから、optimizer.step()を呼び出す
             if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
                 optimizer.step()
-                optimizer.zero_grad()
                 pbar.update(1)
                 if rank == 0: steps += 1
 
