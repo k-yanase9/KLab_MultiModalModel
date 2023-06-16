@@ -56,9 +56,9 @@ def train():
             if i % args.accumulation_steps == 0:
                 optimizer.zero_grad()
             images = images.to(device_id)
-            source_encoding = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
-            target_encoding = tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
-            loss = model(images, source_encoding, target_encoding)
+            src_texts = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
+            tgt_texts = tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
+            loss = model(images, src_texts, tgt_texts)
 
             loss /= args.accumulation_steps
             loss.backward()
@@ -93,9 +93,9 @@ def train():
         for images, src_texts, tgt_texts in val_loop:
             with torch.no_grad():
                 images = images.to(device_id)
-                source_encoding = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
-                target_encoding = tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt').to(device_id) # ['pt', 'tf', 'np', 'jax']
-                loss = model(images, source_encoding, target_encoding)
+                src_texts = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
+                tgt_texts = tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
+                loss = model(images, src_texts, tgt_texts)
                 
                 val_loss += loss.item() * images.shape[0]
                 val_count += images.shape[0]
