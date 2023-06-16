@@ -24,7 +24,7 @@ def get_data(args, rank):
     
 def get_dataloader(args, dataset, rank):
     sampler = torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=torch.cuda.device_count(), rank=rank, shuffle=True, drop_last=True)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, num_workers=os.cpu_count()//torch.cuda.device_count(), pin_memory=True, sampler=sampler)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, num_workers=2, pin_memory=True, sampler=sampler)
     return dataloader
 
 def get_dataset(args, phase="train"):
