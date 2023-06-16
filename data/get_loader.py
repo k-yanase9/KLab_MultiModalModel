@@ -1,11 +1,7 @@
-import os
 import torch
-from .redcaps import RedCapsDatasetLoader
-from .coco import COCODatasetLoader
-from .vcr import Vcrdataset
-from .vqa2 import Vqa2dataset
-from .imSitu import imSituDataset
-from .imagenet import ImageNetDatasetLoader
+from .caption import *
+from .image_classify import *
+from .vqa import *
 
 def get_data(args, rank):
     if 'redcaps' in args.data_dir.lower():
