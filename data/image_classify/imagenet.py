@@ -1,5 +1,5 @@
 import os
-from .dataset_loader import DatasetLoader
+from ..dataset_loader import DatasetLoader
 
 class ImageNetDatasetLoader(DatasetLoader):
     def __init__(self, data_dir='/data/datatset/imagenet_2012', phase='train'):
