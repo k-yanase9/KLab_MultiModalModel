@@ -2,6 +2,7 @@ import torch
 from .caption import *
 from .image_classify import *
 from .vqa import *
+from .pretrain import *
 
 def get_data(args, rank):
     if 'redcaps' in args.data_dir.lower():
@@ -27,7 +28,10 @@ def get_dataset(args, phase="train"):
     if 'mscoco' in args.data_dir.lower():
         dataset = COCODatasetLoader(args.data_dir, phase)
     elif 'redcaps' in args.data_dir.lower():
-        dataset = RedCapsDatasetLoader(args.data_dir)
+        if args.pretrain:
+            dataset = RedCapsPretrainDatasetLoader(args.data_dir)
+        else:
+            dataset = RedCapsDatasetLoader(args.data_dir)
     elif 'vcr' in args.data_dir.lower():
         dataset = Vcrdataset(args.data_dir, phase=phase)
     elif 'vqa2' in args.data_dir.lower():
