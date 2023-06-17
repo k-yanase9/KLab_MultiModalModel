@@ -14,11 +14,11 @@ def train():
     dist.init_process_group("nccl")
     rank = dist.get_rank()
 
-    # create model and move it to GPU with id rank
-    device_id = rank % torch.cuda.device_count()
-
     args = parse_arguments()
-    os.makedirs(args.result_dir, exist_ok=True)
+    args.world_size = torch.cuda.device_count() # GPU数
+    device_id = rank % args.world_size
+
+    if rank == 0: os.makedirs(args.result_dir, exist_ok=True)
 
     torch.manual_seed(args.seed)
     torch.backends.cudnn.benchmark = False
