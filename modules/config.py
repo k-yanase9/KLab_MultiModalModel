@@ -3,7 +3,6 @@ import argparse
 def parse_arguments():
     parser = argparse.ArgumentParser(description='プログラムの説明')
     # Model setting
-    parser.add_argument('--seed', type=int, default=999, help='乱数シード')
     parser.add_argument('--image_model_name', type=str, default="microsoft/swinv2-base-patch4-window8-256", 
                         choices=[
                             "microsoft/resnet-50",
@@ -29,6 +28,8 @@ def parse_arguments():
     parser.add_argument('--max_source_length', type=int, default=256, help='入力文の最大長')
     parser.add_argument('--max_target_length', type=int, default=128, help='出力文の最大長')
     # Training setting
+    parser.add_argument('--pretrain', action='store_true', help='事前学習かどうか')
+    parser.add_argument('--seed', type=int, default=999, help='乱数シード')
     parser.add_argument('--lr', type=float, default=0.001, help='学習率')
     parser.add_argument('--optimizer', type=str, default='AdamW', choices=['Adam', 'AdamW'], help='Optimizer')
     parser.add_argument('--lr_scheduler', type=str, default='', choices=['', 'LambdaLR', 'CosineAnnealingLR', 'ExponentialLR', 'StepLR', 'MultiStepLR'], help='学習率のスケジューラ')
