@@ -2,7 +2,7 @@ import os
 import json
 from pycocotools.coco import COCO
 from collections import defaultdict
-from .dataset_loader import DatasetLoader
+from ..dataset_loader import DatasetLoader
 
 class SilentCOCO(COCO):
     def __init__(self, annotation_file=None):
