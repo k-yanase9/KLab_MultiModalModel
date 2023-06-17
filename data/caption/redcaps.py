@@ -2,7 +2,7 @@ import os
 import json
 import torch
 from PIL import Image
-from .dataset_loader import DatasetLoader
+from ..dataset_loader import DatasetLoader
 
 class RedCapsDatasetLoader(DatasetLoader):
     def __init__(self, data_dir='/data/dataset/redcaps'):
