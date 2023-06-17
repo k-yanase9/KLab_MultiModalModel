@@ -16,5 +16,6 @@ train_only_transformer_*.sh
 train_with_swin_*.sh
 A*.sh
 2080TI*.sh
-Quadro.sh
+TITAN*.sh
+Quadro*.sh
 job.sh
