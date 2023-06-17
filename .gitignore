@@ -8,8 +8,13 @@ work.ipynb
 
 # result files
 results*/
+*_error.txt
+*_test.txt
 
 # tuning shells
 train_only_transformer_*.sh
 train_with_swin_*.sh
 A*.sh
+2080TI*.sh
+Quadro.sh
+job.sh
