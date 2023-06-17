@@ -25,21 +25,24 @@ def get_dataloader(args, dataset, rank):
     return dataloader
 
 def get_dataset(args, phase="train"):
-    if 'mscoco' in args.data_dir.lower():
-        dataset = COCODatasetLoader(args.data_dir, phase)
-    elif 'redcaps' in args.data_dir.lower():
-        if args.pretrain:
+    if args.pretrain: # 事前学習だったら
+        if 'redcaps' in args.data_dir.lower():
             dataset = RedCapsPretrainDatasetLoader(args.data_dir)
         else:
-            dataset = RedCapsDatasetLoader(args.data_dir)
-    elif 'vcr' in args.data_dir.lower():
-        dataset = Vcrdataset(args.data_dir, phase=phase)
-    elif 'vqa2' in args.data_dir.lower():
-        dataset = Vqa2dataset(args.data_dir, phase=phase)
-    elif 'imsitu' in args.data_dir.lower():
-        dataset = imSituDataset(args.data_dir, phase=phase)
-    elif 'imagenet' in args.data_dir.lower():
-        dataset = ImageNetDatasetLoader(args.data_dir, phase=phase)
+            raise NotImplementedError
     else:
-        raise NotImplementedError
+        if 'mscoco' in args.data_dir.lower():
+            dataset = COCODatasetLoader(args.data_dir, phase)
+        elif 'redcaps' in args.data_dir.lower():
+            dataset = RedCapsDatasetLoader(args.data_dir)
+        elif 'vcr' in args.data_dir.lower():
+            dataset = Vcrdataset(args.data_dir, phase=phase)
+        elif 'vqa2' in args.data_dir.lower():
+            dataset = Vqa2dataset(args.data_dir, phase=phase)
+        elif 'imsitu' in args.data_dir.lower():
+            dataset = imSituDataset(args.data_dir, phase=phase)
+        elif 'imagenet' in args.data_dir.lower():
+            dataset = ImageNetDatasetLoader(args.data_dir, phase=phase)
+        else:
+            raise NotImplementedError
     return dataset
