@@ -29,6 +29,7 @@ pip install -r requirements.txt
 
 | parameter | 説明 | default |
 | - | - | - |
+| pretrain | 事前学習かどうか | False |
 | seed | 乱数シード | 999 |
 | lr | 学習率 | 0.001 |
 | optimizer | Optimizer | AdamW |
