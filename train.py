@@ -15,8 +15,8 @@ def train():
     rank = dist.get_rank()
 
     args = parse_arguments()
-    args.world_size = torch.cuda.device_count() # GPU数
-    device_id = rank % args.world_size
+    args.gpu_nums = torch.cuda.device_count() # GPU数
+    device_id = rank % args.gpu_nums
 
     if rank == 0: os.makedirs(args.result_dir, exist_ok=True)
 
@@ -34,10 +34,10 @@ def train():
     scheduler = get_scheduler(args, optimizer)
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
-    tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=512, use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True)
 
     # データの設定
-    train_loader, val_loader = get_data(args, rank=rank)
+    train_loader, val_loader = get_data(args)
 
     if args.num_epochs is None:
         args.num_epochs = int(args.num_steps / len(train_loader)) + 1
