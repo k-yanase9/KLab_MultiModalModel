@@ -17,6 +17,8 @@ def test():
     model = MyModel(args).to(device)
     model.load(result_name='best.pth')
 
+    logger = get_logger(args, 'test.log')
+
     tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True)
 
     # データの設定
@@ -36,9 +38,13 @@ def test():
                     results[gt_text] = 0
                 if gt_text == pred_text:
                     results[gt_text] += 1
-    print(results)
+    sorted_results = sorted(results.items(), key=lambda x: x[1], reverse=True)
+    for i, (gt_text, correct) in enumerate(sorted_results[:5]):
+        logger.info(f'TOP{i}: {gt_text}: {correct}')
+    for i, (gt_text, correct) in enumerate(sorted_results[-5:]):
+        logger.info(f'WORST{i}: {gt_text}: {correct}')
     corrects = sum(results.values())
-    print(f'Accuracy: {corrects / dataset_size * 100}% ({corrects}/{dataset_size})')
+    logger.info(f'Accuracy: {corrects / dataset_size * 100}% ({corrects}/{dataset_size})')
 
 if __name__ == '__main__':
     test()
