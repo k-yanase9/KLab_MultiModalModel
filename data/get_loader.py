@@ -4,7 +4,7 @@ from .image_classify import *
 from .vqa import *
 from .pretrain import *
 
-def get_data(args, rank):
+def get_data(args):
     if 'redcaps' in args.data_dir.lower():
         dataset = get_dataset(args)
         val_rate = 0.1
@@ -17,10 +17,10 @@ def get_data(args, rank):
         train_dataset = get_dataset(args, phase="train")
         val_dataset = get_dataset(args, phase="val")
 
-    return get_dataloader(args, train_dataset, rank), get_dataloader(args, val_dataset, rank)
+    return get_dataloader(args, train_dataset), get_dataloader(args, val_dataset)
     
-def get_dataloader(args, dataset, rank):
-    sampler = torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=torch.cuda.device_count(), rank=rank, shuffle=True, drop_last=True)
+def get_dataloader(args, dataset):
+    sampler = torch.utils.data.distributed.DistributedSampler(dataset, drop_last=True)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, num_workers=2, pin_memory=True, sampler=sampler)
     return dataloader
 
