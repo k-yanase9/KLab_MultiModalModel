@@ -12,5 +12,5 @@ torchrun --nnodes=1 --nproc_per_node=4 train.py \
         --num_epochs 50 \
         --save_interval 50 \
         --data_dir /data/dataset/mscoco2017/ \
-        --result_dir results/caption/only_transformer_coco/$model/
+        --result_dir results/caption/with_swin_coco/$model/
 done
