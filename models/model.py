@@ -25,7 +25,7 @@ class MyModel(nn.Module):
             self.language_ffn = nn.Linear(self.language_model.config.d_model, self.transformer.config.d_model)
             self.image_ffn = nn.Linear(self.image_model.num_features, self.transformer.config.d_model)
 
-    def forward(self, images, src_texts, tgt_texts=None, return_loss=True):
+    def forward(self, images, src_texts, tgt_texts=None, return_loss=True, num_beams=1, num_return_sequences=1, do_sample=False):
         with torch.no_grad():
             language_embeddings = self.language_model(src_texts).last_hidden_state
         image_embeddings = self.image_model(images).last_hidden_state
@@ -39,7 +39,7 @@ class MyModel(nn.Module):
         if return_loss:
             return self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).loss
         else:
-            return self.transformer.generate(inputs_embeds=concated_embeddings)
+            return self.transformer.generate(inputs_embeds=concated_embeddings, num_beams=num_beams, num_return_sequences=num_return_sequences, do_sample=do_sample)
     
     def save(self, result_name="best.pth"):
         result_path = os.path.join(self.args.result_dir, result_name)
