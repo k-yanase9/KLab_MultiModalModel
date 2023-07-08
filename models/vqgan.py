@@ -2,24 +2,22 @@ import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
 
-from main import instantiate_from_config
-
-from taming.modules.diffusionmodules.model import Encoder, Decoder
-from taming.modules.vqvae.quantize import VectorQuantizer2 as VectorQuantizer
-from taming.modules.vqvae.quantize import GumbelQuantize
-from taming.modules.vqvae.quantize import EMAVectorQuantizer
+from .diffusionmodules import Encoder, Decoder
+from .vqvae import VectorQuantizer2 as VectorQuantizer
+from .vqvae import GumbelQuantize
+from .vqvae import EMAVectorQuantizer
 
 class VQModel(pl.LightningModule):
     def __init__(self,
-                 ddconfig,
-                 lossconfig,
-                 n_embed,
-                 embed_dim,
+                 ddconfig={'double_z': False, 'z_channels': 256, 'resolution': 256, 'in_channels': 3, 'out_ch': 3, 'ch': 128, 'ch_mult': [1, 1, 2, 2, 4], 'num_res_blocks': 2, 'attn_resolutions': [16], 'dropout': 0.0},
+                 lossconfig={'target': 'taming.modules.losses.vqperceptual.VQLPIPSWithDiscriminator', 'params': {'disc_conditional': False, 'disc_in_channels': 3, 'disc_start': 0, 'disc_weight': 0.75, 'disc_num_layers': 2, 'codebook_weight': 1.0}},
+                 n_embed=16384,
+                 embed_dim=256,
                  ckpt_path=None,
                  ignore_keys=[],
                  image_key="image",
                  colorize_nlabels=None,
-                 monitor=None,
+                 monitor='val/rec_loss',
                  remap=None,
                  sane_index_shape=False,  # tell vector quantizer to return indices as bhw
                  ):
@@ -27,7 +25,6 @@ class VQModel(pl.LightningModule):
         self.image_key = image_key
         self.encoder = Encoder(**ddconfig)
         self.decoder = Decoder(**ddconfig)
-        self.loss = instantiate_from_config(lossconfig)
         self.quantize = VectorQuantizer(n_embed, embed_dim, beta=0.25,
                                         remap=remap, sane_index_shape=sane_index_shape)
         self.quant_conv = torch.nn.Conv2d(ddconfig["z_channels"], embed_dim, 1)
@@ -38,8 +35,6 @@ class VQModel(pl.LightningModule):
         if colorize_nlabels is not None:
             assert type(colorize_nlabels)==int
             self.register_buffer("colorize", torch.randn(3, colorize_nlabels, 1, 1))
-        if monitor is not None:
-            self.monitor = monitor
 
     def init_from_ckpt(self, path, ignore_keys=list()):
         sd = torch.load(path, map_location="cpu")["state_dict"]
