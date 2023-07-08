@@ -11,6 +11,6 @@ torchrun --nnodes=1 --nproc_per_node=4 train.py \
         --batch_size $batch_size \
         --num_epochs 5 \
         --save_interval 1 \
-        --data_dir /data/dataset/redcaps/ \
+        --data_dir /user/data/redcaps/ \
         --result_dir results/pretrain/only_transformer/$model/
 done
