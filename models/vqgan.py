@@ -43,6 +43,13 @@ class VQModel(nn.Module):
         self.load_state_dict(sd, strict=False)
         print(f"Restored from {path}")
 
+    def save_ckpt(self, path=None):
+        if path is None:
+            print("No path given, not saving.")
+            return
+        sd = self.cpu().state_dict()
+        torch.save({"state_dict": sd}, path)
+
     def encode(self, x):
         h = self.encoder(x)
         h = self.quant_conv(h)
