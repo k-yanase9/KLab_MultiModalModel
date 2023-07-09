@@ -1,11 +1,10 @@
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from .diffusionmodules import Encoder, Decoder
 from .vqvae import VectorQuantizer2 as VectorQuantizer
-from .vqvae import GumbelQuantize
-from .vqvae import EMAVectorQuantizer
 
 class VQModel(nn.Module):
     def __init__(self,
@@ -26,7 +25,7 @@ class VQModel(nn.Module):
         self.encoder = Encoder(**ddconfig)
         self.decoder = Decoder(**ddconfig)
         self.quantize = VectorQuantizer(n_embed, embed_dim, beta=0.25,
-                                        remap=remap, sane_index_shape=sane_index_shape)
+                                        sane_index_shape=sane_index_shape)
         self.quant_conv = torch.nn.Conv2d(ddconfig["z_channels"], embed_dim, 1)
         self.post_quant_conv = torch.nn.Conv2d(embed_dim, ddconfig["z_channels"], 1)
         if ckpt_path is not None:
@@ -50,17 +49,19 @@ class VQModel(nn.Module):
     def encode(self, x):
         h = self.encoder(x)
         h = self.quant_conv(h)
-        min_encoding_indices = self.quantize.encode(h)
-        return h, min_encoding_indices
+        quant, emb_loss, info = self.quantize(h)
+        return quant, emb_loss, info
 
-    def decode(self, h, min_encoding_indices):
-        quant, emb_loss, info = self.quantize.decode(h, min_encoding_indices)
+    def decode(self, quant, training=False):
         quant = self.post_quant_conv(quant)
         dec = self.decoder(quant)
         return dec
 
     def decode_code(self, code_b):
-        quant_b = self.quantize.embed_code(code_b)
+        quant_b = self.quantize.get_codebook_entry(code_b)
+        bs, seq_len, dim = quant_b.shape
+        size = int(math.sqrt(seq_len)) # 画像の縦横の16
+        quant_b = quant_b.view(bs, size, size, dim).permute(0, 3, 1, 2).contiguous()
         dec = self.decode(quant_b)
         return dec
 
@@ -152,199 +153,3 @@ class VQSegmentationModel(VQModel):
         log["inputs"] = x
         log["reconstructions"] = xrec
         return log
-
-
-class VQNoDiscModel(VQModel):
-    def __init__(self,
-                 ddconfig,
-                 lossconfig,
-                 n_embed,
-                 embed_dim,
-                 ckpt_path=None,
-                 ignore_keys=[],
-                 image_key="image",
-                 colorize_nlabels=None
-                 ):
-        super().__init__(ddconfig=ddconfig, lossconfig=lossconfig, n_embed=n_embed, embed_dim=embed_dim,
-                         ckpt_path=ckpt_path, ignore_keys=ignore_keys, image_key=image_key,
-                         colorize_nlabels=colorize_nlabels)
-
-    def training_step(self, batch, batch_idx):
-        x = self.get_input(batch, self.image_key)
-        xrec, qloss = self(x)
-        # autoencode
-        aeloss, log_dict_ae = self.loss(qloss, x, xrec, self.global_step, split="train")
-        output = pl.TrainResult(minimize=aeloss)
-        output.log("train/aeloss", aeloss,
-                   prog_bar=True, logger=True, on_step=True, on_epoch=True)
-        output.log_dict(log_dict_ae, prog_bar=False, logger=True, on_step=True, on_epoch=True)
-        return output
-
-    def validation_step(self, batch, batch_idx):
-        x = self.get_input(batch, self.image_key)
-        xrec, qloss = self(x)
-        aeloss, log_dict_ae = self.loss(qloss, x, xrec, self.global_step, split="val")
-        rec_loss = log_dict_ae["val/rec_loss"]
-        output = pl.EvalResult(checkpoint_on=rec_loss)
-        output.log("val/rec_loss", rec_loss,
-                   prog_bar=True, logger=True, on_step=True, on_epoch=True)
-        output.log("val/aeloss", aeloss,
-                   prog_bar=True, logger=True, on_step=True, on_epoch=True)
-        output.log_dict(log_dict_ae)
-
-        return output
-
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(list(self.encoder.parameters())+
-                                  list(self.decoder.parameters())+
-                                  list(self.quantize.parameters())+
-                                  list(self.quant_conv.parameters())+
-                                  list(self.post_quant_conv.parameters()),
-                                  lr=self.learning_rate, betas=(0.5, 0.9))
-        return optimizer
-
-
-class GumbelVQ(VQModel):
-    def __init__(self,
-                 ddconfig,
-                 lossconfig,
-                 n_embed,
-                 embed_dim,
-                 temperature_scheduler_config,
-                 ckpt_path=None,
-                 ignore_keys=[],
-                 image_key="image",
-                 colorize_nlabels=None,
-                 monitor=None,
-                 kl_weight=1e-8,
-                 remap=None,
-                 ):
-
-        z_channels = ddconfig["z_channels"]
-        super().__init__(ddconfig,
-                         lossconfig,
-                         n_embed,
-                         embed_dim,
-                         ckpt_path=None,
-                         ignore_keys=ignore_keys,
-                         image_key=image_key,
-                         colorize_nlabels=colorize_nlabels,
-                         monitor=monitor,
-                         )
-
-        self.loss.n_classes = n_embed
-        self.vocab_size = n_embed
-
-        self.quantize = GumbelQuantize(z_channels, embed_dim,
-                                       n_embed=n_embed,
-                                       kl_weight=kl_weight, temp_init=1.0,
-                                       remap=remap)
-
-        self.temperature_scheduler = instantiate_from_config(temperature_scheduler_config)   # annealing of temp
-
-        if ckpt_path is not None:
-            self.init_from_ckpt(ckpt_path, ignore_keys=ignore_keys)
-
-    def temperature_scheduling(self):
-        self.quantize.temperature = self.temperature_scheduler(self.global_step)
-
-    def encode_to_prequant(self, x):
-        h = self.encoder(x)
-        h = self.quant_conv(h)
-        return h
-
-    def decode_code(self, code_b):
-        raise NotImplementedError
-
-    def training_step(self, batch, batch_idx, optimizer_idx):
-        self.temperature_scheduling()
-        x = self.get_input(batch, self.image_key)
-        xrec, qloss = self(x)
-
-        if optimizer_idx == 0:
-            # autoencode
-            aeloss, log_dict_ae = self.loss(qloss, x, xrec, optimizer_idx, self.global_step,
-                                            last_layer=self.get_last_layer(), split="train")
-
-            self.log_dict(log_dict_ae, prog_bar=False, logger=True, on_step=True, on_epoch=True)
-            self.log("temperature", self.quantize.temperature, prog_bar=False, logger=True, on_step=True, on_epoch=True)
-            return aeloss
-
-        if optimizer_idx == 1:
-            # discriminator
-            discloss, log_dict_disc = self.loss(qloss, x, xrec, optimizer_idx, self.global_step,
-                                            last_layer=self.get_last_layer(), split="train")
-            self.log_dict(log_dict_disc, prog_bar=False, logger=True, on_step=True, on_epoch=True)
-            return discloss
-
-    def validation_step(self, batch, batch_idx):
-        x = self.get_input(batch, self.image_key)
-        xrec, qloss = self(x, return_pred_indices=True)
-        aeloss, log_dict_ae = self.loss(qloss, x, xrec, 0, self.global_step,
-                                        last_layer=self.get_last_layer(), split="val")
-
-        discloss, log_dict_disc = self.loss(qloss, x, xrec, 1, self.global_step,
-                                            last_layer=self.get_last_layer(), split="val")
-        rec_loss = log_dict_ae["val/rec_loss"]
-        self.log("val/rec_loss", rec_loss,
-                 prog_bar=True, logger=True, on_step=False, on_epoch=True, sync_dist=True)
-        self.log("val/aeloss", aeloss,
-                 prog_bar=True, logger=True, on_step=False, on_epoch=True, sync_dist=True)
-        self.log_dict(log_dict_ae)
-        self.log_dict(log_dict_disc)
-        return self.log_dict
-
-    def log_images(self, batch, **kwargs):
-        log = dict()
-        x = self.get_input(batch, self.image_key)
-        x = x.to(self.device)
-        # encode
-        h = self.encoder(x)
-        h = self.quant_conv(h)
-        quant, _, _ = self.quantize(h)
-        # decode
-        x_rec = self.decode(quant)
-        log["inputs"] = x
-        log["reconstructions"] = x_rec
-        return log
-
-
-class EMAVQ(VQModel):
-    def __init__(self,
-                 ddconfig,
-                 lossconfig,
-                 n_embed,
-                 embed_dim,
-                 ckpt_path=None,
-                 ignore_keys=[],
-                 image_key="image",
-                 colorize_nlabels=None,
-                 monitor=None,
-                 remap=None,
-                 sane_index_shape=False,  # tell vector quantizer to return indices as bhw
-                 ):
-        super().__init__(ddconfig,
-                         lossconfig,
-                         n_embed,
-                         embed_dim,
-                         ckpt_path=None,
-                         ignore_keys=ignore_keys,
-                         image_key=image_key,
-                         colorize_nlabels=colorize_nlabels,
-                         monitor=monitor,
-                         )
-        self.quantize = EMAVectorQuantizer(n_embed=n_embed,
-                                           embedding_dim=embed_dim,
-                                           beta=0.25,
-                                           remap=remap)
-    def configure_optimizers(self):
-        lr = self.learning_rate
-        #Remove self.quantize from parameter list since it is updated via EMA
-        opt_ae = torch.optim.Adam(list(self.encoder.parameters())+
-                                  list(self.decoder.parameters())+
-                                  list(self.quant_conv.parameters())+
-                                  list(self.post_quant_conv.parameters()),
-                                  lr=lr, betas=(0.5, 0.9))
-        opt_disc = torch.optim.Adam(self.loss.discriminator.parameters(),
-                                    lr=lr, betas=(0.5, 0.9))
-        return [opt_ae, opt_disc], []                                           
