@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .diffusionmodules import Encoder, Decoder
-from .vqvae import VectorQuantizer2 as VectorQuantizer
+from .vqvae import VectorQuantizer
 
 class VQModel(nn.Module):
     def __init__(self,
