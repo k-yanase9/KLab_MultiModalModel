@@ -1,4 +1,4 @@
-# pytorch_diffusion + derived encoder decoder
+# pytorch vqgan encoder decoder
 import math
 import torch
 import torch.nn as nn
