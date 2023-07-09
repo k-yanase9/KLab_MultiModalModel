@@ -6,6 +6,9 @@ __pycache__/
 try.ipynb
 work.ipynb
 
+# weights
+checkpoints/
+
 # result files
 results*/
 
