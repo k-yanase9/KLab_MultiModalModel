@@ -2,6 +2,5 @@ accelerate
 datasets
 transformers[torch]
 sentencepiece
-pytorch-lightning
 pycocotools
 notebook
