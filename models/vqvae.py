@@ -282,6 +282,60 @@ class VectorQuantizer2(nn.Module):
             torch.einsum('bd,dn->bn', z_flattened, rearrange(self.embedding.weight, 'n d -> d n'))
 
         min_encoding_indices = torch.argmin(d, dim=1)
+        print("min_encoding_indices shape:", min_encoding_indices.shape)
+        print("min_encoding_indices:", min_encoding_indices)
+        z_q = self.embedding(min_encoding_indices).view(z.shape)
+        perplexity = None
+        min_encodings = None
+
+        # compute loss for embedding
+        if not self.legacy:
+            loss = self.beta * torch.mean((z_q.detach()-z)**2) + \
+                   torch.mean((z_q - z.detach()) ** 2)
+        else:
+            loss = torch.mean((z_q.detach()-z)**2) + self.beta * \
+                   torch.mean((z_q - z.detach()) ** 2)
+
+        # preserve gradients
+        z_q = z + (z_q - z).detach()
+
+        # reshape back to match original input shape
+        z_q = rearrange(z_q, 'b h w c -> b c h w').contiguous()
+
+        if self.remap is not None:
+            min_encoding_indices = min_encoding_indices.reshape(z.shape[0],-1) # add batch axis
+            min_encoding_indices = self.remap_to_used(min_encoding_indices)
+            min_encoding_indices = min_encoding_indices.reshape(-1,1) # flatten
+
+        if self.sane_index_shape:
+            min_encoding_indices = min_encoding_indices.reshape(
+                z_q.shape[0], z_q.shape[2], z_q.shape[3])
+
+        return z_q, loss, (perplexity, min_encodings, min_encoding_indices)
+
+    def encode(self, z, temp=None, rescale_logits=False, return_logits=False):
+        assert temp is None or temp==1.0, "Only for interface compatible with Gumbel"
+        assert rescale_logits==False, "Only for interface compatible with Gumbel"
+        assert return_logits==False, "Only for interface compatible with Gumbel"
+        # reshape z -> (batch, height, width, channel) and flatten
+        z = rearrange(z, 'b c h w -> b h w c').contiguous()
+        z_flattened = z.view(-1, self.e_dim)
+        # distances from z to embeddings e_j (z - e)^2 = z^2 + e^2 - 2 e * z
+
+        d = torch.sum(z_flattened ** 2, dim=1, keepdim=True) + \
+            torch.sum(self.embedding.weight**2, dim=1) - 2 * \
+            torch.einsum('bd,dn->bn', z_flattened, rearrange(self.embedding.weight, 'n d -> d n'))
+
+        min_encoding_indices = torch.argmin(d, dim=1)
+
+        return min_encoding_indices
+    
+    def decode(self, z, min_encoding_indices, temp=None, rescale_logits=False, return_logits=False):
+        assert temp is None or temp==1.0, "Only for interface compatible with Gumbel"
+        assert rescale_logits==False, "Only for interface compatible with Gumbel"
+        assert return_logits==False, "Only for interface compatible with Gumbel"
+
+        z = rearrange(z, 'b c h w -> b h w c').contiguous()
         z_q = self.embedding(min_encoding_indices).view(z.shape)
         perplexity = None
         min_encodings = None
