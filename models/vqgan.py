@@ -9,14 +9,12 @@ from .vqvae import VectorQuantizer
 class VQModel(nn.Module):
     def __init__(self,
                  ddconfig={'double_z': False, 'z_channels': 256, 'resolution': 256, 'in_channels': 3, 'out_ch': 3, 'ch': 128, 'ch_mult': [1, 1, 2, 2, 4], 'num_res_blocks': 2, 'attn_resolutions': [16], 'dropout': 0.0},
-                 lossconfig={'target': 'taming.modules.losses.vqperceptual.VQLPIPSWithDiscriminator', 'params': {'disc_conditional': False, 'disc_in_channels': 3, 'disc_start': 0, 'disc_weight': 0.75, 'disc_num_layers': 2, 'codebook_weight': 1.0}},
                  n_embed=16384,
                  embed_dim=256,
                  ckpt_path=None,
                  ignore_keys=[],
                  image_key="image",
                  colorize_nlabels=None,
-                 monitor='val/rec_loss',
                  remap=None,
                  sane_index_shape=False,  # tell vector quantizer to return indices as bhw
                  ):
@@ -65,91 +63,17 @@ class VQModel(nn.Module):
         dec = self.decode(quant_b)
         return dec
 
+    def get_codebook_indices(self, x, vae_decode=False, training=False):
+        h = self.encoder(x)
+        h = self.quant_conv(h)
+        z, _, [_, _, indices] = self.quantize(h)
+
+        if vae_decode:
+            _ = self.decode(z, training)
+
+        return indices.reshape(h.shape[0], -1)
+
     def forward(self, input):
         quant, diff, _ = self.encode(input)
         dec = self.decode(quant)
         return dec, diff
-
-    def get_input(self, batch, k):
-        x = batch[k]
-        if len(x.shape) == 3:
-            x = x[..., None]
-        x = x.permute(0, 3, 1, 2).to(memory_format=torch.contiguous_format)
-        return x.float()
-
-    def get_last_layer(self):
-        return self.decoder.conv_out.weight
-
-    def log_images(self, batch, **kwargs):
-        log = dict()
-        x = self.get_input(batch, self.image_key)
-        x = x.to(self.device)
-        xrec, _ = self(x)
-        if x.shape[1] > 3:
-            # colorize with random projection
-            assert xrec.shape[1] > 3
-            x = self.to_rgb(x)
-            xrec = self.to_rgb(xrec)
-        log["inputs"] = x
-        log["reconstructions"] = xrec
-        return log
-
-    def to_rgb(self, x):
-        assert self.image_key == "segmentation"
-        if not hasattr(self, "colorize"):
-            self.register_buffer("colorize", torch.randn(3, x.shape[1], 1, 1).to(x))
-        x = F.conv2d(x, weight=self.colorize)
-        x = 2.*(x-x.min())/(x.max()-x.min()) - 1.
-        return x
-
-
-class VQSegmentationModel(VQModel):
-    def __init__(self, n_labels, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.register_buffer("colorize", torch.randn(3, n_labels, 1, 1))
-
-    def configure_optimizers(self):
-        lr = self.learning_rate
-        opt_ae = torch.optim.Adam(list(self.encoder.parameters())+
-                                  list(self.decoder.parameters())+
-                                  list(self.quantize.parameters())+
-                                  list(self.quant_conv.parameters())+
-                                  list(self.post_quant_conv.parameters()),
-                                  lr=lr, betas=(0.5, 0.9))
-        return opt_ae
-
-    def training_step(self, batch, batch_idx):
-        x = self.get_input(batch, self.image_key)
-        xrec, qloss = self(x)
-        aeloss, log_dict_ae = self.loss(qloss, x, xrec, split="train")
-        self.log_dict(log_dict_ae, prog_bar=False, logger=True, on_step=True, on_epoch=True)
-        return aeloss
-
-    def validation_step(self, batch, batch_idx):
-        x = self.get_input(batch, self.image_key)
-        xrec, qloss = self(x)
-        aeloss, log_dict_ae = self.loss(qloss, x, xrec, split="val")
-        self.log_dict(log_dict_ae, prog_bar=False, logger=True, on_step=True, on_epoch=True)
-        total_loss = log_dict_ae["val/total_loss"]
-        self.log("val/total_loss", total_loss,
-                 prog_bar=True, logger=True, on_step=True, on_epoch=True, sync_dist=True)
-        return aeloss
-
-    @torch.no_grad()
-    def log_images(self, batch, **kwargs):
-        log = dict()
-        x = self.get_input(batch, self.image_key)
-        x = x.to(self.device)
-        xrec, _ = self(x)
-        if x.shape[1] > 3:
-            # colorize with random projection
-            assert xrec.shape[1] > 3
-            # convert logits to indices
-            xrec = torch.argmax(xrec, dim=1, keepdim=True)
-            xrec = F.one_hot(xrec, num_classes=x.shape[1])
-            xrec = xrec.squeeze(1).permute(0, 3, 1, 2).float()
-            x = self.to_rgb(x)
-            xrec = self.to_rgb(xrec)
-        log["inputs"] = x
-        log["reconstructions"] = xrec
-        return log
