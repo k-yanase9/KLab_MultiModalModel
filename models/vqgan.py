@@ -2,8 +2,6 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch import einsum
-from einops import rearrange
 
 from .encdec import Encoder, Decoder
 
@@ -105,13 +103,13 @@ class VectorQuantizer(nn.Module):
         assert rescale_logits==False, "Only for interface compatible with Gumbel"
         assert return_logits==False, "Only for interface compatible with Gumbel"
         # reshape z -> (batch, height, width, channel) and flatten
-        z = rearrange(z, 'b c h w -> b h w c').contiguous()
+        z = z.permute(0, 2, 3, 1).contiguous() # b c h w -> b h w c
         z_flattened = z.view(-1, self.e_dim)
         # distances from z to embeddings e_j (z - e)^2 = z^2 + e^2 - 2 e * z
 
         d = torch.sum(z_flattened ** 2, dim=1, keepdim=True) + \
             torch.sum(self.embedding.weight**2, dim=1) - 2 * \
-            torch.einsum('bd,dn->bn', z_flattened, rearrange(self.embedding.weight, 'n d -> d n'))
+            torch.einsum('bd,dn->bn', z_flattened, self.embedding.weight.permute(1, 0)) # embedding.weight: n d -> d n
 
         min_encoding_indices = torch.argmin(d, dim=1)
         z_q = self.embedding(min_encoding_indices).view(z.shape)
@@ -130,7 +128,7 @@ class VectorQuantizer(nn.Module):
         z_q = z + (z_q - z).detach()
 
         # reshape back to match original input shape
-        z_q = rearrange(z_q, 'b h w c -> b c h w').contiguous()
+        z_q = z_q.permute(0, 3, 1, 2).contiguous() # b h w c -> b c h w
 
         if self.sane_index_shape:
             min_encoding_indices = min_encoding_indices.reshape(

@@ -3,6 +3,5 @@ datasets
 transformers[torch]
 sentencepiece
 pytorch-lightning
-einops
 pycocotools
 notebook
