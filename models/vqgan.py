@@ -41,7 +41,7 @@ class VQModel(nn.Module):
                     print("Deleting key {} from state_dict.".format(k))
                     del sd[k]
         self.load_state_dict(sd, strict=False)
-        print(f"Restored from {path}")
+        # print(f"Restored from {path}")
 
     def save_ckpt(self, path=None):
         if path is None:
@@ -146,6 +146,5 @@ class VectorQuantizer(nn.Module):
     def get_codebook_entry(self, indices):
         # get quantized latent vectors
         z_q = self.embedding(indices)
-        print("z_q shape:", z_q.shape)
 
         return z_q
