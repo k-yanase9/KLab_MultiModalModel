@@ -25,10 +25,14 @@ def parse_arguments():
                             't5-small', 't5-base', 't5-large', 't5-3b', 't5-11b',
                             'google/flan-t5-small', 'google/flan-t5-base', 'google/flan-t5-large', 'google/flan-t5-xl', 'google/flan-t5-xxl',
                         ], help='メインTransformerのモデル')
-    parser.add_argument('--max_source_length', type=int, default=256, help='入力文の最大長')
-    parser.add_argument('--max_target_length', type=int, default=128, help='出力文の最大長')
+    parser.add_argument('--image_vocab_size', type=int, default=16384, help='画像のボキャブラリサイズ')
+    parser.add_argument('--loc_vocab_size', type=int, default=1000, help='位置のボキャブラリサイズ')
+    parser.add_argument('--vae_ckpt_path', type=str, default='checkpoints/vqgan.pt', help='VAEのパラメータファイルのパス')
+    parser.add_argument('--max_source_length', type=int, default=512, help='入力文の最大長')
+    parser.add_argument('--max_target_length', type=int, default=512, help='出力文の最大長')
     # Training setting
     parser.add_argument('--pretrain', action='store_true', help='事前学習かどうか')
+    parser.add_argument('--image_mask_ratio', type=float, default=0.75, help='画像のマスク率')
     parser.add_argument('--seed', type=int, default=999, help='乱数シード')
     parser.add_argument('--lr', type=float, default=0.001, help='学習率')
     parser.add_argument('--optimizer', type=str, default='AdamW', choices=['Adam', 'AdamW'], help='Optimizer')
