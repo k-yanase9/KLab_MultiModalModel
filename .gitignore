@@ -6,12 +6,15 @@ __pycache__/
 try.ipynb
 work.ipynb
 
+# weights
+checkpoints/
+
 # result files
 results*/
 
 # tuning shells
 train_only_transformer_*.sh
 train_with_swin_*.sh
-Quadro*.sh
 test_only_transformer_*.sh
 test_with_swin_*.sh
+job.sh

@@ -34,7 +34,8 @@ def train():
     scheduler = get_scheduler(args, optimizer)
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
-    tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True)
+    src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True)
+    tgt_tokenizer = AutoTokenizer.from_pretrained(args.transformer_model_name, model_max_length=256, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(1000)] + [f"<img_{i}>" for i in range(args.image_vocab_size)])
 
     # データの設定
     train_loader, val_loader = get_data(args)
@@ -52,19 +53,23 @@ def train():
         train_loss = torch.tensor(0.0).to(device_id)
         train_count = torch.tensor(0).to(device_id)
         pbar = tqdm(total=int(np.ceil(len(train_loader)/args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
-        for i, (images, src_texts, tgt_texts) in enumerate(train_loader):
+        for i, (src_images, tgt_images, src_texts, tgt_texts) in enumerate(train_loader):
             if i % args.accumulation_steps == 0:
                 optimizer.zero_grad()
-            images = images.to(device_id)
-            src_texts = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
-            tgt_texts = tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
-            loss = model(images, src_texts, tgt_texts)
+            src_images = src_images.to(device_id)
+            if args.pretrain:
+                tgt_images = tgt_images.to(device_id)
+                tgt_texts = model.module.image_to_z(tgt_images)
+
+            src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
+            tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
+            loss = model(src_images, src_texts, tgt_texts)
 
             loss /= args.accumulation_steps
             loss.backward()
 
-            train_loss += loss.item() * images.shape[0]
-            train_count += images.shape[0]
+            train_loss += loss.item() * src_images.shape[0]
+            train_count += src_images.shape[0]
 
             # args.accumulation_steps回の勾配を蓄積してから、optimizer.step()を呼び出す
             if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
@@ -90,15 +95,18 @@ def train():
         val_loss = torch.tensor(0.0).to(device_id)
         val_count = torch.tensor(0).to(device_id)
         val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
-        for images, src_texts, tgt_texts in val_loop:
+        for src_images, tgt_images, src_texts, tgt_texts in val_loop:
             with torch.no_grad():
-                images = images.to(device_id)
-                src_texts = tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
-                tgt_texts = tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
-                loss = model(images, src_texts, tgt_texts)
+                src_images = src_images.to(device_id)
+                if args.pretrain:
+                    tgt_images = tgt_images.to(device_id)
+                    tgt_texts = model.module.image_to_z(tgt_images)
+                src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
+                tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
+                loss = model(src_images, src_texts, tgt_texts)
                 
-                val_loss += loss.item() * images.shape[0]
-                val_count += images.shape[0]
+                val_loss += loss.item() * src_images.shape[0]
+                val_count += src_images.shape[0]
 
         # 他のノードから集める
         dist.all_reduce(val_loss, op=dist.ReduceOp.SUM)

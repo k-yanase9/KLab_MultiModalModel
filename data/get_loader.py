@@ -21,7 +21,7 @@ def get_data(args):
     
 def get_dataloader(args, dataset):
     sampler = torch.utils.data.distributed.DistributedSampler(dataset, drop_last=True)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, num_workers=2, pin_memory=True, sampler=sampler)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, num_workers=3, pin_memory=True, sampler=sampler)
     return dataloader
 
 def get_dataset(args, phase="train"):
