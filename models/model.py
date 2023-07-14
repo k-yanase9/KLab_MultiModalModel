@@ -2,7 +2,7 @@ import os
 import torch
 import numpy as np
 from torch import nn
-from transformers import T5EncoderModel, Swinv2Model, T5Config, T5Model, logging, ResNetModel, T5ForConditionalGeneration
+from transformers import T5EncoderModel, Swinv2Model, T5Config, logging, ResNetModel, T5ForConditionalGeneration
 from models.vqgan import VQModel
 logging.set_verbosity_error()
 
@@ -26,6 +26,7 @@ class MyModel(nn.Module):
         transformer_config = T5Config(
             vocab_size=32128+args.loc_vocab_size+args.image_vocab_size, 
             decoder_start_token_id=0,
+            max_length=args.max_target_length,
         )
         self.transformer = T5ForConditionalGeneration(transformer_config)
         if args.ffn:

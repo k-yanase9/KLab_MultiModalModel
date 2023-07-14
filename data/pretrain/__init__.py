@@ -1,1 +1,2 @@
 from .redcaps import RedCapsPretrainDatasetLoader
+from .imagenet import ImageNetPretrainDatasetLoader
