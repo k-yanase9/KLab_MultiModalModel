@@ -14,6 +14,7 @@ class MyModel(nn.Module):
         self.result_dir = args.result_dir
         
         self.vae = VQModel(ckpt_path=args.vae_ckpt_path).requires_grad_(False)
+        self.vae.eval()
         self.language_model = T5EncoderModel.from_pretrained(args.language_model_name).requires_grad_(False) # device_map="auto"
         self.language_model.eval()
 
@@ -68,10 +69,14 @@ class MyModel(nn.Module):
     
     def image_to_z(self, images):
         z = self.vae.get_codebook_indices(images) # VAEで中間表現を得る
-        z = z.cpu().numpy().astype(str) # 文字列に変換
-        z = np.char.add(np.char.add('<img_', z), '>') # <extra_id_0>のようにする
-        z = [''.join(b) for b in z]
-        return z
+        z_text = z.cpu().numpy().astype(str) # 文字列に変換
+        z_text = np.char.add(np.char.add('<img_', z_text), '>') # <extra_id_0>のようにする
+        z_text = [''.join(b) for b in z_text]
+        return z_text, z
+    
+    def z_to_image(self, z):
+        x = self.vae.decode_code(z)
+        return x
 
     def save(self, result_name="best.pth"):
         result_path = os.path.join(self.args.result_dir, result_name)
