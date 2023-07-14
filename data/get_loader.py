@@ -1,4 +1,5 @@
 import torch
+from torch.utils.data import random_split, DataLoader, distributed
 from .caption import *
 from .image_classify import *
 from .vqa import *
@@ -11,7 +12,7 @@ def get_data(args):
         val_size = int(len(dataset) * val_rate)
         train_size = len(dataset) - val_size
 
-        train_dataset, val_dataset = torch.utils.data.random_split(
+        train_dataset, val_dataset = random_split(
             dataset, [train_size, val_size], generator=torch.Generator().manual_seed(args.seed)
         )
         
@@ -22,8 +23,8 @@ def get_data(args):
     return get_dataloader(args, train_dataset), get_dataloader(args, val_dataset)
     
 def get_dataloader(args, dataset):
-    sampler = torch.utils.data.distributed.DistributedSampler(dataset, drop_last=True)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, num_workers=16, pin_memory=True, sampler=sampler)
+    sampler = distributed.DistributedSampler(dataset, drop_last=True)
+    dataloader = DataLoader(dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True, sampler=sampler)
     return dataloader
 
 def get_dataset(args, phase="train"):
