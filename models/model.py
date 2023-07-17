@@ -26,6 +26,8 @@ class MyModel(nn.Module):
 
         transformer_config = T5Config(
             vocab_size=32128+args.loc_vocab_size+args.image_vocab_size, 
+            num_layers=args.transformer_num_layers,
+            num_decoder_layers=args.transformer_num_decoder_layers,
             decoder_start_token_id=0,
             max_length=args.max_target_length,
         )
