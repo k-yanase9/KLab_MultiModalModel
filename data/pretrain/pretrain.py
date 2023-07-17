@@ -24,7 +24,7 @@ class PretrainDatasetLoader(DatasetLoader):
         # tgt_text = ' '.join(tgt_text)
         tgt_text = ''
 
-        image = Image.open(image).convert('RGB').resize((256,256))
+        image = Image.open(image).convert('RGB')#.resize((256,256))
         src_image = self.src_transforms(image)
         tgt_image = self.tgt_transforms(image)
         tgt_image = 2.*tgt_image-1.
