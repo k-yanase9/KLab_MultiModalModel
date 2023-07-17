@@ -36,14 +36,16 @@ def parse_arguments():
     parser.add_argument('--seed', type=int, default=999, help='乱数シード')
     parser.add_argument('--lr', type=float, default=0.001, help='学習率')
     parser.add_argument('--optimizer', type=str, default='AdamW', choices=['Adam', 'AdamW'], help='Optimizer')
-    parser.add_argument('--lr_scheduler', type=str, default='', choices=['', 'LambdaLR', 'CosineAnnealingLR', 'ExponentialLR', 'StepLR', 'MultiStepLR'], help='学習率のスケジューラ')
+    parser.add_argument('--lr_scheduler', type=str, default='', choices=['', 'LambdaLR', 'CosineAnnealingLR', 'ExponentialLR', 'StepLR', 'MultiStepLR', 'LinearWarmup', 'CosineWarmup'], help='学習率のスケジューラ')
     parser.add_argument('--batch_size', type=int, default=64, help='1GPUあたりのバッチサイズ')
     parser.add_argument('--accumulation_steps', type=int, default=1, help='勾配の蓄積回数')
     parser.add_argument('--num_epochs', type=int, default=None, help='学習エポック数')
     parser.add_argument('--num_steps', type=int, default=None, help='学習ステップ数')
+    parser.add_argument('--warmup_steps', type=int, default=None, help='学習率を上げるステップ数')
     parser.add_argument('--save_interval', type=int, default=None, help='モデルの保存間隔')
+    parser.add_argument('--datasets', nargs='+', default=['imagenet', 'places365'], choices=['redcaps', 'imagenet', 'places365', 'sun397', 'mscoco', 'vcr', 'vqa2', 'imsitu', 'imagenet'], help='データセットの名前')
     # Dir setting
-    parser.add_argument('--data_dir', type=str, default='/user/data/mscoco2017/', help='データのディレクトリ')
+    parser.add_argument('--root_dir', type=str, default='/user/data/', help='データのディレクトリ')
     parser.add_argument('--result_dir', type=str, default='results/', help='結果を保存するディレクトリ')
     args = parser.parse_args()
     return args

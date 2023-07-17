@@ -1,2 +1,4 @@
 from .redcaps import RedCapsPretrainDatasetLoader
 from .imagenet import ImageNetPretrainDatasetLoader
+from .places365 import Places365PretrainDatasetLoader
+from .sun397 import SUN397PretrainDatasetLoader
