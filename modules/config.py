@@ -43,8 +43,9 @@ def parse_arguments():
     parser.add_argument('--num_steps', type=int, default=None, help='学習ステップ数')
     parser.add_argument('--warmup_steps', type=int, default=None, help='学習率を上げるステップ数')
     parser.add_argument('--save_interval', type=int, default=None, help='モデルの保存間隔')
+    parser.add_argument('--datasets', nargs='+', default=['imagenet', 'places365'], choices=['redcaps', 'imagenet', 'places365', 'sun397', 'mscoco', 'vcr', 'vqa2', 'imsitu', 'imagenet'], help='データセットの名前')
     # Dir setting
-    parser.add_argument('--data_dir', type=str, default='/user/data/mscoco2017/', help='データのディレクトリ')
+    parser.add_argument('--root_dir', type=str, default='/user/data/', help='データのディレクトリ')
     parser.add_argument('--result_dir', type=str, default='results/', help='結果を保存するディレクトリ')
     args = parser.parse_args()
     return args
