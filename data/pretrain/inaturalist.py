@@ -1,7 +1,7 @@
 from torchvision import transforms
-from torchvision.datasets import Places365
+from torchvision.datasets import INaturalist
 
-class Places365PretrainDatasetLoader(Places365):
+class INaturalistPretrainDatasetLoader(INaturalist):
     def __init__(self, resize=256, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.src_transforms = transforms.Compose([
@@ -16,8 +16,8 @@ class Places365PretrainDatasetLoader(Places365):
         ])
 
     def __getitem__(self, index):
-        image, target = super().__getitem__(index)
-        src_text = 'a photo of ' + target.split('/')[2].replace('_', ' ')
+        image, label = super().__getitem__(index)
+        src_text = ' '.join(self.all_categories[label].split('_')[1:])
         tgt_text = ''
 
         src_image = self.src_transforms(image)
@@ -25,6 +25,6 @@ class Places365PretrainDatasetLoader(Places365):
         tgt_image = 2.*tgt_image-1.
 
         return src_image, tgt_image, src_text, tgt_text
-
+    
     def __len__(self):
         return super().__len__()

@@ -17,7 +17,7 @@ class SUN397PretrainDatasetLoader(SUN397):
 
     def __getitem__(self, index):
         image, label = super().__getitem__(index)
-        src_text = self.classes[label].split('/')[0].replace('_', ' ')
+        src_text = 'a photo of ' + self.classes[label].split('/')[0].replace('_', ' ')
         tgt_text = ''
 
         src_image = self.src_transforms(image)
