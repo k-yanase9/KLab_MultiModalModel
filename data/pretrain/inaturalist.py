@@ -1,7 +1,7 @@
 from torchvision import transforms
-from torchvision.datasets import SUN397
+from torchvision.datasets import INaturalist
 
-class SUN397PretrainDatasetLoader(SUN397):
+class INaturalistPretrainDatasetLoader(INaturalist):
     def __init__(self, resize=256, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.src_transforms = transforms.Compose([
@@ -17,7 +17,7 @@ class SUN397PretrainDatasetLoader(SUN397):
 
     def __getitem__(self, index):
         image, label = super().__getitem__(index)
-        src_text = 'a photo of ' + self.classes[label].split('/')[0].replace('_', ' ')
+        src_text = ' '.join(self.all_categories[label].split('_')[1:])
         tgt_text = ''
 
         src_image = self.src_transforms(image)
