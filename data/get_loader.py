@@ -48,11 +48,16 @@ def get_dataset(args, dataset_name, phase="train"):
             dataset = ImageNetPretrainDatasetLoader(data_dir)
         elif 'places365' == dataset_name:
             if phase == "train":
-                dataset = Places365PretrainDatasetLoader(root=data_dir, split="train-standard", small=True, download=True)
+                dataset = Places365PretrainDatasetLoader(root=data_dir, split="train-standard", small=True)
             elif phase == "val":
-                dataset = Places365PretrainDatasetLoader(root=data_dir, split="val", small=True, download=True)
+                dataset = Places365PretrainDatasetLoader(root=data_dir, split="val", small=True)
         elif 'sun397' == dataset_name:
             dataset = SUN397PretrainDatasetLoader(root=data_dir)
+        elif 'inaturalist' == dataset_name:
+            if phase == "train":
+                dataset = INaturalistPretrainDatasetLoader(root=data_dir, version=f'2021_train')
+            elif phase == "val":
+                dataset = INaturalistPretrainDatasetLoader(root=data_dir, version=f'2021_valid')
         else:
             raise NotImplementedError
     else:
