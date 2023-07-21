@@ -16,7 +16,8 @@ class Places365PretrainDatasetLoader(Places365):
         ])
 
     def __getitem__(self, index):
-        image, src_text = super().__getitem__(index)
+        image, target = super().__getitem__(index)
+        src_text = 'a photo of ' + target.split('/')[2].replace('_', ' ')
         tgt_text = ''
 
         src_image = self.src_transforms(image)
