@@ -7,7 +7,7 @@ def get_scheduler(args, optimizer):
     elif args.lr_scheduler == 'ExponentialLR':
         return ExponentialLR(optimizer, gamma=0.9)
     elif args.lr_scheduler == 'StepLR':
-        return StepLR(optimizer, step_size=10, gamma=0.5)
+        return StepLR(optimizer, step_size=args.num_epochs//5, gamma=0.5)
     elif args.lr_scheduler == 'MultiStepLR':
         return MultiStepLR(optimizer, milestones=[args.num_epochs//2, args.num_epochs*3//4, args.num_epochs*7//8], gamma=0.5)
     elif args.lr_scheduler == 'LambdaLR':
