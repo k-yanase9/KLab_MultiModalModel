@@ -67,7 +67,9 @@ class MyModel(nn.Module):
         if return_loss:
             return self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).loss
         else:
-            return self.transformer.generate(inputs_embeds=concated_embeddings, num_beams=num_beams, num_return_sequences=num_return_sequences, do_sample=do_sample, max_length=self.args.max_target_length)
+            pred = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).logits
+            return pred.argmax(-1)
+            # return self.transformer.generate(inputs_embeds=concated_embeddings, num_beams=num_beams, num_return_sequences=num_return_sequences, do_sample=do_sample, max_length=self.args.max_target_length)
     
     def random_patch_masking(self, batch_size):
         len_keep = int(self.num_patches * (1 - self.args.image_mask_ratio))
