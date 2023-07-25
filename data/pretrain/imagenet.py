@@ -2,9 +2,9 @@ import os
 from .pretrain import PretrainDatasetLoader
 
 class ImageNetPretrainDatasetLoader(PretrainDatasetLoader):
-    def __init__(self, data_dir='/data/datatset/imagenet_2012', resize=256):
+    def __init__(self, data_dir='/data/datatset/imagenet_2012', phase='train', resize=256):
         super().__init__(data_dir, resize)
-        img_folder_path = os.path.join(data_dir, "train")
+        img_folder_path = os.path.join(data_dir, phase)
 
         # Load class names
         map_clsloc_path = os.path.join(data_dir, 'map_clsloc.txt')
