@@ -26,12 +26,24 @@ class MyModel(nn.Module):
 
         transformer_config = T5Config(
             vocab_size=32128+args.loc_vocab_size+args.image_vocab_size, 
+            d_model=args.transformer_d_model,
+            d_ff=args.transformer_d_ff,
+            d_kv=args.transformer_d_kv,
+            num_heads=args.transformer_num_heads,
             num_layers=args.transformer_num_layers,
             num_decoder_layers=args.transformer_num_decoder_layers,
             decoder_start_token_id=0,
             max_length=args.max_target_length,
         )
         self.transformer = T5ForConditionalGeneration(transformer_config)
+
+        # self.transformer = T5ForConditionalGeneration.from_pretrained("google/flan-t5-small").requires_grad_(True)
+        # vocab_size = 32128+args.loc_vocab_size+args.image_vocab_size
+        # self.transformer.shared = nn.Embedding(vocab_size, self.transformer.model_dim)
+        # self.transformer.encoder.embed_tokens = self.transformer.shared
+        # self.transformer.decoder.embed_tokens = self.transformer.shared
+        # self.transformer.lm_head = nn.Linear(self.transformer.model_dim, vocab_size, bias=False)
+
         if args.ffn:
             self.language_ffn = nn.Linear(self.language_model.config.d_model, self.transformer.config.d_model)
             self.image_ffn = nn.Linear(self.image_model.num_features, self.transformer.config.d_model)
@@ -55,7 +67,7 @@ class MyModel(nn.Module):
         if return_loss:
             return self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).loss
         else:
-            return self.transformer.generate(inputs_embeds=concated_embeddings, num_beams=num_beams, num_return_sequences=num_return_sequences, do_sample=do_sample)
+            return self.transformer.generate(inputs_embeds=concated_embeddings, num_beams=num_beams, num_return_sequences=num_return_sequences, do_sample=do_sample, max_length=self.args.max_target_length)
     
     def random_patch_masking(self, batch_size):
         len_keep = int(self.num_patches * (1 - self.args.image_mask_ratio))

@@ -10,8 +10,7 @@ def parse_arguments():
                             "microsoft/resnet-152",
                             "microsoft/swinv2-base-patch4-window8-256",
                             "microsoft/swinv2-base-patch4-window16-256",
-                            "microsoft/swinv2-base-patch4-window12-192-22k",
-                            "microsoft/swinv2-large-patch4-window12-192-22k",
+                            "microsoft/swinv2-large-patch4-window12to16-192to256-22kto1k-ft",
                         ], help='画像の特徴抽出モデル')
     parser.add_argument('--image_model_train', action='store_true', help='画像の特徴抽出モデルを学習するかどうか')
     parser.add_argument('--language_model_name', type=str, default='t5-large', 
@@ -20,6 +19,10 @@ def parse_arguments():
                             'google/flan-t5-small', 'google/flan-t5-base', 'google/flan-t5-large', 'google/flan-t5-xl', 'google/flan-t5-xxl',
                         ], help='言語の特徴抽出モデル')
     parser.add_argument('--ffn', action='store_true', help='特徴抽出モデルの出力をFFNで変換するかどうか')
+    parser.add_argument('--transformer_d_model', type=int, default=512, help='メインTransformerのd_model')
+    parser.add_argument('--transformer_d_ff', type=int, default=2048, help='メインTransformerのd_ff')
+    parser.add_argument('--transformer_d_kv', type=int, default=64, help='メインTransformerのd_kv')
+    parser.add_argument('--transformer_num_heads', type=int, default=8, help='メインTransformerのヘッド数')
     parser.add_argument('--transformer_num_layers', type=int, default=2, help='メインTransformerの層数')
     parser.add_argument('--transformer_num_decoder_layers', type=int, default=6, help='メインTransformerのデコーダーの層数')
     parser.add_argument('--image_vocab_size', type=int, default=16384, help='画像のボキャブラリサイズ')
