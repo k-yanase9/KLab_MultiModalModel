@@ -53,18 +53,18 @@ def train():
 
     src_images = src_images.to(device)
 
-    if args.pretrain:
-        tgt_images = tgt_images.to(device)
-        tgt_texts, _ = model.image_to_z(tgt_images)
+    # if args.pretrain:
+    #     tgt_images = tgt_images.to(device)
+    #     tgt_texts, _ = model.image_to_z(tgt_images)
 
-    matches = [re.findall(pattern, tgt_text)[:256] for tgt_text in tgt_texts]
-    targets = [[int(m) for m in match] for match in matches]
-    targets = torch.tensor(targets).to(device)
-    targets = model.vae.decode_code(targets)
-    custom_to_pil(targets[0]).save(os.path.join(args.result_dir, "target.png"))
+    # matches = [re.findall(pattern, tgt_text)[:256] for tgt_text in tgt_texts]
+    # targets = [[int(m) for m in match] for match in matches]
+    # targets = torch.tensor(targets).to(device)
+    # targets = model.vae.decode_code(targets)
+    # custom_to_pil(targets[0]).save(os.path.join(args.result_dir, "target.png"))
 
-    print("src_images.shape", src_images.shape)
-    print("tgt_images.shape", tgt_images.shape)
+    # print("src_images.shape", src_images.shape)
+    # print("tgt_images.shape", tgt_images.shape)
     print("src_texts", src_texts)
     print("tgt_texts", tgt_texts)
     src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device) # ['pt', 'tf', 'np', 'jax']
@@ -78,10 +78,7 @@ def train():
         
         optimizer.zero_grad()
 
-        if epoch / args.num_epochs <= 0.5:
-            image_mask_ratio = 0.5
-        else:
-            image_mask_ratio = 0.0
+        image_mask_ratio = 0.0
 
         loss = model(src_images, src_texts, tgt_texts, image_mask_ratio=image_mask_ratio)
         loss.backward()
@@ -105,17 +102,18 @@ def train():
                 outputs = model(src_images, src_texts, tgt_texts, return_loss=False)
                 preds = tgt_tokenizer.batch_decode(outputs)
 
-                matches = []
-                for pred in preds:
-                    match = re.findall(pattern, pred)
-                    if len(match) >= 256:
-                        matches.append([int(m) for m in match[:256]])
+                print(f"Generated text: {preds}")
+                # matches = []
+                # for pred in preds:
+                #     match = re.findall(pattern, pred)
+                #     if len(match) >= 256:
+                #         matches.append([int(m) for m in match[:256]])
 
-                if len(matches) > 0:
-                    preds = torch.tensor(matches).to(device)
-                    preds = model.vae.decode_code(preds)
-                    custom_to_pil(preds[0]).save(os.path.join(args.result_dir, f"epoch_{epoch}.png"))
-                    print(f"Generated image {epoch} saved")
+                # if len(matches) > 0:
+                #     preds = torch.tensor(matches).to(device)
+                #     preds = model.vae.decode_code(preds)
+                #     custom_to_pil(preds[0]).save(os.path.join(args.result_dir, f"epoch_{epoch}.png"))
+                #     print(f"Generated image {epoch} saved")
     
         if args.save_interval is not None:
             if (epoch) % args.save_interval == 0:
