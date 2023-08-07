@@ -39,13 +39,6 @@ class MyModel(nn.Module):
         )
         self.transformer = T5ForConditionalGeneration(transformer_config)
 
-        # self.transformer = T5ForConditionalGeneration.from_pretrained("google/flan-t5-small").requires_grad_(True)
-        # vocab_size = 32128+args.loc_vocab_size+args.image_vocab_size
-        # self.transformer.shared = nn.Embedding(vocab_size, self.transformer.model_dim)
-        # self.transformer.encoder.embed_tokens = self.transformer.shared
-        # self.transformer.decoder.embed_tokens = self.transformer.shared
-        # self.transformer.lm_head = nn.Linear(self.transformer.model_dim, vocab_size, bias=False)
-
         if args.ffn:
             self.language_ffn = nn.Linear(self.language_model.config.d_model, self.transformer.config.d_model)
             self.image_ffn = nn.Linear(self.image_model.num_features, self.transformer.config.d_model)

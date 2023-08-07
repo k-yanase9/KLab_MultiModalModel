@@ -49,10 +49,7 @@ def train():
     loss_counter = LossCounter()
     for epoch in range(1, args.num_epochs+1):
         # 学習ループ
-        if epoch / args.num_epochs <= 0.5:
-            image_mask_ratio = 0.5
-        else:
-            image_mask_ratio = 0.0
+        image_mask_ratio = 0.0
         if args.image_model_train:
             model.module.image_model.train()
         model.module.transformer.train()
@@ -63,9 +60,9 @@ def train():
             if i % args.accumulation_steps == 0:
                 optimizer.zero_grad()
             src_images = src_images.to(device_id)
-            if args.pretrain:
-                tgt_images = tgt_images.to(device_id)
-                tgt_texts, _ = model.module.image_to_z(tgt_images)
+            # if args.pretrain:
+            #     tgt_images = tgt_images.to(device_id)
+            #     tgt_texts, _ = model.module.image_to_z(tgt_images)
 
             src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
             tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
@@ -106,9 +103,9 @@ def train():
         for src_images, tgt_images, src_texts, tgt_texts in val_loop:
             with torch.no_grad():
                 src_images = src_images.to(device_id)
-                if args.pretrain:
-                    tgt_images = tgt_images.to(device_id)
-                    tgt_texts, _ = model.module.image_to_z(tgt_images)
+                # if args.pretrain:
+                #     tgt_images = tgt_images.to(device_id)
+                #     tgt_texts, _ = model.module.image_to_z(tgt_images)
                 src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
                 tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
                 loss = model(src_images, src_texts, tgt_texts)
