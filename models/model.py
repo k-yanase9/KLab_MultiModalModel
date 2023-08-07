@@ -12,6 +12,7 @@ class MyModel(nn.Module):
         super().__init__()
         self.args = args
         self.result_dir = args.result_dir
+        self.loss_fct = nn.CrossEntropyLoss(reduction="none")
         
         self.vae = VQModel(ckpt_path=args.vae_ckpt_path).requires_grad_(False)
         self.vae.eval()
@@ -22,7 +23,8 @@ class MyModel(nn.Module):
             self.image_model = ResNetModel.from_pretrained(args.image_model_name).requires_grad_(args.image_model_train)
         elif "swinv2" in args.image_model_name:
             self.image_model = Swinv2Model.from_pretrained(args.image_model_name, use_mask_token=args.pretrain).requires_grad_(args.image_model_train)
-            self.num_patches = (self.image_model.config.image_size // self.image_model.config.patch_size) ** 2
+            # self.num_patches = (self.image_model.config.image_size // self.image_model.config.patch_size) ** 2
+            self.num_patches = 16 ** 2
 
         transformer_config = T5Config(
             vocab_size=32128+args.loc_vocab_size+args.image_vocab_size, 
@@ -48,15 +50,16 @@ class MyModel(nn.Module):
             self.language_ffn = nn.Linear(self.language_model.config.d_model, self.transformer.config.d_model)
             self.image_ffn = nn.Linear(self.image_model.num_features, self.transformer.config.d_model)
 
-    def forward(self, images, src_texts, tgt_texts=None, return_loss=True, num_beams=1, num_return_sequences=1, do_sample=False):
+    def forward(self, images, src_texts, tgt_texts=None, return_loss=True, num_beams=1, num_return_sequences=1, do_sample=False, image_mask_ratio=0.0):
         with torch.no_grad():
             language_embeddings = self.language_model(src_texts).last_hidden_state
 
-        if self.args.pretrain: # 事前学習だったら画像パッチにマスクをかける
-            bool_masked_pos = self.random_patch_masking(len(images))
+        if image_mask_ratio > 0: # 画像パッチにマスクをかける
+            bool_masked_pos = self.random_patch_masking(len(images), image_mask_ratio)
         else:
             bool_masked_pos = None
-        image_embeddings = self.image_model(pixel_values=images, bool_masked_pos=bool_masked_pos).last_hidden_state
+        # image_embeddings = self.image_model(pixel_values=images, bool_masked_pos=bool_masked_pos).last_hidden_state
+        image_embeddings = self.image_model(pixel_values=images).last_hidden_state
 
         if self.args.ffn:
             language_embeddings = self.language_ffn(language_embeddings)
@@ -65,14 +68,27 @@ class MyModel(nn.Module):
         concated_embeddings = torch.cat((image_embeddings,language_embeddings), dim=1)
 
         if return_loss:
-            return self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).loss
+            if image_mask_ratio > 0:
+                pred = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).logits
+                b, t, v = pred.shape
+                pred = pred.view(b*t, v)
+                tgt_texts = tgt_texts.view(-1)
+                loss = self.loss_fct(pred, tgt_texts)
+                loss = loss.view(b, t)
+                if loss.shape[1] - bool_masked_pos.shape[1] > 0:
+                    add_mask = torch.ones(loss.shape[0], loss.shape[1] - bool_masked_pos.shape[1], device=self.image_model.device)
+                    bool_masked_pos = torch.cat((bool_masked_pos, add_mask), dim=1)
+                loss = loss * bool_masked_pos
+                return loss.mean()
+            else:
+                return self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).loss
         else:
             pred = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).logits
             return pred.argmax(-1)
             # return self.transformer.generate(inputs_embeds=concated_embeddings, num_beams=num_beams, num_return_sequences=num_return_sequences, do_sample=do_sample, max_length=self.args.max_target_length)
     
-    def random_patch_masking(self, batch_size):
-        len_keep = int(self.num_patches * (1 - self.args.image_mask_ratio))
+    def random_patch_masking(self, batch_size, image_mask_ratio):
+        len_keep = int(self.num_patches * image_mask_ratio)
         noise = torch.rand(batch_size, self.num_patches, device=self.image_model.device)
 
         ids_shuffle = torch.argsort(noise, dim=1)  # ascend: small is keep, large is remove

@@ -16,6 +16,7 @@ def train():
 
     os.makedirs(args.result_dir, exist_ok=True)
 
+    np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
@@ -77,7 +78,12 @@ def train():
         
         optimizer.zero_grad()
 
-        loss = model(src_images, src_texts, tgt_texts)
+        if epoch / args.num_epochs <= 0.5:
+            image_mask_ratio = 0.5
+        else:
+            image_mask_ratio = 0.0
+
+        loss = model(src_images, src_texts, tgt_texts, image_mask_ratio=image_mask_ratio)
         loss.backward()
 
         train_loss = loss.item()
@@ -91,11 +97,10 @@ def train():
         if args.lr_scheduler != '':
             scheduler.step()
 
-        logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Steps : {steps}')
+        logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Steps : {steps}, Image mask ratio : {image_mask_ratio}')
 
-        if (epoch) % 20 == 0:
+        if (epoch) % 50 == 0:
             with torch.no_grad():
-                print("Generate image")
                 # outputs = model(src_images, src_texts, tgt_texts, return_loss=False, num_beams=4)
                 outputs = model(src_images, src_texts, tgt_texts, return_loss=False)
                 preds = tgt_tokenizer.batch_decode(outputs)
@@ -110,7 +115,7 @@ def train():
                     preds = torch.tensor(matches).to(device)
                     preds = model.vae.decode_code(preds)
                     custom_to_pil(preds[0]).save(os.path.join(args.result_dir, f"epoch_{epoch}.png"))
-                    print("Generated image saved")
+                    print(f"Generated image {epoch} saved")
     
         if args.save_interval is not None:
             if (epoch) % args.save_interval == 0:
@@ -126,10 +131,10 @@ def train():
 
     if not os.path.exists(csv_path):
         with open(csv_path, "w") as f:
-            f.write("image_model_name,language_model_name,transformer_num_layers,transformer_num_decoder_layers,image_mask_ratio,seed,lr,optimizer,lr_scheduler,batch_size,num_epochs,datasets,train_loss,result_dir\n")
+            f.write("image_model_name,language_model_name,transformer_num_layers,transformer_num_decoder_layers,seed,lr,optimizer,lr_scheduler,batch_size,num_epochs,datasets,train_loss,result_dir\n")
             
     with open(csv_path, "a") as f:
-        f.write(f"{args.image_model_name},{args.language_model_name},{args.transformer_num_layers},{args.transformer_num_decoder_layers},{args.image_mask_ratio},{args.seed},{args.lr},{args.optimizer},{args.lr_scheduler},{args.batch_size},{args.num_epochs},{args.datasets},{train_loss},{args.result_dir}\n")
+        f.write(f"{args.image_model_name},{args.language_model_name},{args.transformer_num_layers},{args.transformer_num_decoder_layers},{args.seed},{args.lr},{args.optimizer},{args.lr_scheduler},{args.batch_size},{args.num_epochs},{args.datasets},{train_loss},{args.result_dir}\n")
 
 def custom_to_pil(x):
     x = x.detach().cpu()
