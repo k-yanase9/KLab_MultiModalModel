@@ -5,6 +5,10 @@ __pycache__/
 .ipynb_checkpoints
 try.ipynb
 work.ipynb
+vqgan.ipynb
+
+# search files
+imagenet_counter.py
 
 # weights
 checkpoints/
