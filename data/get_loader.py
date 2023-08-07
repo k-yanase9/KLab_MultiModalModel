@@ -9,7 +9,7 @@ from .pretrain import *
 def get_data(args):
     train_datasets, val_datasets = [], []
     for dataset_name in args.datasets:
-        if dataset_name in ['redcaps', 'sun397']:
+        if dataset_name in ['redcaps', 'sun397', 'imagenet21k']:
             dataset = get_dataset(args, dataset_name)
             val_rate = 0.1
             val_size = int(len(dataset) * val_rate)
@@ -32,11 +32,15 @@ def get_data(args):
     elif len(args.datasets) == 0:
         raise NotImplementedError
     
-    return get_dataloader(args, train_dataset), get_dataloader(args, val_dataset)
-    
-def get_dataloader(args, dataset):
-    sampler = distributed.DistributedSampler(dataset, drop_last=True)
-    dataloader = DataLoader(dataset, batch_size=args.batch_size, num_workers=4, pin_memory=True, sampler=sampler)
+    return train_dataset, val_dataset
+
+def get_distributed_dataloader(args, dataset, num_workers=4, shuffle=True):
+    sampler = distributed.DistributedSampler(dataset, drop_last=True, shuffle=shuffle)
+    dataloader = DataLoader(dataset, batch_size=args.batch_size, num_workers=num_workers, pin_memory=True, sampler=sampler)
+    return dataloader
+
+def get_dataloader(args, dataset, num_workers=4, shuffle=False):
+    dataloader = DataLoader(dataset, batch_size=args.batch_size, num_workers=num_workers, pin_memory=True, drop_last=True, shuffle=shuffle)
     return dataloader
 
 def get_dataset(args, dataset_name, phase="train"):
@@ -45,7 +49,9 @@ def get_dataset(args, dataset_name, phase="train"):
         if 'redcaps' == dataset_name:
             dataset = RedCapsPretrainDatasetLoader(data_dir)
         elif 'imagenet' == dataset_name:
-            dataset = ImageNetPretrainDatasetLoader(data_dir)
+            dataset = ImageNetPretrainDatasetLoader(data_dir, phase=phase)
+        elif 'imagenet_21k' == dataset_name:
+            dataset = ImageNet21kPretrainDatasetLoader(data_dir)
         elif 'places365' == dataset_name:
             if phase == "train":
                 dataset = Places365PretrainDatasetLoader(root=data_dir, split="train-standard", small=True)

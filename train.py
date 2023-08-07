@@ -38,7 +38,9 @@ def train():
     tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<img_{i}>" for i in range(args.image_vocab_size)])
 
     # データの設定
-    train_loader, val_loader = get_data(args)
+    train_dataset, val_dataset = get_data(args)
+    train_loader = get_distributed_dataloader(args, train_dataset, shuffle=True)
+    val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)
 
     if args.num_epochs is None:
         args.num_epochs = int(args.num_steps / len(train_loader)) + 1
