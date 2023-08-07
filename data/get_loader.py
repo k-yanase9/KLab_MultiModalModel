@@ -9,7 +9,7 @@ from .pretrain import *
 def get_data(args):
     train_datasets, val_datasets = [], []
     for dataset_name in args.datasets:
-        if dataset_name in ['redcaps', 'sun397']:
+        if dataset_name in ['redcaps', 'sun397', 'imagenet21k']:
             dataset = get_dataset(args, dataset_name)
             val_rate = 0.1
             val_size = int(len(dataset) * val_rate)
@@ -50,6 +50,8 @@ def get_dataset(args, dataset_name, phase="train"):
             dataset = RedCapsPretrainDatasetLoader(data_dir)
         elif 'imagenet' == dataset_name:
             dataset = ImageNetPretrainDatasetLoader(data_dir, phase=phase)
+        elif 'imagenet_21k' == dataset_name:
+            dataset = ImageNet21kPretrainDatasetLoader(data_dir)
         elif 'places365' == dataset_name:
             if phase == "train":
                 dataset = Places365PretrainDatasetLoader(root=data_dir, split="train-standard", small=True)
