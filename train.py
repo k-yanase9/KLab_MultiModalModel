@@ -49,6 +49,10 @@ def train():
     loss_counter = LossCounter()
     for epoch in range(1, args.num_epochs+1):
         # 学習ループ
+        if epoch / args.num_epochs <= 0.5:
+            image_mask_ratio = 0.5
+        else:
+            image_mask_ratio = 0.0
         if args.image_model_train:
             model.module.image_model.train()
         model.module.transformer.train()
@@ -65,7 +69,7 @@ def train():
 
             src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
             tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
-            loss = model(src_images, src_texts, tgt_texts)
+            loss = model(src_images, src_texts, tgt_texts, image_mask_ratio=image_mask_ratio)
 
             loss /= args.accumulation_steps
             loss.backward()
@@ -119,7 +123,7 @@ def train():
         if rank == 0:
             val_loss /= val_count
             loss_counter.add("val", val_loss.cpu().numpy().copy())
-            logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}, Steps : {steps}')
+            logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}, Steps : {steps}, Image Mask Ratio : {image_mask_ratio}')
         
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
