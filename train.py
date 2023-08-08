@@ -1,4 +1,5 @@
 import os
+import random
 import torch
 import torch.distributed as dist
 import numpy as np
@@ -20,6 +21,7 @@ def train():
 
     if rank == 0: os.makedirs(args.result_dir, exist_ok=True)
 
+    random.seed(args.seed)
     torch.manual_seed(args.seed)
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
@@ -59,15 +61,15 @@ def train():
         for i, (src_images, tgt_images, src_texts, tgt_texts) in enumerate(train_loader):
             if i % args.accumulation_steps == 0:
                 optimizer.zero_grad()
-            src_images = src_images.to(device_id)
+            src_images = src_images.to(device_id, non_blocking=True)
             if args.pretrain:
-                src_texts = src_texts.to(device_id)
-                tgt_texts = tgt_texts.to(device_id)
+                src_texts = src_texts.to(device_id, non_blocking=True)
+                tgt_texts = tgt_texts.to(device_id, non_blocking=True)
                 # tgt_images = tgt_images.to(device_id)
                 # tgt_texts, _ = model.module.image_to_z(tgt_images)
             else:
-                src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
-                tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
+                src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
+                tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
 
             loss = model(src_images, src_texts, tgt_texts, image_mask_ratio=image_mask_ratio)
 
@@ -105,15 +107,15 @@ def train():
         val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
         for src_images, tgt_images, src_texts, tgt_texts in val_loop:
             with torch.no_grad():
-                src_images = src_images.to(device_id)
+                src_images = src_images.to(device_id, non_blocking=True)
                 if args.pretrain:
-                    src_texts = src_texts.to(device_id)
-                    tgt_texts = tgt_texts.to(device_id)
+                    src_texts = src_texts.to(device_id, non_blocking=True)
+                    tgt_texts = tgt_texts.to(device_id, non_blocking=True)
                     # tgt_images = tgt_images.to(device_id)
                     # tgt_texts, _ = model.module.image_to_z(tgt_images)
                 else:
-                    src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
-                    tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
+                    src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
+                    tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
                 
                 loss = model(src_images, src_texts, tgt_texts)
                 
