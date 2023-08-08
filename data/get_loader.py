@@ -6,7 +6,6 @@ from .image_classify import *
 from .vqa import *
 from .pretrain import *
 from .relationship import *
-from .mask import *
 from .detection import *
 
 def get_data(args, src_tokenizer=None, tgt_tokenizer=None):

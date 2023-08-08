@@ -1,6 +1,5 @@
 from torchvision import transforms
 from torchvision.datasets import INaturalist
-from ..mask.utils import make_mask_textpair
 
 class INaturalistPretrainDatasetLoader(INaturalist):
     def __init__(self, resize=256, *args, **kwargs):
