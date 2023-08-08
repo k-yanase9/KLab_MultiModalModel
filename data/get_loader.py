@@ -61,10 +61,7 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
         elif 'sun397' == dataset_name:
             dataset = SUN397PretrainDatasetLoader(args, data_dir, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'inaturalist' == dataset_name:
-            if phase == "train":
-                dataset = INaturalistPretrainDatasetLoader(root=data_dir, version=f'2021_train', src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
-            elif phase == "val":
-                dataset = INaturalistPretrainDatasetLoader(root=data_dir, version=f'2021_valid', src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+            dataset = INaturalistPretrainDatasetLoader(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         else:
             raise NotImplementedError
     else:
