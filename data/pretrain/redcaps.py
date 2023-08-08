@@ -3,8 +3,8 @@ import json
 from .pretrain import PretrainDatasetLoader
 
 class RedCapsPretrainDatasetLoader(PretrainDatasetLoader):
-    def __init__(self, data_dir='/data/dataset/redcaps', resize=256):
-        super().__init__(data_dir, resize)
+    def __init__(self, args, data_dir='/data/dataset/redcaps', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
+        super().__init__(args, resize, src_tokenizer, tgt_tokenizer, mask_probability)
         anno_dir = os.path.join(data_dir, 'removed_annotations')
         img_dir = os.path.join(data_dir, 'images')
 
