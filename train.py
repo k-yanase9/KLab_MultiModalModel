@@ -38,7 +38,7 @@ def train():
     tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<img_{i}>" for i in range(args.image_vocab_size)])
 
     # データの設定
-    train_dataset, val_dataset = get_data(args)
+    train_dataset, val_dataset = get_data(args, src_tokenizer, tgt_tokenizer)
     train_loader = get_distributed_dataloader(args, train_dataset, shuffle=True)
     val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)
 
@@ -60,12 +60,15 @@ def train():
             if i % args.accumulation_steps == 0:
                 optimizer.zero_grad()
             src_images = src_images.to(device_id)
-            # if args.pretrain:
-            #     tgt_images = tgt_images.to(device_id)
-            #     tgt_texts, _ = model.module.image_to_z(tgt_images)
+            if args.pretrain:
+                src_texts = src_texts.to(device_id)
+                tgt_texts = tgt_texts.to(device_id)
+                # tgt_images = tgt_images.to(device_id)
+                # tgt_texts, _ = model.module.image_to_z(tgt_images)
+            else:
+                src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
+                tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
 
-            src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
-            tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
             loss = model(src_images, src_texts, tgt_texts, image_mask_ratio=image_mask_ratio)
 
             loss /= args.accumulation_steps
@@ -103,11 +106,15 @@ def train():
         for src_images, tgt_images, src_texts, tgt_texts in val_loop:
             with torch.no_grad():
                 src_images = src_images.to(device_id)
-                # if args.pretrain:
-                #     tgt_images = tgt_images.to(device_id)
-                #     tgt_texts, _ = model.module.image_to_z(tgt_images)
-                src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
-                tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
+                if args.pretrain:
+                    src_texts = src_texts.to(device_id)
+                    tgt_texts = tgt_texts.to(device_id)
+                    # tgt_images = tgt_images.to(device_id)
+                    # tgt_texts, _ = model.module.image_to_z(tgt_images)
+                else:
+                    src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
+                    tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id) # ['pt', 'tf', 'np', 'jax']
+                
                 loss = model(src_images, src_texts, tgt_texts)
                 
                 val_loss += loss.item() * src_images.shape[0]
