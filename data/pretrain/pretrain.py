@@ -5,7 +5,7 @@ from torch.nn.functional import pad
 from ..dataset_loader import DatasetLoader
 
 class PretrainDatasetLoader(DatasetLoader):
-    def __init__(self, args, data_dir='/data/dataset/redcaps', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
+    def __init__(self, args, resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
         super().__init__(resize)
         self.max_source_length = args.max_source_length
         self.max_target_length = args.max_target_length 

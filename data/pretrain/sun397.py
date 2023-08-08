@@ -1,9 +1,10 @@
 from pathlib import Path
 from .pretrain import PretrainDatasetLoader
+from torchvision.datasets import SUN397
 
 class SUN397PretrainDatasetLoader(PretrainDatasetLoader):
     def __init__(self, args, data_dir='/data01/sun397', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
-        super().__init__(args, data_dir, resize, src_tokenizer, tgt_tokenizer, mask_probability)
+        super().__init__(args, resize, src_tokenizer, tgt_tokenizer, mask_probability)
         self.data_dir = Path(data_dir) / "SUN397"
 
         with open(self.data_dir / "ClassName.txt") as f:
