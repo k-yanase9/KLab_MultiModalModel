@@ -6,14 +6,13 @@ from .image_classify import *
 from .vqa import *
 from .pretrain import *
 from .relationship import *
-from .mask import *
 from .detection import *
 
-def get_data(args):
+def get_data(args, src_tokenizer=None, tgt_tokenizer=None):
     train_datasets, val_datasets = [], []
     for dataset_name in args.datasets:
         if dataset_name in ['redcaps', 'sun397', 'imagenet21k']:
-            dataset = get_dataset(args, dataset_name)
+            dataset = get_dataset(args, dataset_name, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
             val_rate = 0.1
             val_size = int(len(dataset) * val_rate)
             train_size = len(dataset) - val_size
@@ -23,8 +22,8 @@ def get_data(args):
             )
             
         else:
-            train_dataset = get_dataset(args, dataset_name, phase="train")
-            val_dataset = get_dataset(args, dataset_name, phase="val")
+            train_dataset = get_dataset(args, dataset_name, phase="train", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+            val_dataset = get_dataset(args, dataset_name, phase="val", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         train_datasets.append(train_dataset)
         val_datasets.append(val_dataset)
 
@@ -46,27 +45,23 @@ def get_dataloader(args, dataset, num_workers=4, shuffle=False):
     dataloader = DataLoader(dataset, batch_size=args.batch_size, num_workers=num_workers, pin_memory=True, drop_last=True, shuffle=shuffle)
     return dataloader
 
-def get_dataset(args, dataset_name, phase="train"):
+def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_tokenizer=None):
     data_dir = os.path.join(args.root_dir, dataset_name)
     if args.pretrain: # 事前学習だったら
+        if src_tokenizer is None or tgt_tokenizer is None:
+            raise NotImplementedError
         if 'redcaps' == dataset_name:
-            dataset = RedCapsPretrainDatasetLoader(data_dir)
+            dataset = RedCapsPretrainDatasetLoader(args, data_dir, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'imagenet' == dataset_name:
-            dataset = ImageNetPretrainDatasetLoader(data_dir, phase=phase)
+            dataset = ImageNetPretrainDatasetLoader(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'imagenet_21k' == dataset_name:
-            dataset = ImageNet21kPretrainDatasetLoader(data_dir)
+            dataset = ImageNet21kPretrainDatasetLoader(args, data_dir, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'places365' == dataset_name:
-            if phase == "train":
-                dataset = Places365PretrainDatasetLoader(root=data_dir, split="train-standard", small=True)
-            elif phase == "val":
-                dataset = Places365PretrainDatasetLoader(root=data_dir, split="val", small=True)
+            dataset = Places365PretrainDatasetLoader(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'sun397' == dataset_name:
-            dataset = SUN397PretrainDatasetLoader(root=data_dir)
+            dataset = SUN397PretrainDatasetLoader(args, data_dir, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'inaturalist' == dataset_name:
-            if phase == "train":
-                dataset = INaturalistPretrainDatasetLoader(root=data_dir, version=f'2021_train')
-            elif phase == "val":
-                dataset = INaturalistPretrainDatasetLoader(root=data_dir, version=f'2021_valid')
+            dataset = INaturalistPretrainDatasetLoader(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         else:
             raise NotImplementedError
     else:

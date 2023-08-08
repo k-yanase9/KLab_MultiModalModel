@@ -1,30 +1,15 @@
-from torchvision import transforms
+from pathlib import Path
+from .pretrain import PretrainDatasetLoader
 from torchvision.datasets import SUN397
 
-class SUN397PretrainDatasetLoader(SUN397):
-    def __init__(self, resize=256, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.src_transforms = transforms.Compose([
-            transforms.Resize((resize, resize)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                                 std=[0.229, 0.224, 0.225]),
-        ])
-        self.tgt_transforms = transforms.Compose([
-            transforms.Resize((resize, resize)),
-            transforms.ToTensor(),
-        ])
+class SUN397PretrainDatasetLoader(PretrainDatasetLoader):
+    def __init__(self, args, data_dir='/data01/sun397', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
+        super().__init__(args, resize, src_tokenizer, tgt_tokenizer, mask_probability)
+        self.data_dir = Path(data_dir) / "SUN397"
 
-    def __getitem__(self, index):
-        image, label = super().__getitem__(index)
-        src_text = 'a photo of ' + self.classes[label].split('/')[0].replace('_', ' ')
-        tgt_text = ''
+        with open(self.data_dir / "ClassName.txt") as f:
+            self.classes = [c[3:].strip() for c in f]
 
-        src_image = self.src_transforms(image)
-        tgt_image = self.tgt_transforms(image)
-        tgt_image = 2.*tgt_image-1.
-
-        return src_image, tgt_image, src_text, tgt_text
-    
-    def __len__(self):
-        return super().__len__()
+        self.class_to_idx = dict(zip(self.classes, range(len(self.classes))))
+        self.images = list(self.data_dir.rglob("sun_*.jpg"))
+        self.src_texts = ["a photo of "+"/".join(path.relative_to(self.data_dir).parts[1:-1]).replace("_"," ")+"." for path in self.images]
