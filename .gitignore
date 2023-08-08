@@ -5,6 +5,13 @@ __pycache__/
 .ipynb_checkpoints
 try.ipynb
 work.ipynb
+vqgan.ipynb
+
+# search files
+imagenet_counter.py
+
+# weights
+checkpoints/
 
 # result files
 results*/
@@ -12,4 +19,6 @@ results*/
 # tuning shells
 train_only_transformer_*.sh
 train_with_swin_*.sh
-A*.sh
+test_only_transformer_*.sh
+test_with_swin_*.sh
+job.sh

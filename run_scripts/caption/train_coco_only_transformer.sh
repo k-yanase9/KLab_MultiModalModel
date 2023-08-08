@@ -1,16 +1,16 @@
-batch_size=64
+# RTX-TITAN
+batch_size=128
 for model in "google/flan-t5-small"
 do
-torchrun --nnodes=1 --nproc_per_node=8 train.py \
+torchrun --nnodes=1 --nproc_per_node=2 train.py \
         --language_model_name google/flan-t5-base \
         --ffn \
         --transformer_model_name $model \
-        --pretrain \
         --lr 0.001 \
         --optimizer AdamW \
         --batch_size $batch_size \
         --num_epochs 50 \
-        --save_interval 1 \
-        --data_dir /local/redcaps/ \
-        --result_dir results/pretrain/redcaps/only_transformer/$model/
+        --save_interval 50 \
+        --data_dir /data/dataset/mscoco2017/ \
+        --result_dir results/caption/only_transformer_coco/$model/
 done
