@@ -1,6 +1,5 @@
 from torchvision import transforms
 from torchvision.datasets import SUN397
-from ..mask.utils import make_mask_textpair
 
 class SUN397PretrainDatasetLoader(SUN397):
     def __init__(self, resize=256, *args, **kwargs):

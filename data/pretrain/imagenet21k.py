@@ -2,7 +2,6 @@ import os
 import tarfile
 from PIL import Image
 from .pretrain import PretrainDatasetLoader
-from ..mask.utils import make_mask_textpair
 
 class ImageNet21kPretrainDatasetLoader(PretrainDatasetLoader):
     def __init__(self, args, data_dir='/data01/imagenet_21k/', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):

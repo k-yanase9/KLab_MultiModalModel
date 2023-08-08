@@ -1,6 +1,5 @@
 from torchvision import transforms
 from torchvision.datasets import Places365
-from ..mask.utils import make_mask_textpair
 
 class Places365PretrainDatasetLoader(Places365):
     def __init__(self, resize=256, *args, **kwargs):
