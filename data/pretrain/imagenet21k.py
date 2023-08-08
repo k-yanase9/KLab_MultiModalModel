@@ -5,7 +5,7 @@ from .pretrain import PretrainDatasetLoader
 
 class ImageNet21kPretrainDatasetLoader(PretrainDatasetLoader):
     def __init__(self, args, data_dir='/data01/imagenet_21k/', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
-        super().__init__(args, data_dir, resize, src_tokenizer, tgt_tokenizer, mask_probability)
+        super().__init__(args, resize, src_tokenizer, tgt_tokenizer, mask_probability)
 
         # Load class names
         ids_txt_path = os.path.join(data_dir, 'imagenet21k_wordnet_ids.txt')
