@@ -2,6 +2,7 @@ import os
 import tarfile
 from PIL import Image
 from .pretrain import PretrainDatasetLoader
+from ..mask.utils import make_mask_textpair
 
 class ImageNet21kPretrainDatasetLoader(PretrainDatasetLoader):
     def __init__(self, data_dir='/data01/imagenet_21k/', resize=256):
@@ -31,13 +32,3 @@ class ImageNet21kPretrainDatasetLoader(PretrainDatasetLoader):
                 img = Image.open(img_name).resize((resize, resize))
                 self.images.append(img)
                 self.src_texts.append(f'a photo of {imagenet_classes[class_id]}')
-   
-    def __getitem__(self, idx):
-        image, src_text = self.images[idx], self.src_texts[idx]
-        tgt_text = ''
-
-        src_image = self.src_transforms(image)
-        tgt_image = self.tgt_transforms(image)
-        tgt_image = 2.*tgt_image-1.
-
-        return src_image, tgt_image, src_text, tgt_text

@@ -1,5 +1,6 @@
 from torchvision import transforms
 from torchvision.datasets import Places365
+from ..mask.utils import make_mask_textpair
 
 class Places365PretrainDatasetLoader(Places365):
     def __init__(self, resize=256, *args, **kwargs):
@@ -17,8 +18,8 @@ class Places365PretrainDatasetLoader(Places365):
 
     def __getitem__(self, index):
         image, target = super().__getitem__(index)
-        src_text = 'a photo of ' + self.classes[target].split('/')[2].replace('_', ' ')
-        tgt_text = ''
+        text = 'a photo of ' + self.classes[target].split('/')[2].replace('_', ' ')
+        src_text, tgt_text = make_mask_textpair(text)
 
         src_image = self.src_transforms(image)
         tgt_image = self.tgt_transforms(image)
