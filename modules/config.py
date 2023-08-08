@@ -13,7 +13,7 @@ def parse_arguments():
                             "microsoft/swinv2-large-patch4-window12to16-192to256-22kto1k-ft",
                         ], help='画像の特徴抽出モデル')
     parser.add_argument('--image_model_train', action='store_true', help='画像の特徴抽出モデルを学習するかどうか')
-    parser.add_argument('--language_model_name', type=str, default='t5-large', 
+    parser.add_argument('--language_model_name', type=str, default='google/flan-t5-base', 
                         choices=[
                             't5-small', 't5-base', 't5-large', 't5-3b', 't5-11b',
                             'google/flan-t5-small', 'google/flan-t5-base', 'google/flan-t5-large', 'google/flan-t5-xl', 'google/flan-t5-xxl',
@@ -23,13 +23,13 @@ def parse_arguments():
     parser.add_argument('--transformer_d_ff', type=int, default=2048, help='メインTransformerのd_ff')
     parser.add_argument('--transformer_d_kv', type=int, default=64, help='メインTransformerのd_kv')
     parser.add_argument('--transformer_num_heads', type=int, default=8, help='メインTransformerのヘッド数')
-    parser.add_argument('--transformer_num_layers', type=int, default=2, help='メインTransformerの層数')
-    parser.add_argument('--transformer_num_decoder_layers', type=int, default=6, help='メインTransformerのデコーダーの層数')
+    parser.add_argument('--transformer_num_layers', type=int, default=8, help='メインTransformerの層数')
+    parser.add_argument('--transformer_num_decoder_layers', type=int, default=8, help='メインTransformerのデコーダーの層数')
     parser.add_argument('--image_vocab_size', type=int, default=16384, help='画像のボキャブラリサイズ')
     parser.add_argument('--loc_vocab_size', type=int, default=1000, help='位置のボキャブラリサイズ')
     parser.add_argument('--vae_ckpt_path', type=str, default='checkpoints/vqgan.pt', help='VAEの重みファイルのパス')
-    parser.add_argument('--max_source_length', type=int, default=512, help='入力文の最大長')
-    parser.add_argument('--max_target_length', type=int, default=512, help='出力文の最大長')
+    parser.add_argument('--max_source_length', type=int, default=256, help='入力文の最大長')
+    parser.add_argument('--max_target_length', type=int, default=256, help='出力文の最大長')
     # Training setting
     parser.add_argument('--pretrain', action='store_true', help='事前学習かどうか')
     parser.add_argument('--seed', type=int, default=999, help='乱数シード')
