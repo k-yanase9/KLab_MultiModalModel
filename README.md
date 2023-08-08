@@ -21,14 +21,18 @@ pip install -r requirements.txt
 | image_model_train | 画像の特徴抽出モデルを学習するかどうか | False |
 | language_model_name | 言語の特徴抽出モデル | t5-large |
 | ffn | 特徴抽出モデルの出力をFFNで変換するかどうか | False |
-| transformer_model_name | メインTransformerのモデル | t5-large |
-| max_source_length | 入力文の最大長 | 256 |
-| max_target_length | 出力文の最大長 | 128 |
+| image_vocab_size | 画像のボキャブラリサイズ | 16384 |
+| loc_vocab_size | 位置のボキャブラリサイズ | 1000 |
+| vae_ckpt_path | VAEの重みファイルのパス | checkpoints/vqgan.pt |
+| max_source_length | 入力文の最大長 | 512 |
+| max_target_length | 出力文の最大長 | 512 |
 
 ### 学習設定
 
 | parameter | 説明 | default |
 | - | - | - |
+| pretrain | 事前学習かどうか | False |
+| image_mask_ratio | 画像のマスク率 | 0.75 |
 | seed | 乱数シード | 999 |
 | lr | 学習率 | 0.001 |
 | optimizer | Optimizer | AdamW |
@@ -37,12 +41,14 @@ pip install -r requirements.txt
 | accumulation_steps | 勾配の蓄積回数 | 1 |
 | num_epochs | 学習エポック数 | なし |
 | num_steps | 学習ステップ数 | なし |
+| warmup_steps | 学習率のウォームアップステップ数 | なし |
 | save_interval | モデルの保存間隔 | なし |
+| datasets | 使用データセットの名前 | imagenet sun397 |
 
 ### ディレクトリ設定
 | parameter | 説明 | default |
 | - | - | - |
-| data_dir | データセットのディレクトリ | /user/data/mscoco2017/ |
+| root_dir | データセットのrootディレクトリ | /local/ |
 | result_dir | 結果を保存するディレクトリ | results/ |
 
 <br>
