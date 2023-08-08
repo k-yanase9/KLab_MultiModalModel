@@ -1,5 +1,6 @@
 from torchvision import transforms
 from torchvision.datasets import SUN397
+from ..mask.utils import make_mask_textpair
 
 class SUN397PretrainDatasetLoader(SUN397):
     def __init__(self, resize=256, *args, **kwargs):
@@ -17,8 +18,8 @@ class SUN397PretrainDatasetLoader(SUN397):
 
     def __getitem__(self, index):
         image, label = super().__getitem__(index)
-        src_text = 'a photo of ' + self.classes[label].split('/')[0].replace('_', ' ')
-        tgt_text = ''
+        text = 'a photo of ' + self.classes[label].split('/')[0].replace('_', ' ')
+        src_text, tgt_text = make_mask_textpair(text)
 
         src_image = self.src_transforms(image)
         tgt_image = self.tgt_transforms(image)

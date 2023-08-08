@@ -1,5 +1,6 @@
 from torchvision import transforms
 from torchvision.datasets import INaturalist
+from ..mask.utils import make_mask_textpair
 
 class INaturalistPretrainDatasetLoader(INaturalist):
     def __init__(self, resize=256, *args, **kwargs):
@@ -17,8 +18,8 @@ class INaturalistPretrainDatasetLoader(INaturalist):
 
     def __getitem__(self, index):
         image, label = super().__getitem__(index)
-        src_text = ' '.join(self.all_categories[label].split('_')[1:])
-        tgt_text = ''
+        text = ' '.join(self.all_categories[label].split('_')[1:])
+        src_text, tgt_text = make_mask_textpair(text)
 
         src_image = self.src_transforms(image)
         tgt_image = self.tgt_transforms(image)
