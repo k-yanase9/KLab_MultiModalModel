@@ -18,10 +18,8 @@ class PretrainDatasetLoader(DatasetLoader):
         image, text = self.images[idx], self.src_texts[idx]
         src_text = self.tgt_tokenizer.encode_plus(text, return_attention_mask=False, verbose=False, max_length=self.max_target_length)["input_ids"]
         tgt_text = self.generate_target_ids(src_text)
-        src_text = torch.tensor(src_text)
-        src_text = pad(src_text, (0, self.max_source_length-len(src_text)), value=self.src_tokenizer.pad_token_id)
-        tgt_text = torch.tensor(tgt_text)
-        tgt_text = pad(tgt_text, (0, self.max_target_length-len(tgt_text)), value=self.tgt_tokenizer.pad_token_id)
+        src_text = self.tgt_tokenizer.decode(src_text)
+        tgt_text = self.tgt_tokenizer.decode(tgt_text)
 
         image = Image.open(image).convert('RGB')#.resize((256,256))
         src_image = self.src_transforms(image)
