@@ -1,16 +1,24 @@
-batch_size=64
-for model in "google/flan-t5-small"
+batch_size=128
+dataset="redcaps places365 sun397 inaturalist"
+
+for enc in 4
 do
-torchrun --nnodes=1 --nproc_per_node=8 train.py \
-        --language_model_name google/flan-t5-base \
-        --ffn \
-        --transformer_model_name $model \
-        --pretrain \
-        --lr 0.001 \
-        --optimizer AdamW \
-        --batch_size $batch_size \
-        --num_epochs 50 \
-        --save_interval 1 \
-        --data_dir /local/redcaps/ \
-        --result_dir results/pretrain/redcaps/only_transformer/$model/
+        for dec in 4
+        do
+        torchrun --nnodes=1 --nproc_per_node=4 train.py \
+                --language_model_name google/flan-t5-base \
+                --image_model_name microsoft/swinv2-large-patch4-window12to16-192to256-22kto1k-ft \
+                --ffn \
+                --transformer_num_layers $enc \
+                --transformer_num_decoder_layers $dec \
+                --pretrain \
+                --lr 0.01 \
+                --optimizer AdamW \
+                --lr_scheduler StepLR \
+                --batch_size $batch_size \
+                --num_epochs 50 \
+                --root_dir /local/ \
+                --dataset $dataset \
+                --result_dir results/pretrain/redcaps_places365_sun397_inaturalist/enc$enc\_dec$dec/
+        done
 done
