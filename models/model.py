@@ -4,6 +4,7 @@ import numpy as np
 from torch import nn
 from transformers import T5EncoderModel, Swinv2Model, T5Config, logging, ResNetModel, T5ForConditionalGeneration
 from models.vqgan import VQModel
+from modules.losses import FocalLoss
 logging.set_verbosity_error()
 
 # モデルの定義
@@ -12,7 +13,6 @@ class MyModel(nn.Module):
         super().__init__()
         self.args = args
         self.result_dir = args.result_dir
-        self.loss_fct = nn.CrossEntropyLoss(reduction="none")
         
         self.vae = VQModel(ckpt_path=args.vae_ckpt_path).requires_grad_(False)
         self.vae.eval()
@@ -66,7 +66,7 @@ class MyModel(nn.Module):
 
         if return_loss:
             if image_mask_ratio > 0:
-                pred = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).logits
+                pred = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attenntion_mask=concat_attention_mask, decoder_attention_mask=target_attention_mask).logits
                 b, t, v = pred.shape
                 pred = pred.view(b*t, v)
                 tgt_texts = tgt_texts.view(-1)
@@ -80,7 +80,12 @@ class MyModel(nn.Module):
             else:
                 target_attention_mask = torch.ones(tgt_texts.shape[0], tgt_texts.shape[1], device=self.transformer.device)
                 target_attention_mask[tgt_texts == 0] = 1
-                return self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attenntion_mask=concat_attention_mask, decoder_attention_mask=target_attention_mask).loss
+                if self.args.loss == 'CrossEntropy':
+                    return self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=target_attention_mask).loss
+                elif self.args.loss == 'FocalLoss':
+                    loss_fct = FocalLoss()
+                    logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=target_attention_mask).logits
+                    return loss_fct(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
         else:
             # pred = self.transformer(inputs_embeds=concated_embeddings).logits
             generated = self.transformer.generate(inputs_embeds=concated_embeddings, num_beams=num_beams, num_return_sequences=num_return_sequences, do_sample=do_sample, max_length=self.args.max_target_length)
