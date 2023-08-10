@@ -45,7 +45,9 @@ class MyModel(nn.Module):
 
     def forward(self, images, src_texts, tgt_texts=None, return_loss=True, num_beams=1, num_return_sequences=1, do_sample=False, image_mask_ratio=0.0):
         with torch.no_grad():
-            language_embeddings = self.language_model(src_texts).last_hidden_state
+            language_attention_mask = torch.ones(src_texts.shape[0], src_texts.shape[1], device=self.language_model.device)
+            language_attention_mask[src_texts == 0] = 0
+            language_embeddings = self.language_model(src_texts, attention_mask=language_attention_mask).last_hidden_state
 
         if image_mask_ratio > 0: # 画像パッチにマスクをかける
             bool_masked_pos = self.random_patch_masking(len(images), image_mask_ratio)
@@ -74,11 +76,13 @@ class MyModel(nn.Module):
                 loss = loss * bool_masked_pos
                 return loss.mean()
             else:
-                return self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).loss
+                target_attention_mask = torch.ones(tgt_texts.shape[0], tgt_texts.shape[1], device=self.transformer.device)
+                target_attention_mask[tgt_texts == 0] = 1
+                return self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, decoder_attention_mask=target_attention_mask).loss
         else:
-            pred = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).logits
-            return pred.argmax(-1)
-            # return self.transformer.generate(inputs_embeds=concated_embeddings, num_beams=num_beams, num_return_sequences=num_return_sequences, do_sample=do_sample, max_length=self.args.max_target_length)
+            # pred = self.transformer(inputs_embeds=concated_embeddings).logits
+            generated = self.transformer.generate(inputs_embeds=concated_embeddings, num_beams=num_beams, num_return_sequences=num_return_sequences, do_sample=do_sample, max_length=self.args.max_target_length)
+            return generated
     
     def random_patch_masking(self, batch_size, image_mask_ratio):
         len_keep = int(self.num_patches * image_mask_ratio)
