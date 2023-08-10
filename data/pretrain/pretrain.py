@@ -54,3 +54,26 @@ class PretrainDatasetLoader(DatasetLoader):
                     target_id.append(self.mask_tokens[masked_spans_counter])
             i += 1
         return target_id
+    
+class ClassifyPretrainDatasetLoader(PretrainDatasetLoader):
+    def __init__(self, args, resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
+        super().__init__(args, resize, src_tokenizer, tgt_tokenizer, mask_probability)
+
+    def __getitem__(self, idx):
+        image, text = self.images[idx], self.src_texts[idx]
+        rate = random.random()
+        if rate >= 0.9:
+            text = 'An image of ' + text
+        src_text = self.tgt_tokenizer.encode_plus(text, return_attention_mask=False, verbose=False)["input_ids"][:-1]
+        tgt_text = self.generate_target_ids(src_text)
+        src_text = self.tgt_tokenizer.decode(src_text)
+        if rate < 0.9: # 実質elseですからね
+            src_text = 'An image of ' + src_text
+        tgt_text = self.tgt_tokenizer.decode(tgt_text)
+
+        image = Image.open(image).convert('RGB')#.resize((256,256))
+        src_image = self.src_transforms(image)
+        tgt_image = self.tgt_transforms(image)
+        tgt_image = 2.*tgt_image-1.
+
+        return src_image, tgt_image, src_text, tgt_text
