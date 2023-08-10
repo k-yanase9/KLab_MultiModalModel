@@ -60,6 +60,8 @@ class MyModel(nn.Module):
             language_embeddings = self.language_ffn(language_embeddings)
             image_embeddings = self.image_ffn(image_embeddings)
 
+        image_attention_mask = torch.ones(image_embeddings.shape[0], image_embeddings.shape[1], device=self.image_model.device)
+        concat_attention_mask = torch.cat((image_attention_mask, language_attention_mask), dim=1)
         concated_embeddings = torch.cat((image_embeddings,language_embeddings), dim=1)
 
         if return_loss:
@@ -78,7 +80,7 @@ class MyModel(nn.Module):
             else:
                 target_attention_mask = torch.ones(tgt_texts.shape[0], tgt_texts.shape[1], device=self.transformer.device)
                 target_attention_mask[tgt_texts == 0] = 1
-                return self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, decoder_attention_mask=target_attention_mask).loss
+                return self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attenntion_mask=concat_attention_mask, decoder_attention_mask=target_attention_mask).loss
         else:
             # pred = self.transformer(inputs_embeds=concated_embeddings).logits
             generated = self.transformer.generate(inputs_embeds=concated_embeddings, num_beams=num_beams, num_return_sequences=num_return_sequences, do_sample=do_sample, max_length=self.args.max_target_length)
