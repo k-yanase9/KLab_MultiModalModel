@@ -14,5 +14,5 @@ class Places365PretrainDatasetLoader(PretrainDatasetLoader):
         dataset = Places365(root=data_dir, split=split, small=True)
         for img, label in dataset.imgs:
             self.images.append(img)
-            self.src_texts.append(f'a photo of {dataset.classes[label].split("/")[2].replace("_", " ")}.')
+            self.src_texts.append(f'An image of {dataset.classes[label].split("/")[2].replace("_", " ")}.')
         del dataset

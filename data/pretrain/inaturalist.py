@@ -17,7 +17,7 @@ class INaturalistPretrainDatasetLoader(PretrainDatasetLoader):
             img = os.path.join(data_dir, version, dataset.all_categories[cat_id], fname)
             self.images.append(img)
 
-            target = 'a photo of ' + ' '.join(dataset.all_categories[cat_id].split('_')[1:]) + '.'
+            target = 'An image of ' + ' '.join(dataset.all_categories[cat_id].split('_')[1:]) + '.'
             self.src_texts.append(target)
 
         del dataset

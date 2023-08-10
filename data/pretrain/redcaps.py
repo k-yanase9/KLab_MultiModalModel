@@ -9,7 +9,7 @@ class RedCapsPretrainDatasetLoader(PretrainDatasetLoader):
         img_dir = os.path.join(data_dir, 'images')
 
         for annotations_file_name in os.listdir(anno_dir):
-            if "2019" in annotations_file_name: # 2019年のデータのみ使用
+            if "2019" in annotations_file_name or "2020" in annotations_file_name: # 2019年のデータのみ使用
                 annotations_filepath = os.path.join(anno_dir, annotations_file_name)
                 annotations = json.load(open(annotations_filepath))
                 

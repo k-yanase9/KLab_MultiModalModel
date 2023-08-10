@@ -30,4 +30,4 @@ class ImageNet21kPretrainDatasetLoader(PretrainDatasetLoader):
                 img_name = tar.extractfile(name)
                 img = Image.open(img_name).resize((resize, resize))
                 self.images.append(img)
-                self.src_texts.append(f'a photo of {imagenet_classes[class_id]}')
+                self.src_texts.append(f'An image of {imagenet_classes[class_id]}.')
