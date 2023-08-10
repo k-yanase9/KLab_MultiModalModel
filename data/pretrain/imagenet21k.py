@@ -1,9 +1,9 @@
 import os
 import tarfile
 from PIL import Image
-from .pretrain import PretrainDatasetLoader
+from .pretrain import ClassifyPretrainDatasetLoader
 
-class ImageNet21kPretrainDatasetLoader(PretrainDatasetLoader):
+class ImageNet21kPretrainDatasetLoader(ClassifyPretrainDatasetLoader):
     def __init__(self, args, data_dir='/data01/imagenet_21k/', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
         super().__init__(args, resize, src_tokenizer, tgt_tokenizer, mask_probability)
 
@@ -30,4 +30,4 @@ class ImageNet21kPretrainDatasetLoader(PretrainDatasetLoader):
                 img_name = tar.extractfile(name)
                 img = Image.open(img_name).resize((resize, resize))
                 self.images.append(img)
-                self.src_texts.append(f'An image of {imagenet_classes[class_id]}.')
+                self.src_texts.append(f'{imagenet_classes[class_id]}.')

@@ -1,7 +1,7 @@
-from .pretrain import PretrainDatasetLoader
+from .pretrain import ClassifyPretrainDatasetLoader
 from torchvision.datasets import Places365
 
-class Places365PretrainDatasetLoader(PretrainDatasetLoader):
+class Places365PretrainDatasetLoader(ClassifyPretrainDatasetLoader):
     def __init__(self, args, data_dir='/data01/places365', phase='train', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
         super().__init__(args, resize, src_tokenizer, tgt_tokenizer, mask_probability)
         if phase == 'train':
@@ -14,5 +14,5 @@ class Places365PretrainDatasetLoader(PretrainDatasetLoader):
         dataset = Places365(root=data_dir, split=split, small=True)
         for img, label in dataset.imgs:
             self.images.append(img)
-            self.src_texts.append(f'An image of {dataset.classes[label].split("/")[2].replace("_", " ")}.')
+            self.src_texts.append(f'{dataset.classes[label].split("/")[2].replace("_", " ")}.')
         del dataset
