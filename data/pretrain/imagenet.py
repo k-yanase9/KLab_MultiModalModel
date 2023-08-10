@@ -20,4 +20,4 @@ class ImageNetPretrainDatasetLoader(PretrainDatasetLoader):
             for img in os.listdir(class_folder_path):
                 img_path = os.path.join(class_folder_path, img)
                 self.images.append(img_path)
-                self.src_texts.append(f'a photo of {class_name}')
+                self.src_texts.append(f'An image of {class_name}.')

@@ -16,7 +16,7 @@ class PretrainDatasetLoader(DatasetLoader):
 
     def __getitem__(self, idx):
         image, text = self.images[idx], self.src_texts[idx]
-        src_text = self.tgt_tokenizer.encode_plus(text, return_attention_mask=False, verbose=False, max_length=self.max_target_length)["input_ids"]
+        src_text = self.tgt_tokenizer.encode_plus(text, return_attention_mask=False, verbose=False)["input_ids"][:-1]
         tgt_text = self.generate_target_ids(src_text)
         src_text = self.tgt_tokenizer.decode(src_text)
         tgt_text = self.tgt_tokenizer.decode(tgt_text)
@@ -31,7 +31,7 @@ class PretrainDatasetLoader(DatasetLoader):
     def generate_target_ids(self, input_id):
         target_id = []
         masked_indexes = sorted(random.sample(range(0, len(input_id)),  # sample a word index in sentence
-                                                min(int(self.mask_prob * len(input_id)),  # number of tokens masked
+                                                min(max(int(self.mask_prob * len(input_id)),1),  # number of tokens masked
                                                     len(self.mask_tokens) - 1)))  # but never more than special tokens available
         mask = [(i in masked_indexes)  # this is True or False
                 for i in range(len(input_id))]

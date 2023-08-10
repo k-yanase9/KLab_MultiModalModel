@@ -12,4 +12,4 @@ class SUN397PretrainDatasetLoader(PretrainDatasetLoader):
 
         self.class_to_idx = dict(zip(self.classes, range(len(self.classes))))
         self.images = list(self.data_dir.rglob("sun_*.jpg"))
-        self.src_texts = ["a photo of "+"/".join(path.relative_to(self.data_dir).parts[1:-1]).replace("_"," ")+"." for path in self.images]
+        self.src_texts = ["An image of "+" ".join(path.relative_to(self.data_dir).parts[1:-1]).replace("_"," ")+"." for path in self.images]
