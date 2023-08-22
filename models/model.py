@@ -4,6 +4,7 @@ import numpy as np
 from torch import nn
 from transformers import T5EncoderModel, Swinv2Model, T5Config, logging, ResNetModel, T5ForConditionalGeneration
 from models.vqgan import VQModel
+from modules.losses import FocalLoss
 logging.set_verbosity_error()
 
 # モデルの定義
@@ -12,7 +13,6 @@ class MyModel(nn.Module):
         super().__init__()
         self.args = args
         self.result_dir = args.result_dir
-        self.loss_fct = nn.CrossEntropyLoss(reduction="none")
         
         self.vae = VQModel(ckpt_path=args.vae_ckpt_path).requires_grad_(False)
         self.vae.eval()
@@ -45,7 +45,9 @@ class MyModel(nn.Module):
 
     def forward(self, images, src_texts, tgt_texts=None, return_loss=True, num_beams=1, num_return_sequences=1, do_sample=False, image_mask_ratio=0.0):
         with torch.no_grad():
-            language_embeddings = self.language_model(src_texts).last_hidden_state
+            language_attention_mask = torch.ones(src_texts.shape[0], src_texts.shape[1], device=self.language_model.device)
+            language_attention_mask[src_texts == 0] = 0
+            language_embeddings = self.language_model(src_texts, attention_mask=language_attention_mask).last_hidden_state
 
         if image_mask_ratio > 0: # 画像パッチにマスクをかける
             bool_masked_pos = self.random_patch_masking(len(images), image_mask_ratio)
@@ -58,11 +60,13 @@ class MyModel(nn.Module):
             language_embeddings = self.language_ffn(language_embeddings)
             image_embeddings = self.image_ffn(image_embeddings)
 
+        image_attention_mask = torch.ones(image_embeddings.shape[0], image_embeddings.shape[1], device=self.image_model.device)
+        concat_attention_mask = torch.cat((image_attention_mask, language_attention_mask), dim=1)
         concated_embeddings = torch.cat((image_embeddings,language_embeddings), dim=1)
 
         if return_loss:
             if image_mask_ratio > 0:
-                pred = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).logits
+                pred = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attenntion_mask=concat_attention_mask, decoder_attention_mask=target_attention_mask).logits
                 b, t, v = pred.shape
                 pred = pred.view(b*t, v)
                 tgt_texts = tgt_texts.view(-1)
@@ -74,11 +78,18 @@ class MyModel(nn.Module):
                 loss = loss * bool_masked_pos
                 return loss.mean()
             else:
-                return self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).loss
+                target_attention_mask = torch.ones(tgt_texts.shape[0], tgt_texts.shape[1], device=self.transformer.device)
+                target_attention_mask[tgt_texts == 0] = 1
+                if self.args.loss == 'CrossEntropy':
+                    return self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=target_attention_mask).loss
+                elif self.args.loss == 'FocalLoss':
+                    loss_fct = FocalLoss()
+                    logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=target_attention_mask).logits
+                    return loss_fct(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
         else:
-            pred = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).logits
-            return pred.argmax(-1)
-            # return self.transformer.generate(inputs_embeds=concated_embeddings, num_beams=num_beams, num_return_sequences=num_return_sequences, do_sample=do_sample, max_length=self.args.max_target_length)
+            # pred = self.transformer(inputs_embeds=concated_embeddings).logits
+            generated = self.transformer.generate(inputs_embeds=concated_embeddings, num_beams=num_beams, num_return_sequences=num_return_sequences, do_sample=do_sample, max_length=self.args.max_target_length)
+            return generated
     
     def random_patch_masking(self, batch_size, image_mask_ratio):
         len_keep = int(self.num_patches * image_mask_ratio)
