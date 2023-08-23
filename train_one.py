@@ -43,7 +43,6 @@ def train():
 
     steps = 0
     loss_counter = LossCounter()
-    # pbar = tqdm(total=args.num_epochs, desc=f'Train')
 
     src_images, tgt_images, src_texts, tgt_texts = train_dataset[0]
     src_images = src_images.unsqueeze(0)
@@ -67,6 +66,8 @@ def train():
     print("tgt_texts", tgt_texts)
     src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device) # ['pt', 'tf', 'np', 'jax']
     tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device) # ['pt', 'tf', 'np', 'jax']
+    print("src_texts", src_texts)
+    print("tgt_texts", tgt_texts)
 
     for epoch in range(1, args.num_epochs+1):
         # 学習ループ
