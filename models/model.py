@@ -87,7 +87,8 @@ class MyModel(nn.Module):
                     logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=target_attention_mask).logits
                     return loss_fct(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
         else:
-            # pred = self.transformer(inputs_embeds=concated_embeddings).logits
+            # pred = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).logits
+            # generated = torch.argmax(pred, dim=2)
             generated = self.transformer.generate(inputs_embeds=concated_embeddings, num_beams=num_beams, num_return_sequences=num_return_sequences, do_sample=do_sample, max_length=self.args.max_target_length)
             return generated
     
