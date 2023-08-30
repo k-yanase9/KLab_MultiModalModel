@@ -3,9 +3,11 @@ import os
 from PIL import Image
 import torch
 from torchvision.transforms import ToTensor
+from ..dataset_loader import DatasetLoader
 
-class OpenImageDataset_Caption(torch.utils.data.Dataset):
+class OpenImageDataset_Caption(DatasetLoader):
     def __init__(self,data_dir="/data/dataset/openimage",phase="train",imagesize=(256,256)):
+        super().__init__()
         if phase =="val":
             self.phase = "validation"
         else:
@@ -16,14 +18,11 @@ class OpenImageDataset_Caption(torch.utils.data.Dataset):
 
         with open(os.path.join(self.data_dir,"caption",f"{self.phase}_caption.jsonl"),"r") as f:
             self.items = [json.loads(s) for s in f]
-        
-    def __getitem__(self,idx):
-        src_text = "What does the image describe?"
-        tgt_text = self.items[idx]["caption"]
-        imgpath = os.path.join(self.data_dir,self.phase,f"{self.items[idx]['image_id']}.jpg")
-        image = Image.open(imgpath).convert("RGB").resize(self.imagesize)
-        image = self.transform(image)
-        return image,src_text,tgt_text
+
+
+        self.tgt_texts = [item["caption"] for item in self.items]
+        self.src_texts = ["What does the image describe?"]*len(self.items)
+        self.images = [os.path.join(self.data_dir,self.phase,f"{item['image_id']}.jpg") for item in self.items]
 
     def __len__(self):
         return len(self.items)
