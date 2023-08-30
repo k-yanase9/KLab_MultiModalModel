@@ -1,9 +1,8 @@
 import os
+import random
 import torch
 import numpy as np
 from transformers import AutoTokenizer
-from tqdm import tqdm
-import re
 from PIL import Image
 import matplotlib.pyplot as plt
 
@@ -16,6 +15,7 @@ def train():
 
     os.makedirs(args.result_dir, exist_ok=True)
 
+    random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     torch.backends.cudnn.benchmark = False
@@ -34,7 +34,7 @@ def train():
     tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<img_{i}>" for i in range(args.image_vocab_size)])
 
     # データの設定
-    train_dataset, val_dataset = get_data(args)
+    train_dataset, val_dataset = get_data(args, src_tokenizer, tgt_tokenizer)
     train_loader = get_dataloader(args, train_dataset, num_workers=1, shuffle=False)
 
     if args.num_epochs is None:
@@ -43,13 +43,10 @@ def train():
 
     steps = 0
     loss_counter = LossCounter()
-    # pbar = tqdm(total=args.num_epochs, desc=f'Train')
-
-    pattern = r"<img_(\d+)>"
 
     src_images, tgt_images, src_texts, tgt_texts = train_dataset[0]
     src_images = src_images.unsqueeze(0)
-    tgt_images = tgt_images.unsqueeze(0)
+    # tgt_images = tgt_images.unsqueeze(0)
 
     src_images = src_images.to(device)
 
@@ -69,6 +66,8 @@ def train():
     print("tgt_texts", tgt_texts)
     src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device) # ['pt', 'tf', 'np', 'jax']
     tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device) # ['pt', 'tf', 'np', 'jax']
+    print("src_texts", src_texts)
+    print("tgt_texts", tgt_texts)
 
     for epoch in range(1, args.num_epochs+1):
         # 学習ループ
