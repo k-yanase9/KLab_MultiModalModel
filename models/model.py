@@ -14,8 +14,8 @@ class MyModel(nn.Module):
         self.args = args
         self.result_dir = args.result_dir
         
-        self.vae = VQModel(ckpt_path=args.vae_ckpt_path).requires_grad_(False)
-        self.vae.eval()
+        # self.vae = VQModel(ckpt_path=args.vae_ckpt_path).requires_grad_(False)
+        # self.vae.eval()
         self.language_model = T5EncoderModel.from_pretrained(args.language_model_name).requires_grad_(False) # device_map="auto"
         self.language_model.eval()
 
