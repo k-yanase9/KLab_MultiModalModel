@@ -1,8 +1,8 @@
 import os
-from .pretrain import PretrainDatasetLoader
+from .pretrain import ClassifyPretrainDatasetLoader
 from torchvision.datasets import INaturalist
 
-class INaturalistPretrainDatasetLoader(PretrainDatasetLoader):
+class INaturalistPretrainDatasetLoader(ClassifyPretrainDatasetLoader):
     def __init__(self, args, data_dir='/data01/inaturalist', phase='train', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
         super().__init__(args, resize, src_tokenizer, tgt_tokenizer, mask_probability)
         if phase == 'train':
@@ -17,7 +17,7 @@ class INaturalistPretrainDatasetLoader(PretrainDatasetLoader):
             img = os.path.join(data_dir, version, dataset.all_categories[cat_id], fname)
             self.images.append(img)
 
-            target = 'a photo of ' + ' '.join(dataset.all_categories[cat_id].split('_')[1:]) + '.'
+            target = ' '.join(dataset.all_categories[cat_id].split('_')[1:]) + '.'
             self.src_texts.append(target)
 
         del dataset

@@ -11,7 +11,7 @@ from .detection import *
 def get_data(args, src_tokenizer=None, tgt_tokenizer=None):
     train_datasets, val_datasets = [], []
     for dataset_name in args.datasets:
-        if dataset_name in ['redcaps', 'sun397', 'imagenet21k']:
+        if dataset_name in ['redcaps', 'sun397', 'imagenet21k', 'cc12m']:
             dataset = get_dataset(args, dataset_name, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
             val_rate = 0.1
             val_size = int(len(dataset) * val_rate)
@@ -62,6 +62,10 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             dataset = SUN397PretrainDatasetLoader(args, data_dir, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'inaturalist' == dataset_name:
             dataset = INaturalistPretrainDatasetLoader(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+        elif 'cc3m' == dataset_name:
+            dataset = CC3MPretrainDatasetLoader(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+        elif 'cc12m' == dataset_name:
+            dataset = CC12MPretrainDatasetLoader(args, data_dir, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         else:
             raise NotImplementedError
     else:

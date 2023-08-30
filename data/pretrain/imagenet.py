@@ -1,7 +1,7 @@
 import os
-from .pretrain import PretrainDatasetLoader
+from .pretrain import ClassifyPretrainDatasetLoader
 
-class ImageNetPretrainDatasetLoader(PretrainDatasetLoader):
+class ImageNetPretrainDatasetLoader(ClassifyPretrainDatasetLoader):
     def __init__(self, args, data_dir='/data/datatset/imagenet_2012', phase='train', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
         super().__init__(args, resize, src_tokenizer, tgt_tokenizer, mask_probability)
         img_folder_path = os.path.join(data_dir, phase)
@@ -20,4 +20,4 @@ class ImageNetPretrainDatasetLoader(PretrainDatasetLoader):
             for img in os.listdir(class_folder_path):
                 img_path = os.path.join(class_folder_path, img)
                 self.images.append(img_path)
-                self.src_texts.append(f'a photo of {class_name}')
+                self.src_texts.append(f'{class_name}.')
