@@ -94,7 +94,7 @@ def parse_arguments():
     return args
 
 
-def get_logger(args, rank, log_name='train.log'):
+def get_logger(args, log_name='train.log'):
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s: %(message)s')
@@ -144,8 +144,9 @@ def train():
     torch.manual_seed(args.seed)
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
-
-    logger = get_logger(args, rank)
+    # if rank == 0:
+    logger = get_logger(args)
+    logger.info("make_logger")
 
     # create model
     model = ExModel(args).to(device_id)
@@ -187,7 +188,7 @@ def train():
     # distributed_sampler_2 = torch.utils.data.distributed.DistributedSampler(dataset_2, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=False)
     # distributed_sampler_3 = torch.utils.data.distributed.DistributedSampler(dataset_3, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=False)
     loaders = [
-        torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=distributed_sampler)
+        torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=distributed_sampler, num_workers=4, pin_memory=True)
         for dataset, batch_size, distributed_sampler in zip(datasets, batch_size_list, distributed_samplers)
     ]
     min_step = min([len(loader) for loader in loaders])
