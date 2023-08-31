@@ -169,7 +169,7 @@ def train():
     #     args.num_epochs = int(args.num_steps / len(train_loader)) + 1
 
     task_num = 3  # taskの数=datasetの数
-    batch_size_list = [5, 50, 10]
+    batch_size_list = [5, 50, 10]  # 1 : 10 : 2
     # データの数は task1: 100,task2: 1100,task3: 300
     # step当たりのbatch_sizeはgpu数は4で4xbatch_size[20,200,40]
     # step=5で[100.1000,200]となりtask1のデータが終わる
@@ -242,7 +242,7 @@ def train():
             sample_image_list = []
             sample_in_list = []
             sample_out_list = []
-            sample_num = 3  # 1バッチの中から何個サンプルするか
+            sample_num = 1  # 1バッチの中から何個サンプルするか
             in_batch_index = 0  # バッチ中のindex
             for batch_size in batch_size_list:
                 sample_image_list.append(image[in_batch_index : in_batch_index + sample_num].flatten())

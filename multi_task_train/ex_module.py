@@ -44,3 +44,20 @@ class MyDataset(Dataset):
 
     def __getitem__(self, idx):
         return [torch.tensor([float(data)]) for data in self.data[idx]]
+
+
+class MyChainDataset(Dataset):
+    def __init__(self, dataset_list):
+        self.dataset_list = dataset_list
+        self.length = sum([len(dataset) for dataset in dataset_list])
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, idx):
+        for dataset in self.dataset_list:
+            if idx < len(dataset):
+                return dataset[idx]
+            else:
+                idx -= len(dataset)
+        raise IndexError
