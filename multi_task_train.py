@@ -59,9 +59,9 @@ def train():
 
     # データの設定
     batch_size_list = [1, 4, 21]
-    coco_dataset = data_module.caption.COCODatasetLoader("/home/omote/gpu-node/mscoco2017", phase="val")  # 3
-    detection_dataset = data_module.detection.oidv7_detection.OpenImageDataset_detection("/home/omote/gpu-node/openimage", phase="val")  # 3 add transforms
-    vqa_dataset = data_module.vqa.vqa2.Vqa2dataset("/home/omote/gpu-node/vqa2", phase="val")  # 3 add transforms
+    coco_dataset = data_module.caption.COCODatasetLoader("/home/omote/gpu-node/mscoco2017", phase="val")  # データ数4
+    detection_dataset = data_module.detection.oidv7_detection.OpenImageDataset_detection("/home/omote/gpu-node/openimage", phase="val")  # データ数3 add transforms
+    vqa_dataset = data_module.vqa.vqa2.Vqa2dataset("/home/omote/gpu-node/vqa2", phase="val")  # データ数3 add transforms
     dataset_list = [coco_dataset, detection_dataset, vqa_dataset]
 
     additional_transforms = transforms.Compose(
@@ -115,10 +115,10 @@ def train():
             image_list.append(coco_data[0])
             image_list.append(additional_transforms(detection_data[0]))
             image_list.append(additional_transforms(vqa_data[0]))
-            src_text_list.extend(coco_data[1])
+            src_text_list.extend(coco_data[2])
             src_text_list.extend(detection_data[1])
             src_text_list.extend(vqa_data[1])
-            tgt_text_list.extend(coco_data[2])
+            tgt_text_list.extend(coco_data[3])
             tgt_text_list.extend(detection_data[2])
             tgt_text_list.extend(vqa_data[2])
             src_images = torch.cat(image_list, dim=0)
@@ -173,7 +173,7 @@ def train():
         val_loss = torch.tensor(0.0).to(device_id)
         val_count = torch.tensor(0).to(device_id)
         val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
-        for src_images, src_texts, tgt_texts in val_loop:
+        for src_images, tgt_images, src_texts, tgt_texts in val_loop:
             with torch.no_grad():
                 src_images = src_images.to(device_id, non_blocking=True)
                 # if args.pretrain:
