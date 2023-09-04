@@ -4,33 +4,23 @@ from PIL import Image
 import torch
 from torchvision.transforms import ToTensor,functional
 import os
+from ..dataset_loader import DatasetLoader
 
-class imSituDataset(torch.utils.data.Dataset):
+class imSituDataset(DatasetLoader):
     def __init__(self,data_dir="/data/dataset/imSitu",phase="train",imagesize=(256,256)):
+        super().__init__()
         if phase =="val":
-            self.phase = "dev"
-        else:
-            self.phase = phase
+            phase = "dev"
         self.data_dir = data_dir
         self.transform = ToTensor()
         self.imagesize = imagesize
 
-        with open(os.path.join(self.data_dir,"imSituVQA.json")) as f:
+        with open(os.path.join(data_dir,"imSituVQA.json")) as f:
             items = json.load(f)
 
-        self.items = items[self.phase]
+        items = items[phase]
+
+        self.tgt_texts = [item for item in items["answer"]]
+        self.src_texts = [item for item in items["question"]]
+        self.images = [os.path.join(data_dir,"of500_images_resized",item) for item in items["image_file"]]
                 
-    def __getitem__(self,idx):
-        src_text = self.items["question"][idx]
-        tgt_text = self.items["answer"][idx]
-        imgpath = os.path.join(self.data_dir,"of500_images_resized",self.items["image_file"][idx])
-        image = Image.open(imgpath).convert("RGB").resize(self.imagesize)
-        image = self.transform(image)
-        return image,src_text,tgt_text
-
-    def __len__(self):
-        return len(self.items["question"])
-
-if __name__ =="__main__":
-    dataset = imSituDataset()
-    print(dataset[0])
