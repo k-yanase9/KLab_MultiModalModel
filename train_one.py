@@ -44,8 +44,9 @@ def train():
     steps = 0
     loss_counter = LossCounter()
 
-    src_images, tgt_images, src_texts, tgt_texts = train_dataset[0]
-    src_images = src_images.unsqueeze(0)
+    data_iter = iter(train_loader)
+    src_images, tgt_images, src_texts, tgt_texts = data_iter.__next__()
+    # src_images = src_images.unsqueeze(0)
     # tgt_images = tgt_images.unsqueeze(0)
 
     src_images = src_images.to(device)
@@ -62,12 +63,13 @@ def train():
 
     # print("src_images.shape", src_images.shape)
     # print("tgt_images.shape", tgt_images.shape)
-    print("src_texts", src_texts)
-    print("tgt_texts", tgt_texts)
+    print("src_texts:", src_texts)
+    print("tgt_texts:", tgt_texts)
     src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device) # ['pt', 'tf', 'np', 'jax']
-    tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device) # ['pt', 'tf', 'np', 'jax']
-    print("src_texts", src_texts)
-    print("tgt_texts", tgt_texts)
+    # tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device) # ['pt', 'tf', 'np', 'jax']
+    tgt_texts = tgt_texts.to(device)
+    print("src_texts tokenized:", src_texts)
+    # print("tgt_texts", tgt_texts)
 
     for epoch in range(1, args.num_epochs+1):
         # 学習ループ
@@ -79,7 +81,8 @@ def train():
 
         image_mask_ratio = 0.0
 
-        loss = model(src_images, src_texts, tgt_texts, image_mask_ratio=image_mask_ratio)
+        loss, preds = model(src_images, src_texts, tgt_texts, image_mask_ratio=image_mask_ratio)
+
         loss.backward()
 
         train_loss = loss.item()
@@ -98,10 +101,10 @@ def train():
         if (epoch) % 50 == 0:
             with torch.no_grad():
                 # outputs = model(src_images, src_texts, tgt_texts, return_loss=False, num_beams=4)
-                outputs = model(src_images, src_texts, tgt_texts, return_loss=False)
-                preds = tgt_tokenizer.batch_decode(outputs)
+                print("Pred:", preds)
+                # preds = tgt_tokenizer.batch_decode(outputs)
 
-                print(f"Generated text: {preds}")
+                # print(f"Generated text: {preds}")
                 # matches = []
                 # for pred in preds:
                 #     match = re.findall(pattern, pred)
