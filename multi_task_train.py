@@ -58,11 +58,16 @@ def train():
     )
 
     # データの設定
-    batch_size_list = [1, 4, 21]
+    batch_size_list = [5, 4, 21]
     coco_dataset = data_module.caption.COCODatasetLoader("/home/omote/gpu-node/mscoco2017", phase="val")  # データ数4
+    oidv7_caption_dataset = data_module.caption.OpenImageDataset_Caption("/home/omote/gpu-node/openimage", phase="val")  # データ数3
     detection_dataset = data_module.detection.oidv7_detection.OpenImageDataset_detection("/home/omote/gpu-node/openimage", phase="val")  # データ数3 add transforms
     vqa_dataset = data_module.vqa.vqa2.Vqa2dataset("/home/omote/gpu-node/vqa2", phase="val")  # データ数3 add transforms
-    dataset_list = [coco_dataset, detection_dataset, vqa_dataset]
+    dataset_list = [
+        data_module.MultiChainDataset(dataset_list=[coco_dataset, oidv7_caption_dataset], key_list=[[0, 2, 3], [0, 1, 2]]),
+        detection_dataset,
+        vqa_dataset,
+    ]
 
     additional_transforms = transforms.Compose(
         [
@@ -70,7 +75,7 @@ def train():
         ]
     )
     distributed_samplers = [
-        torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=True)
+        torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=True, drop_last=True)
         for dataset in dataset_list
     ]
     loaders = [
@@ -88,6 +93,9 @@ def train():
     max_step = max([len(loader) for loader in loaders])
     if rank == 0:
         logger.info(f"min_step: {min_step}, max_step: {max_step}")
+        logger.info(f"batch_size_list: {batch_size_list}")
+        logger.info(f"len(dataset_list): {[len(dataset) for dataset in dataset_list]}")
+        logger.info(f"len(loaders): {[len(loader) for loader in loaders]}")
 
     steps = 0
     min_val_loss = 100
@@ -109,16 +117,16 @@ def train():
             image_list = []
             src_text_list = []
             tgt_text_list = []
-            coco_data = next(iterators[0])
+            caption_data = next(iterators[0])
             detection_data = next(iterators[1])
             vqa_data = next(iterators[2])
-            image_list.append(coco_data[0])
+            image_list.append(caption_data[0])
             image_list.append(additional_transforms(detection_data[0]))
             image_list.append(additional_transforms(vqa_data[0]))
-            src_text_list.extend(coco_data[2])
+            src_text_list.extend(caption_data[1])
             src_text_list.extend(detection_data[1])
             src_text_list.extend(vqa_data[1])
-            tgt_text_list.extend(coco_data[3])
+            tgt_text_list.extend(caption_data[2])
             tgt_text_list.extend(detection_data[2])
             tgt_text_list.extend(vqa_data[2])
             src_images = torch.cat(image_list, dim=0)
