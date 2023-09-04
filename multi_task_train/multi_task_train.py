@@ -6,7 +6,7 @@ import random
 import numpy as np
 import torch
 import torch.distributed as dist
-from ex_module import ExModel, MyDataset
+from ex_module import ExModel, MyChainDataset, MyDataset
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 
@@ -170,6 +170,9 @@ def train():
 
     task_num = 3  # taskの数=datasetの数
     batch_size_list = [5, 50, 10]  # 1 : 10 : 2
+    batch_size_list = [15, 50]
+    # 60,200
+    # 300,1000
     # データの数は task1: 100,task2: 1100,task3: 300
     # step当たりのbatch_sizeはgpu数は4で4xbatch_size[20,200,40]
     # step=5で[100.1000,200]となりtask1のデータが終わる
@@ -180,8 +183,10 @@ def train():
     # dataset_2 = MyDataset("dataset_2.csv")
     # dataset_3 = MyDataset("dataset_3.csv")
 
+    datasets = [MyChainDataset([datasets[0], datasets[2]]), datasets[1]]
+
     distributed_samplers = [
-        torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=False)
+        torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=False, drop_last=True)
         for dataset in datasets
     ]
     # distributed_sampler_1 = torch.utils.data.distributed.DistributedSampler(dataset_1, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=False)
@@ -203,6 +208,7 @@ def train():
     # loss_counter = LossCounter()
     prefix_text = f"rank:{rank} || "
     logger.info(f"{prefix_text}start training")
+    logger.info(f"min_step: {min_step}, max_step: {max_step}")
     for epoch in range(1, args.num_epochs + 1):
         # # 学習ループ
         # image_mask_ratio = 0.0
@@ -222,8 +228,9 @@ def train():
             # iteratorはrankごとに初期化することができる、他のrankのiteratorは初期化されない
             # rank=0のGPUでstep == 3の時にiteratorを初期化する
             if rank == 0 and epoch == 2 and step == 3:
-                logger.info(f"{prefix_text} initialize rank:{rank} iterator 0")
-                iterators[0] = iter(loaders[0])
+                iterator_index = 1
+                logger.info(f"{prefix_text} initialize rank:{rank} iterator {iterator_index}")
+                iterators[iterator_index] = iter(loaders[iterator_index])
 
             # すべてのiteratorからデータを取得し結合する
             image_list = []
@@ -242,16 +249,25 @@ def train():
             sample_image_list = []
             sample_in_list = []
             sample_out_list = []
-            sample_num = 1  # 1バッチの中から何個サンプルするか
+            sample_num = 2  # 1バッチの中から何個サンプルするか
             in_batch_index = 0  # バッチ中のindex
             for batch_size in batch_size_list:
                 sample_image_list.append(image[in_batch_index : in_batch_index + sample_num].flatten())
                 sample_in_list.append(in_text[in_batch_index : in_batch_index + sample_num].flatten())
                 sample_out_list.append(out_text[in_batch_index : in_batch_index + sample_num].flatten())
                 in_batch_index += batch_size
-
+            # for batch_size in batch_size_list:
+            #     in_batch_index += batch_size
+            #     sample_image_list.append(image[in_batch_index - sample_num : in_batch_index].flatten())
+            #     sample_in_list.append(in_text[in_batch_index - sample_num : in_batch_index].flatten())
+            #     sample_out_list.append(out_text[in_batch_index - sample_num : in_batch_index].flatten())
+            print_batch_size = f"batch_size = image:{image.shape} || in_text:{in_text.shape} || out_text:{out_text.shape}"
+            logger.info(f"{prefix_text}{print_batch_size}")
             print_sample = f"image:{sample_image_list} || in_text:{sample_in_list} || out_text:{sample_out_list}"
             logger.info(f"{prefix_text}{print_sample}")
+
+            # if step == min_step:
+            #     logger.info(f"full_image:{image} || full_in_text:{in_text} || full_out_text:{out_text}")
 
             # if i % args.accumulation_steps == 0:
             #     optimizer.zero_grad()
