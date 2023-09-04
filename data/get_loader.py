@@ -81,6 +81,8 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             dataset = imSituDataset(data_dir, phase=phase)
         elif 'imagenet' == dataset_name:
             dataset = ImageNetDatasetLoader(data_dir, phase=phase)
+        elif 'sun397' == dataset_name:
+            dataset = SUN397DatasetLoader(data_dir)
         else:
             raise NotImplementedError
     return dataset
