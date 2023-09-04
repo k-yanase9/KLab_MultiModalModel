@@ -18,6 +18,9 @@ dropimageidlist = [
     "805baf9650a12710",
     "98ac2996fc46b56d",
     "a46a248a39f2d97c",
+    "9316d4095eab6d10",
+    "9ee38bb2e69da0ac",
+    "37625d59d0e0782a",
 ]
 
 class OpenImageDataset_detection(torch.utils.data.Dataset):
