@@ -5,6 +5,7 @@ import pandas as pd
 import torch
 from PIL import Image
 from torchvision.transforms import ToTensor
+from ..dataset_loader import DatasetLoader
 
 # 存在しない画像を除外するためのリスト
 dropimageidlist = [
@@ -18,7 +19,6 @@ dropimageidlist = [
     "98ac2996fc46b56d",
     "a46a248a39f2d97c",
 ]
-
 
 class OpenImageDataset_detection(torch.utils.data.Dataset):
     """openimageのdetectionデータセット"""

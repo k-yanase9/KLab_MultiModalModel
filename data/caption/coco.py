@@ -50,7 +50,7 @@ class SilentCOCO(COCO):
         self.cats = cats
 
 class COCODatasetLoader(DatasetLoader):
-    def __init__(self, data_dir='/data/datatset/mscoco2017', phase='train'):
+    def __init__(self, data_dir='/data/dataset/mscoco2017', phase='train'):
         super().__init__()
         anno_path = os.path.join(data_dir, 'annotations', f'captions_{phase}2017.json')
         coco = SilentCOCO(anno_path)
