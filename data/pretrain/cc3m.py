@@ -1,13 +1,14 @@
 import os
 from .pretrain import PretrainDatasetLoader
 
+
 class CC3MPretrainDatasetLoader(PretrainDatasetLoader):
     def __init__(self, args, data_dir='/data/datatset/cc3m', phase='train', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
         super().__init__(args, resize, src_tokenizer, tgt_tokenizer, mask_probability)
         if phase == 'train':
             tsv_path = os.path.join(data_dir, 'train.tsv')
         elif phase == 'val':
-            tsv_path = os.path.join(data_dir, 'validation.tsv')
+            tsv_path = os.path.join(data_dir, 'val.tsv')
         else:
             raise ValueError(f'Invalid phase: {phase}')
 
