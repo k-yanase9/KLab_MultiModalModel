@@ -1,6 +1,6 @@
 import json
 import os
-from PIL import Image
+
 import torch
 from torchvision.transforms import ToTensor
 from ..dataset_loader import DatasetLoader
@@ -36,9 +36,7 @@ class OpenImageDataset_Caption(DatasetLoader):
         return len(self.items)
 
 
-
-if __name__ =="__main__":
+if __name__ == "__main__":
     dataset = OpenImageDataset_Caption(phase="val")
     data = dataset[0]
     print(data)
-    

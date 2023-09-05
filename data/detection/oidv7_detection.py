@@ -1,8 +1,9 @@
 import os
-import pandas as pd
-from PIL import Image
 from copy import deepcopy
+
+import pandas as pd
 import torch
+from PIL import Image
 from torchvision.transforms import ToTensor
 from ..dataset_loader import DatasetLoader
 
