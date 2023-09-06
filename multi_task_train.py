@@ -3,8 +3,10 @@ import random
 import sys
 
 import numpy as np
+import PIL
 import torch
 import torch.distributed as dist
+import torchvision
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torchvision import transforms
 from tqdm import tqdm
@@ -132,6 +134,29 @@ def train():
             src_images = torch.cat(image_list, dim=0)
             src_texts = src_text_list
             tgt_texts = tgt_text_list
+
+            image_dir = f"results/images/rank-{rank}"
+            mean = [0.485, 0.456, 0.406]
+            std = [0.229, 0.224, 0.225]
+            if not os.path.exists(image_dir):
+                # ディレクトリが存在しない場合、ディレクトリを作成する
+                os.makedirs(image_dir)
+            if i == 0 or i == min_step - 1:
+                if i == 0:
+                    text_f = open(f"results/rank-{rank}_src_tgt.txt", "w")
+                elif i == min_step - 1:
+                    text_f = open(f"results/rank-{rank}_src_tgt.txt", "a")
+                for b in range(src_images.shape[0]):
+                    img = src_images[b].cpu()
+                    img = img * torch.tensor(std).view(3, 1, 1)
+                    img = img + torch.tensor(mean).view(3, 1, 1)
+                    img = transforms.ToPILImage()(img)
+                    # img = PIL.Image.fromarray(img)
+                    img.save(f"{image_dir}/step-{i}_batch-{b}.png")
+
+                    text_f.write(f"step-{i}_batch-{b}\n{src_texts[b]}\n{tgt_texts[b]}\n")
+                text_f.write("\n\n\n\n")
+                text_f.close()
 
             if i % args.accumulation_steps == 0:
                 optimizer.zero_grad()
