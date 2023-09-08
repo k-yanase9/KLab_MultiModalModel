@@ -273,8 +273,8 @@ def train():
             #     sample_image_list.append(image[in_batch_index - sample_num : in_batch_index].flatten())
             #     sample_in_list.append(in_text[in_batch_index - sample_num : in_batch_index].flatten())
             #     sample_out_list.append(out_text[in_batch_index - sample_num : in_batch_index].flatten())
-            # print_batch_size = f"batch_size = image:{image.shape} || in_text:{in_text.shape} || out_text:{out_text.shape}"
-            # logger.info(f"{prefix_text}{print_batch_size}")
+            print_batch_size = f"batch_size = image:{image.shape} || in_text:{in_text.shape} || out_text:{out_text.shape}"
+            logger.info(f"{prefix_text}{print_batch_size}")
             print_sample = f"image:{sample_image_list} || in_text:{sample_in_list} || out_text:{sample_out_list}"
             logger.info(f"{prefix_text}{print_sample}")
 
