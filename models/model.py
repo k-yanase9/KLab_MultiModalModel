@@ -33,31 +33,44 @@ class MyModel(nn.Module):
             # self.num_patches = (self.image_model.config.image_size // self.image_model.config.patch_size) ** 2
             self.num_patches = 16**2
 
-        transformer_config = T5Config(
-            vocab_size=32128 + args.loc_vocab_size + args.image_vocab_size,
-            d_model=args.transformer_d_model,
-            d_ff=args.transformer_d_ff,
-            d_kv=args.transformer_d_kv,
-            num_heads=args.transformer_num_heads,
-            num_layers=args.transformer_num_layers,
-            # num_decoder_layers=args.transformer_num_decoder_layers,
-            # decoder_start_token_id=0,
-            max_length=args.max_target_length,
-        )
-        self.transformer = T5EncoderModel(transformer_config).requires_grad_(True)
-        self.transformer.shared.requires_grad_(False)
+        if args.pretrain:
+            transformer_config = T5Config(
+                vocab_size=32128 + args.loc_vocab_size + args.image_vocab_size,
+                d_model=args.transformer_d_model,
+                d_ff=args.transformer_d_ff,
+                d_kv=args.transformer_d_kv,
+                num_heads=args.transformer_num_heads,
+                num_layers=args.transformer_num_layers,
+                num_decoder_layers=args.transformer_num_decoder_layers,
+                decoder_start_token_id=0,
+                max_length=args.max_target_length,
+            )
+            self.transformer = T5ForConditionalGeneration(transformer_config).requires_grad_(True)
+        else:
+            transformer_config = T5Config(
+                vocab_size=32128 + args.loc_vocab_size + args.image_vocab_size,
+                d_model=args.transformer_d_model,
+                d_ff=args.transformer_d_ff,
+                d_kv=args.transformer_d_kv,
+                num_heads=args.transformer_num_heads,
+                num_layers=args.transformer_num_layers,
+                max_length=args.max_target_length,
+            )
+            self.transformer = T5EncoderModel(transformer_config).requires_grad_(True)
+            self.transformer.shared.requires_grad_(False)
 
         if args.ffn:
             self.language_ffn = nn.Linear(self.language_model.config.d_model, self.transformer.config.d_model)
             self.image_ffn = nn.Linear(self.image_model.num_features, self.transformer.config.d_model)
 
-        self.emb_cls_token = EmbClassToken(self.transformer.config.d_model)
-        if 'imagenet' in args.datasets:
-            self.classifier = nn.Linear(self.transformer.config.d_model, 1000)
-        elif 'sun397' in args.datasets:
-            self.classifier = nn.Linear(self.transformer.config.d_model, 397)
-        else:
-            raise NotImplementedError
+        if not args.pretrain:
+            self.emb_cls_token = EmbClassToken(self.transformer.config.d_model)
+            if 'imagenet' in args.datasets:
+                self.classifier = nn.Linear(self.transformer.config.d_model, 1000)
+            elif 'sun397' in args.datasets:
+                self.classifier = nn.Linear(self.transformer.config.d_model, 397)
+            else:
+                raise NotImplementedError
         
         if args.loss == 'CrossEntropy':
             self.criterion = nn.CrossEntropyLoss()
@@ -84,7 +97,8 @@ class MyModel(nn.Module):
             image_embeddings = self.image_ffn(image_embeddings)
 
         concated_embeddings = torch.cat((image_embeddings,language_embeddings), dim=1)
-        concated_embeddings = self.emb_cls_token(concated_embeddings)
+        if not self.args.pretrain:
+            concated_embeddings = self.emb_cls_token(concated_embeddings)
 
         cls_attention_mask = torch.ones(image_embeddings.shape[0], 1, device=self.transformer.device)
         image_attention_mask = torch.ones(image_embeddings.shape[0], image_embeddings.shape[1], device=self.image_model.device)
@@ -143,8 +157,9 @@ class MyModel(nn.Module):
         if self.args.ffn:
             checkpoints['language_ffn'] = self.language_ffn.state_dict()
             checkpoints['image_ffn'] = self.image_ffn.state_dict()
-        checkpoints['emb_cls_token'] = self.emb_cls_token.state_dict()
-        checkpoints['classifier'] = self.classifier.state_dict()
+        if not self.args.pretrain:
+            checkpoints['emb_cls_token'] = self.emb_cls_token.state_dict()
+            checkpoints['classifier'] = self.classifier.state_dict()
         torch.save(checkpoints, result_path)
 
     def load(self, result_name="best.pth"):
@@ -156,8 +171,9 @@ class MyModel(nn.Module):
         if self.args.ffn:
             self.language_ffn.load_state_dict(checkpoints['language_ffn'])
             self.image_ffn.load_state_dict(checkpoints['image_ffn'])
-        self.emb_cls_token.load_state_dict(checkpoints['emb_cls_token'])
-        self.classifier.load_state_dict(checkpoints['classifier'])
+        if not self.args.pretrain:
+            self.emb_cls_token.load_state_dict(checkpoints['emb_cls_token'])
+            self.classifier.load_state_dict(checkpoints['classifier'])
 
 class EmbClassToken(nn.Module):
     def __init__(self, dim) -> None:
