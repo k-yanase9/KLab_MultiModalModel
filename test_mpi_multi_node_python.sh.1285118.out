@@ -1,0 +1,92 @@
++ module load cuda
+++ /usr/bin/modulecmd bash load cuda
++ eval CPATH=/home/center/opt/x86_64/cores/cuda/12.0.1/extras/CUPTI/include:/home/center/opt/x86_64/cores/cuda/12.0.1/include ';export' 'CPATH;CUDA_HOME=/home/center/opt/x86_64/cores/cuda/12.0.1' ';export' 'CUDA_HOME;CUDA_PATH=/home/center/opt/x86_64/cores/cuda/12.0.1' ';export' 'CUDA_PATH;FLOW_CUDA_NAME=cuda' ';export' 'FLOW_CUDA_NAME;FLOW_CUDA_VER=12.0.1' ';export' 'FLOW_CUDA_VER;LD_LIBRARY_PATH=/home/center/opt/x86_64/cores/cuda/12.0.1/targets/x86_64-linux/lib:/home/center/opt/x86_64/cores/cuda/12.0.1/extras/CUPTI/lib64:/home/center/opt/x86_64/cores/cuda/12.0.1/lib64' ';export' 'LD_LIBRARY_PATH;LIBRARY_PATH=/home/center/opt/x86_64/cores/cuda/12.0.1/lib64' ';export' 'LIBRARY_PATH;LOADEDMODULES=cuda/12.0.1' ';export' 'LOADEDMODULES;MANPATH=/center/local/app/x86/nano/share/man:/usr/local/share/man:/usr/share/man' ';export' 'MANPATH;MODULEPATH=/home/center/opt/x86_64/modulefiles/CX/compiler/cuda/12.0.1:/home/center/opt/x86_64/modulefiles/CX/core:/center/local/app/x86/hpci/modulefiles' ';export' 'MODULEPATH;PATH=/home/center/opt/x86_64/cores/cuda/12.0.1/bin:/opt/conda/bin:/center/local/app/x86/nano/bin:/home/center/local/bin:/usr/lib64/qt-3.3/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/w49009a/.local/bin:/home/w49009a/bin' ';export' 'PATH;_LMFILES_=/home/center/opt/x86_64/modulefiles/CX/core/cuda/12.0.1' ';export' '_LMFILES_;'
+++ CPATH=/home/center/opt/x86_64/cores/cuda/12.0.1/extras/CUPTI/include:/home/center/opt/x86_64/cores/cuda/12.0.1/include
+++ export CPATH
+++ CUDA_HOME=/home/center/opt/x86_64/cores/cuda/12.0.1
+++ export CUDA_HOME
+++ CUDA_PATH=/home/center/opt/x86_64/cores/cuda/12.0.1
+++ export CUDA_PATH
+++ FLOW_CUDA_NAME=cuda
+++ export FLOW_CUDA_NAME
+++ FLOW_CUDA_VER=12.0.1
+++ export FLOW_CUDA_VER
+++ LD_LIBRARY_PATH=/home/center/opt/x86_64/cores/cuda/12.0.1/targets/x86_64-linux/lib:/home/center/opt/x86_64/cores/cuda/12.0.1/extras/CUPTI/lib64:/home/center/opt/x86_64/cores/cuda/12.0.1/lib64
+++ export LD_LIBRARY_PATH
+++ LIBRARY_PATH=/home/center/opt/x86_64/cores/cuda/12.0.1/lib64
+++ export LIBRARY_PATH
+++ LOADEDMODULES=cuda/12.0.1
+++ export LOADEDMODULES
+++ MANPATH=/center/local/app/x86/nano/share/man:/usr/local/share/man:/usr/share/man
+++ export MANPATH
+++ MODULEPATH=/home/center/opt/x86_64/modulefiles/CX/compiler/cuda/12.0.1:/home/center/opt/x86_64/modulefiles/CX/core:/center/local/app/x86/hpci/modulefiles
+++ export MODULEPATH
+++ PATH=/home/center/opt/x86_64/cores/cuda/12.0.1/bin:/opt/conda/bin:/center/local/app/x86/nano/bin:/home/center/local/bin:/usr/lib64/qt-3.3/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/w49009a/.local/bin:/home/w49009a/bin
+++ export PATH
+++ _LMFILES_=/home/center/opt/x86_64/modulefiles/CX/core/cuda/12.0.1
+++ export _LMFILES_
++ module load openmpi_cuda
+++ /usr/bin/modulecmd bash load openmpi_cuda
++ eval CPATH=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/include:/home/center/opt/x86_64/cores/cuda/12.0.1/extras/CUPTI/include:/home/center/opt/x86_64/cores/cuda/12.0.1/include ';export' 'CPATH;INCLUDE_PATH=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/include' ';export' 'INCLUDE_PATH;LD_LIBRARY_PATH=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/lib:/home/center/opt/x86_64/cores/cuda/12.0.1/targets/x86_64-linux/lib:/home/center/opt/x86_64/cores/cuda/12.0.1/extras/CUPTI/lib64:/home/center/opt/x86_64/cores/cuda/12.0.1/lib64' ';export' 'LD_LIBRARY_PATH;LIBRARY_PATH=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/lib:/home/center/opt/x86_64/cores/cuda/12.0.1/lib64' ';export' 'LIBRARY_PATH;LOADEDMODULES=cuda/12.0.1:openmpi_cuda/4.1.5' ';export' 'LOADEDMODULES;MANPATH=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/share/man:/center/local/app/x86/nano/share/man:/usr/local/share/man:/usr/share/man' ';export' 'MANPATH;OMPI_MCA_btl=\^openib' ';export' 'OMPI_MCA_btl;OMPI_MCA_plm_rsh_agent=/bin/pjrsh' ';export' 'OMPI_MCA_plm_rsh_agent;OPENMPI_CUDA_DIR=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5' ';export' 'OPENMPI_CUDA_DIR;OPENMPI_CUDA_INC=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/include' ';export' 'OPENMPI_CUDA_INC;OPENMPI_CUDA_LIB=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/lib' ';export' 'OPENMPI_CUDA_LIB;PATH=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/bin:/home/center/opt/x86_64/cores/cuda/12.0.1/bin:/opt/conda/bin:/center/local/app/x86/nano/bin:/home/center/local/bin:/usr/lib64/qt-3.3/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/w49009a/.local/bin:/home/w49009a/bin' ';export' 'PATH;PKG_CONFIG_PATH=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/lib/pkgconfig' ';export' 'PKG_CONFIG_PATH;_LMFILES_=/home/center/opt/x86_64/modulefiles/CX/core/cuda/12.0.1:/home/center/opt/x86_64/modulefiles/CX/compiler/cuda/12.0.1/openmpi_cuda/4.1.5' ';export' '_LMFILES_;'
+++ CPATH=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/include:/home/center/opt/x86_64/cores/cuda/12.0.1/extras/CUPTI/include:/home/center/opt/x86_64/cores/cuda/12.0.1/include
+++ export CPATH
+++ INCLUDE_PATH=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/include
+++ export INCLUDE_PATH
+++ LD_LIBRARY_PATH=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/lib:/home/center/opt/x86_64/cores/cuda/12.0.1/targets/x86_64-linux/lib:/home/center/opt/x86_64/cores/cuda/12.0.1/extras/CUPTI/lib64:/home/center/opt/x86_64/cores/cuda/12.0.1/lib64
+++ export LD_LIBRARY_PATH
+++ LIBRARY_PATH=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/lib:/home/center/opt/x86_64/cores/cuda/12.0.1/lib64
+++ export LIBRARY_PATH
+++ LOADEDMODULES=cuda/12.0.1:openmpi_cuda/4.1.5
+++ export LOADEDMODULES
+++ MANPATH=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/share/man:/center/local/app/x86/nano/share/man:/usr/local/share/man:/usr/share/man
+++ export MANPATH
+++ OMPI_MCA_btl='^openib'
+++ export OMPI_MCA_btl
+++ OMPI_MCA_plm_rsh_agent=/bin/pjrsh
+++ export OMPI_MCA_plm_rsh_agent
+++ OPENMPI_CUDA_DIR=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5
+++ export OPENMPI_CUDA_DIR
+++ OPENMPI_CUDA_INC=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/include
+++ export OPENMPI_CUDA_INC
+++ OPENMPI_CUDA_LIB=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/lib
+++ export OPENMPI_CUDA_LIB
+++ PATH=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/bin:/home/center/opt/x86_64/cores/cuda/12.0.1/bin:/opt/conda/bin:/center/local/app/x86/nano/bin:/home/center/local/bin:/usr/lib64/qt-3.3/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/w49009a/.local/bin:/home/w49009a/bin
+++ export PATH
+++ PKG_CONFIG_PATH=/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/lib/pkgconfig
+++ export PKG_CONFIG_PATH
+++ _LMFILES_=/home/center/opt/x86_64/modulefiles/CX/core/cuda/12.0.1:/home/center/opt/x86_64/modulefiles/CX/compiler/cuda/12.0.1/openmpi_cuda/4.1.5
+++ export _LMFILES_
++ module load singularity
+++ /usr/bin/modulecmd bash load singularity
++ eval LOADEDMODULES=cuda/12.0.1:openmpi_cuda/4.1.5:singularity/3.10.5 ';export' 'LOADEDMODULES;MANPATH=/home/center/opt/x86_64/apps/singularity/3.10.5/share/man:/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/share/man:/center/local/app/x86/nano/share/man:/usr/local/share/man:/usr/share/man' ';export' 'MANPATH;PATH=/home/center/opt/x86_64/apps/singularity/3.10.5/bin:/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/bin:/home/center/opt/x86_64/cores/cuda/12.0.1/bin:/opt/conda/bin:/center/local/app/x86/nano/bin:/home/center/local/bin:/usr/lib64/qt-3.3/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/w49009a/.local/bin:/home/w49009a/bin' ';export' 'PATH;SINGULARITY_DIR=/home/center/opt/x86_64/apps/singularity/3.10.5' ';export' 'SINGULARITY_DIR;_LMFILES_=/home/center/opt/x86_64/modulefiles/CX/core/cuda/12.0.1:/home/center/opt/x86_64/modulefiles/CX/compiler/cuda/12.0.1/openmpi_cuda/4.1.5:/home/center/opt/x86_64/modulefiles/CX/core/singularity/3.10.5' ';export' '_LMFILES_;'
+++ LOADEDMODULES=cuda/12.0.1:openmpi_cuda/4.1.5:singularity/3.10.5
+++ export LOADEDMODULES
+++ MANPATH=/home/center/opt/x86_64/apps/singularity/3.10.5/share/man:/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/share/man:/center/local/app/x86/nano/share/man:/usr/local/share/man:/usr/share/man
+++ export MANPATH
+++ PATH=/home/center/opt/x86_64/apps/singularity/3.10.5/bin:/home/center/opt/x86_64/apps/cuda/12.0.1/openmpi_cuda/4.1.5/bin:/home/center/opt/x86_64/cores/cuda/12.0.1/bin:/opt/conda/bin:/center/local/app/x86/nano/bin:/home/center/local/bin:/usr/lib64/qt-3.3/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/w49009a/.local/bin:/home/w49009a/bin
+++ export PATH
+++ SINGULARITY_DIR=/home/center/opt/x86_64/apps/singularity/3.10.5
+++ export SINGULARITY_DIR
+++ _LMFILES_=/home/center/opt/x86_64/modulefiles/CX/core/cuda/12.0.1:/home/center/opt/x86_64/modulefiles/CX/compiler/cuda/12.0.1/openmpi_cuda/4.1.5:/home/center/opt/x86_64/modulefiles/CX/core/singularity/3.10.5
+++ export _LMFILES_
++ mpirun -n 1 -machinefile /home/w49009a/omote/KLab_MultiModalModel/.d0001285118_nodeinfo -report-bindings -map-by ppr:2:socket singularity exec --nv /home/w49009a/pytorch_omote.sif bash /home/w49009a/omote/KLab_MultiModalModel/test_each_node_task_python.sh
+[cx151:00067] MCW rank 0 bound to socket 0[core 0[hwt 0]]: [B/././././././././././././././././././.][./././././././././././././././././././.]
+13:4: not a valid test operator: (
+13:4: not a valid test operator: 525.60.13
+rm: cannot remove '/usr/local/cuda/compat/lib': Read-only file system
+rm: cannot remove '/usr/local/cuda/compat/lib': Read-only file system
+Traceback (most recent call last):
+  File "/home/w49009a/omote/KLab_MultiModalModel/multi_node.py", line 8, in <module>
+    f.write(torch.cuda.is_available())    
+TypeError: write() argument must be str, not bool
+--------------------------------------------------------------------------
+Primary job  terminated normally, but 1 process returned
+a non-zero exit code. Per user-direction, the job has been aborted.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+mpirun detected that one or more processes exited with non-zero status, thus causing
+the job to be terminated. The first process to do so was:
+
+  Process name: [[53574,1],0]
+  Exit code:    1
+--------------------------------------------------------------------------

@@ -47,7 +47,7 @@ class MyDataset(Dataset):
 
 
 class MyChainDataset(Dataset):
-    def __init__(self, dataset_list: list[Dataset], key_list: list[list[int | str]] = None):
+    def __init__(self, dataset_list, key_list = None):
         """_summary_
         dataset_listにはDatasetのリストを入れる
         key_listはdataset_listの各データセットから取り出すデータのキーのリストを入れる

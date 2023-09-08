@@ -1,0 +1,7 @@
+Bootstrap: docker
+From:nvcr.io/nvidia/pytorch:23.08-py3
+
+%post
+    apt-get update -y
+    apt-get install -y openssh-server
+    pip install pipenv

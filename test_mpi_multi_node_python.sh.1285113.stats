@@ -1,0 +1,527 @@
+Job Statistical Information
+
+ JOB ID                    : 1285113
+ SUB JOB NUM               : -
+ START BULKNO              : -
+ END BULKNO                : -
+ HOST NAME                 : flow-cx05
+ JOB NAME                  : test_mpi_multi_node_python.sh
+ JOB TYPE                  : BATCH
+ JOB MODEL                 : NM
+ USER                      : w49009a
+ GROUP                     : others
+ RESOURCE UNIT             : cx
+ RESOURCE GROUP            : cx-workshop
+ APRIORITY                 : 127 <DEFAULT>
+ PRIORITY                  : 127 <DEFAULT>
+ SHELL                     : /bin/bash
+ MAIL SEND FLAG            : ----
+ MAIL ADDRESS              : w49009a
+ STEP DEPENDENCY EXP       : 
+ FILE MASK                 : 0022
+ STANDARD OUT FILE         : /home/w49009a/omote/KLab_MultiModalModel/test_mpi_multi_node_python.sh.1285113.out
+ STANDARD ERR FILE         : /home/w49009a/omote/KLab_MultiModalModel/test_mpi_multi_node_python.sh.1285113.out
+ INFORMATION FILE          : /home/w49009a/omote/KLab_MultiModalModel/test_mpi_multi_node_python.sh.1285113.stats
+ PJSUB DIRECTORY           : /home/w49009a/omote/KLab_MultiModalModel
+ FILE SYSTEM NAME          : 
+ APPLICATION NAME          : 
+ NUMA POLICY               : 0
+ SPECIFIED JOB START DATE  : -
+ AUTO RESTART              : yes
+ MPI PROC (REQUIRE)        : 2
+ MPI PROC (ALLOC)          : 2
+ MPI STATIC PROC (REQUIRE) : 2
+ MPI STATIC PROC (ALLOC)   : 2
+ PROC CPU LIMIT            : unlimited <DEFAULT>
+ PROC COREFILE LIMIT       : 0.0 MB (0) <DEFAULT>
+ PROC CREATE PROCESS LIMIT : 2048 <DEFAULT>
+ PROC DATA LIMIT           : unlimited <DEFAULT>
+ PROC LOCKED MEMORY LIMIT  : unlimited <DEFAULT>
+ PROC MESSAGE QUEUE LIMIT  : unlimited <DEFAULT>
+ PROC OPEN FILES LIMIT     : 1048576 <DEFAULT>
+ PROC PENDING SIGNAL LIMIT : unlimited <DEFAULT>
+ PROC PERMFILE LIMIT       : unlimited <DEFAULT>
+ PROC STACK LIMIT          : unlimited <DEFAULT>
+ PROC VIRTUAL MEMORY LIMIT : unlimited <DEFAULT>
+ COMMENT                   : 
+ SUPPLEMENTARY INFORMATION : 
+ RETRY NUM                 : 0
+ LAST STATE                : RNO
+ STATE                     : EXT
+ BACKFILL                  : 0
+ ACCEPT DATE               : 2023/09/08 23:14:41
+ QUEUED DATE               : 2023/09/08 23:14:41
+ PRO START DATE            : 2023/09/08 23:14:46
+ PRO END DATE              : 2023/09/08 23:14:46
+ JOB START DATE            : 2023/09/08 23:14:46
+ JOB END DATE              : 2023/09/08 23:14:54
+ EPI START DATE            : 2023/09/08 23:14:56
+ EPI END DATE              : 2023/09/08 23:14:56
+ EXIT DATE                 : 2023/09/08 23:14:59
+ JOB DELETE DATE (REQUIRE) : -
+ JOB DELETE DATE           : -
+ ALL PREC SUBJOB EXIT DATE : -
+ HOLD TIME                 : 0
+ LAST HOLD USER            : -
+ HOLD NUM                  : 0
+ PRM DATE                  : 2023/09/08 23:14:56
+ AFFECTED NODE ID          : -
+ EXIT CODE                 : 0
+ SIGNAL NO                 : -
+ PJM CODE                  : 0
+ REASON                    : -
+ PRO EXIT CODE             : 0
+ EPI EXIT CODE             : 0
+ ELAPSE TIME (LIMIT)       : 00:10:00 (600)
+ ELAPSE TIME (USE)         : 00:00:08 (8)
+ USER CPU TIME (USE)       : 4870 ms
+ SYSTEM CPU TIME (USE)     : 10600 ms
+ CPU TIME (TOTAL)          : 15470 ms
+ MEMORY SIZE (LIMIT)       : 346112.0 MiB (362924736512) <DEFAULT>
+ MEMORY SIZE (ALLOC)       : 346112.0 MiB (362924736512)
+ MAX MEMORY SIZE (USE)     : 482.1 MiB (505475072)
+ VNODE MEMORY SIZE (LIMIT) : -
+ VNODE MEMORY SIZE (ALLOC) : -
+ VNODE MAX MEMORY SIZE (USE) : -
+ CPU NUM (REQUIRE)         : 80 <DEFAULT>
+ CPU NUM (ALLOC)           : 80
+ CPU NUM (USE)             : 80
+ TOFU USER COMM RECV BYTE  : -
+ TOFU USER COMM SEND BYTE  : -
+ TOFU SYSTEM COMM RECV BYTE : -
+ TOFU SYSTEM COMM SEND BYTE : -
+ FJ PROFILER               : -
+ SECTOR CACHE              : -
+ INTRA NODE BARRIER        : -
+ AVG POWER CONSUMPTION OF CORES/CMG (IDEAL) : -
+ MAX POWER CONSUMPTION OF CORES/CMG (IDEAL) : -
+ MIN POWER CONSUMPTION OF CORES/CMG (IDEAL) : -
+ ENERGY CONSUMPTION OF CORES/CMG (IDEAL) : -
+ AVG POWER CONSUMPTION OF L2CACHE/CMG (IDEAL) : -
+ MAX POWER CONSUMPTION OF L2CACHE/CMG (IDEAL) : -
+ MIN POWER CONSUMPTION OF L2CACHE/CMG (IDEAL) : -
+ ENERGY CONSUMPTION OF L2CACHE/CMG (IDEAL) : -
+ AVG POWER CONSUMPTION OF MEM/CMG (IDEAL) : -
+ MAX POWER CONSUMPTION OF MEM/CMG (IDEAL) : -
+ MIN POWER CONSUMPTION OF MEM/CMG (IDEAL) : -
+ ENERGY CONSUMPTION OF MEM/CMG (IDEAL) : -
+ AVG POWER CONSUMPTION OF TOFU (IDEAL) : -
+ MAX POWER CONSUMPTION OF TOFU (IDEAL) : -
+ MIN POWER CONSUMPTION OF TOFU (IDEAL) : -
+ ENERGY CONSUMPTION OF TOFU (IDEAL) : -
+ AVG POWER CONSUMPTION OF CPU PERIPHERALS (IDEAL) : -
+ MAX POWER CONSUMPTION OF CPU PERIPHERALS (IDEAL) : -
+ MIN POWER CONSUMPTION OF CPU PERIPHERALS (IDEAL) : -
+ ENERGY CONSUMPTION OF CPU PERIPHERALS (IDEAL) : -
+ AVG POWER CONSUMPTION OF OPTICAL MODULE (IDEAL) : -
+ MAX POWER CONSUMPTION OF OPTICAL MODULE (IDEAL) : -
+ MIN POWER CONSUMPTION OF OPTICAL MODULE (IDEAL) : -
+ ENERGY CONSUMPTION OF OPTICAL MODULE (IDEAL) : -
+ AVG POWER CONSUMPTION OF PCI-E (IDEAL) : -
+ MAX POWER CONSUMPTION OF PCI-E (IDEAL) : -
+ MIN POWER CONSUMPTION OF PCI-E (IDEAL) : -
+ ENERGY CONSUMPTION OF PCI-E (IDEAL) : -
+ AVG POWER CONSUMPTION OF NODE (IDEAL) : -
+ MAX POWER CONSUMPTION OF NODE (IDEAL) : -
+ MIN POWER CONSUMPTION OF NODE (IDEAL) : -
+ ENERGY CONSUMPTION OF NODE (IDEAL) : -
+ AVG POWER CONSUMPTION OF NODE (MEASURED) : 275.548704
+ MAX POWER CONSUMPTION OF NODE (MEASURED) : 275.548704
+ MIN POWER CONSUMPTION OF NODE (MEASURED) : 275.548704
+ ENERGY CONSUMPTION OF NODE (MEASURED) : 0.781347
+ UTILIZATION INFO OF POWER API : 0
+ AVG POWER CONSUMPTION OF CPU/PKG(0) : 119.839277
+ AVG POWER CONSUMPTION OF CPU/PKG(1) : 115.371065
+ MAX POWER CONSUMPTION OF CPU/PKG(0) : 119.839277
+ MAX POWER CONSUMPTION OF CPU/PKG(1) : 115.371065
+ MIN POWER CONSUMPTION OF CPU/PKG(0) : 119.839277
+ MIN POWER CONSUMPTION OF CPU/PKG(1) : 115.371065
+ ENERGY CONSUMPTION OF CPU/PKG(0) : 0.339856
+ ENERGY CONSUMPTION OF CPU/PKG(1) : 0.327045
+ AVG POWER CONSUMPTION OF MEM/PKG(0) : 20.149202
+ AVG POWER CONSUMPTION OF MEM/PKG(1) : 20.189161
+ MAX POWER CONSUMPTION OF MEM/PKG(0) : 20.149202
+ MAX POWER CONSUMPTION OF MEM/PKG(1) : 20.189161
+ MIN POWER CONSUMPTION OF MEM/PKG(0) : 20.149202
+ MIN POWER CONSUMPTION OF MEM/PKG(1) : 20.189161
+ ENERGY CONSUMPTION OF MEM/PKG(0) : 0.056948
+ ENERGY CONSUMPTION OF MEM/PKG(1) : 0.057498
+ AVG POWER CONSUMPTION OF PP0/PKG : -
+ MAX POWER CONSUMPTION OF PP0/PKG : -
+ MIN POWER CONSUMPTION OF PP0/PKG : -
+ ENERGY CONSUMPTION OF PP0/PKG : -
+ POWER CONSUMPTION STATE   : 1
+ POWER CONSUMPTION MEASURE START DATE : 2023/09/08 23:14:45
+ POWER CONSUMPTION MEASURE END DATE : 2023/09/08 23:14:56
+ VNODE NUM (REQUIRE)       : -
+ VNODE NUM (ALLOC)         : -
+ VNODE NUM (USE)           : -
+ NODE NUM (REQUIRE)        : 2
+ NODE NUM (ALLOC)          : 2
+ NODE NUM (USE)            : 2
+ NODE NUM (UNUSED)         : 0
+ NODE ID (USE)             : 0xFFFF00B6 0xFFFF00B8
+ TOFU COORDINATE (USE)     : -
+ NODE ID (RANK)            : 0xFFFF00B6(0) 0xFFFF00B8(1)
+ gpu_ave_util              : 0.57 %
+ gpu_max_util              : 25 %
+ gpu_ave_mem               : 0.36 MiB
+ gpu_max_mem               : 23 MiB
+ gpu_ave_pwr               : 41.07 W
+ gpu_max_pwr               : 55 W
+ gpu_ave_temp              : 29.50 C
+ gpu_max_temp              : 31 C
+ gpu (REQUIRE)             : 8 <DEFAULT>
+ gpu (ALLOC)               : 8
+ gpu (USE)                 : -
+ beeond (REQUIRE)          : 0 <DEFAULT>
+ beeond (ALLOC)            : 0
+ beeond (USE)              : -
+ jobenv (REQUIRE)          : singularity
+ jobenv (ALLOC)            : singularity
+ jobenv (USE)              : 
+
+--------------------------------------------------------------------------------
+Node Statistical Information
+
+ VNODE ID                  : 0
+ NODE ID                   : 0xFFFF00B6
+ TOFU COORDINATE           : -
+ NODE COORDINATE           : -
+ RANK NO                   : 0
+ NODE AVAILABLE            : available
+ ARCHI INFORMATION         : PG
+ CPU BITMAP (ALLOC)        : 0xffffffffff
+ CPU BITMAP (USE)          : 0xffffffffff
+ MPI PROC (ALLOC)          : 2
+ MPI STATIC PROC (ALLOC)   : 2
+ USER CPU TIME (USE)       : 2360 ms
+ SYSTEM CPU TIME (USE)     : 5770 ms
+ CPU TIME (TOTAL)          : 8130 ms
+ MEMORY SIZE (ALLOC)       : 346112.0 MiB (362924736512)
+ MAX MEMORY SIZE (USE)     : 482.1 MiB (505475072)
+ CPU NUM (ALLOC)           : 40
+ CPU NUM (USE)             : 40
+ PERF COUNT 1              : -
+ PERF COUNT 2              : -
+ PERF COUNT 3              : -
+ PERF COUNT 4              : -
+ PERF COUNT 5              : -
+ PERF COUNT 6              : -
+ PERF COUNT 7              : -
+ PERF COUNT 8              : -
+ PERF COUNT 9              : -
+ TOFU USER COMM RECV BYTE  : -
+ TOFU USER COMM SEND BYTE  : -
+ TOFU SYSTEM COMM RECV BYTE : -
+ TOFU SYSTEM COMM SEND BYTE : -
+ FJ PROFILER               : -
+ SECTOR CACHE              : -
+ INTRA NODE BARRIER        : -
+ AVG POWER CONSUMPTION OF CORES/CMG (IDEAL) : -
+ MAX POWER CONSUMPTION OF CORES/CMG (IDEAL) : -
+ MIN POWER CONSUMPTION OF CORES/CMG (IDEAL) : -
+ ENERGY CONSUMPTION OF CORES/CMG (IDEAL) : -
+ AVG POWER CONSUMPTION OF L2CACHE/CMG (IDEAL) : -
+ MAX POWER CONSUMPTION OF L2CACHE/CMG (IDEAL) : -
+ MIN POWER CONSUMPTION OF L2CACHE/CMG (IDEAL) : -
+ ENERGY CONSUMPTION OF L2CACHE/CMG (IDEAL) : -
+ AVG POWER CONSUMPTION OF MEM/CMG (IDEAL) : -
+ MAX POWER CONSUMPTION OF MEM/CMG (IDEAL) : -
+ MIN POWER CONSUMPTION OF MEM/CMG (IDEAL) : -
+ ENERGY CONSUMPTION OF MEM/CMG (IDEAL) : -
+ AVG POWER CONSUMPTION OF TOFU (IDEAL) : -
+ MAX POWER CONSUMPTION OF TOFU (IDEAL) : -
+ MIN POWER CONSUMPTION OF TOFU (IDEAL) : -
+ ENERGY CONSUMPTION OF TOFU (IDEAL) : -
+ AVG POWER CONSUMPTION OF CPU PERIPHERALS (IDEAL) : -
+ MAX POWER CONSUMPTION OF CPU PERIPHERALS (IDEAL) : -
+ MIN POWER CONSUMPTION OF CPU PERIPHERALS (IDEAL) : -
+ ENERGY CONSUMPTION OF CPU PERIPHERALS (IDEAL) : -
+ AVG POWER CONSUMPTION OF OPTICAL MODULE (IDEAL) : -
+ MAX POWER CONSUMPTION OF OPTICAL MODULE (IDEAL) : -
+ MIN POWER CONSUMPTION OF OPTICAL MODULE (IDEAL) : -
+ ENERGY CONSUMPTION OF OPTICAL MODULE (IDEAL) : -
+ AVG POWER CONSUMPTION OF PCI-E (IDEAL) : -
+ MAX POWER CONSUMPTION OF PCI-E (IDEAL) : -
+ MIN POWER CONSUMPTION OF PCI-E (IDEAL) : -
+ ENERGY CONSUMPTION OF PCI-E (IDEAL) : -
+ AVG POWER CONSUMPTION OF NODE (IDEAL) : -
+ MAX POWER CONSUMPTION OF NODE (IDEAL) : -
+ MIN POWER CONSUMPTION OF NODE (IDEAL) : -
+ ENERGY CONSUMPTION OF NODE (IDEAL) : -
+ AVG POWER CONSUMPTION OF NODE (MEASURED) : 140.250550
+ MAX POWER CONSUMPTION OF NODE (MEASURED) : 140.250550
+ MIN POWER CONSUMPTION OF NODE (MEASURED) : 140.250550
+ ENERGY CONSUMPTION OF NODE (MEASURED) : 0.380282
+ UTILIZATION INFO OF POWER API : 0
+ AVG POWER CONSUMPTION OF CPU/PKG(0) : 60.841949
+ AVG POWER CONSUMPTION OF CPU/PKG(1) : 59.122725
+ MAX POWER CONSUMPTION OF CPU/PKG(0) : 60.841949
+ MAX POWER CONSUMPTION OF CPU/PKG(1) : 59.122725
+ MIN POWER CONSUMPTION OF CPU/PKG(0) : 60.841949
+ MIN POWER CONSUMPTION OF CPU/PKG(1) : 59.122725
+ ENERGY CONSUMPTION OF CPU/PKG(0) : 0.164970
+ ENERGY CONSUMPTION OF CPU/PKG(1) : 0.160308
+ AVG POWER CONSUMPTION OF MEM/PKG(0) : 10.997521
+ AVG POWER CONSUMPTION OF MEM/PKG(1) : 9.288355
+ MAX POWER CONSUMPTION OF MEM/PKG(0) : 10.997521
+ MAX POWER CONSUMPTION OF MEM/PKG(1) : 9.288355
+ MIN POWER CONSUMPTION OF MEM/PKG(0) : 10.997521
+ MIN POWER CONSUMPTION OF MEM/PKG(1) : 9.288355
+ ENERGY CONSUMPTION OF MEM/PKG(0) : 0.029819
+ ENERGY CONSUMPTION OF MEM/PKG(1) : 0.025185
+ AVG POWER CONSUMPTION OF PP0/PKG : -
+ MAX POWER CONSUMPTION OF PP0/PKG : -
+ MIN POWER CONSUMPTION OF PP0/PKG : -
+ ENERGY CONSUMPTION OF PP0/PKG : -
+ POWER CONSUMPTION STATE   : 1
+ POWER CONSUMPTION MEASURE START DATE : 2023/09/08 23:14:46
+ POWER CONSUMPTION MEASURE END DATE : 2023/09/08 23:14:56
+ gpuids                    : 0,1,2,3
+ gpu_driver_version        : 525.60.13
+ gpu_cuda_version          : 12.0
+ gpu_name_0                : Tesla V100-SXM2-32GB
+ gpu_name_1                : Tesla V100-SXM2-32GB
+ gpu_name_2                : Tesla V100-SXM2-32GB
+ gpu_name_3                : Tesla V100-SXM2-32GB
+ gpu_busid_0               : 00000000:3D:00.0
+ gpu_busid_1               : 00000000:3E:00.0
+ gpu_busid_2               : 00000000:B1:00.0
+ gpu_busid_3               : 00000000:B2:00.0
+ gpu_perf_0                : P0
+ gpu_perf_1                : P0
+ gpu_perf_2                : P0
+ gpu_perf_3                : P0
+ gpu_persistence_0         : Enabled
+ gpu_persistence_1         : Enabled
+ gpu_persistence_2         : Enabled
+ gpu_persistence_3         : Enabled
+ gpu_display_0             : Disabled
+ gpu_display_1             : Disabled
+ gpu_display_2             : Disabled
+ gpu_display_3             : Disabled
+ gpu_compute_0             : Default
+ gpu_compute_1             : Default
+ gpu_compute_2             : Default
+ gpu_compute_3             : Default
+ gpu_ave_util_0            : 2.00 %
+ gpu_ave_util_1            : 0.00 %
+ gpu_ave_util_2            : 0.00 %
+ gpu_ave_util_3            : 0.00 %
+ gpu_max_util_0            : 18 %
+ gpu_max_util_1            : 0 %
+ gpu_max_util_2            : 0 %
+ gpu_max_util_3            : 0 %
+ gpu_total_mem_0           : 32768 MiB
+ gpu_total_mem_1           : 32768 MiB
+ gpu_total_mem_2           : 32768 MiB
+ gpu_total_mem_3           : 32768 MiB
+ gpu_ave_mem_0             : 0.00 MiB
+ gpu_ave_mem_1             : 0.00 MiB
+ gpu_ave_mem_2             : 0.00 MiB
+ gpu_ave_mem_3             : 0.00 MiB
+ gpu_max_mem_0             : 0 MiB
+ gpu_max_mem_1             : 0 MiB
+ gpu_max_mem_2             : 0 MiB
+ gpu_max_mem_3             : 0 MiB
+ gpu_power_cap_0           : 300.00 W
+ gpu_power_cap_1           : 300.00 W
+ gpu_power_cap_2           : 300.00 W
+ gpu_power_cap_3           : 300.00 W
+ gpu_ave_pwr_0             : 43.33 W
+ gpu_ave_pwr_1             : 39.89 W
+ gpu_ave_pwr_2             : 41.00 W
+ gpu_ave_pwr_3             : 39.56 W
+ gpu_max_pwr_0             : 54 W
+ gpu_max_pwr_1             : 40 W
+ gpu_max_pwr_2             : 41 W
+ gpu_max_pwr_3             : 40 W
+ gpu_ave_temp_0            : 29.33 C
+ gpu_ave_temp_1            : 28.89 C
+ gpu_ave_temp_2            : 29.00 C
+ gpu_ave_temp_3            : 30.00 C
+ gpu_max_temp_0            : 30 C
+ gpu_max_temp_1            : 29 C
+ gpu_max_temp_2            : 29 C
+ gpu_max_temp_3            : 30 C
+ gpu_volatile_ecc_0        : 0
+ gpu_volatile_ecc_1        : 0
+ gpu_volatile_ecc_2        : 0
+ gpu_volatile_ecc_3        : 0
+ gpu (REQUIRE)             : 4 <DEFAULT>
+ gpu (ALLOC)               : 4
+ gpu (USE)                 : -
+
+--------------------------------------------------------------------------------
+Node Statistical Information
+
+ VNODE ID                  : 1
+ NODE ID                   : 0xFFFF00B8
+ TOFU COORDINATE           : -
+ NODE COORDINATE           : -
+ RANK NO                   : 1
+ NODE AVAILABLE            : available
+ ARCHI INFORMATION         : PG
+ CPU BITMAP (ALLOC)        : 0xffffffffff
+ CPU BITMAP (USE)          : 0xffffffffff
+ MPI PROC (ALLOC)          : 2
+ MPI STATIC PROC (ALLOC)   : 2
+ USER CPU TIME (USE)       : 2510 ms
+ SYSTEM CPU TIME (USE)     : 4830 ms
+ CPU TIME (TOTAL)          : 7340 ms
+ MEMORY SIZE (ALLOC)       : 346112.0 MiB (362924736512)
+ MAX MEMORY SIZE (USE)     : 355.9 MiB (373116928)
+ CPU NUM (ALLOC)           : 40
+ CPU NUM (USE)             : 40
+ PERF COUNT 1              : -
+ PERF COUNT 2              : -
+ PERF COUNT 3              : -
+ PERF COUNT 4              : -
+ PERF COUNT 5              : -
+ PERF COUNT 6              : -
+ PERF COUNT 7              : -
+ PERF COUNT 8              : -
+ PERF COUNT 9              : -
+ TOFU USER COMM RECV BYTE  : -
+ TOFU USER COMM SEND BYTE  : -
+ TOFU SYSTEM COMM RECV BYTE : -
+ TOFU SYSTEM COMM SEND BYTE : -
+ FJ PROFILER               : -
+ SECTOR CACHE              : -
+ INTRA NODE BARRIER        : -
+ AVG POWER CONSUMPTION OF CORES/CMG (IDEAL) : -
+ MAX POWER CONSUMPTION OF CORES/CMG (IDEAL) : -
+ MIN POWER CONSUMPTION OF CORES/CMG (IDEAL) : -
+ ENERGY CONSUMPTION OF CORES/CMG (IDEAL) : -
+ AVG POWER CONSUMPTION OF L2CACHE/CMG (IDEAL) : -
+ MAX POWER CONSUMPTION OF L2CACHE/CMG (IDEAL) : -
+ MIN POWER CONSUMPTION OF L2CACHE/CMG (IDEAL) : -
+ ENERGY CONSUMPTION OF L2CACHE/CMG (IDEAL) : -
+ AVG POWER CONSUMPTION OF MEM/CMG (IDEAL) : -
+ MAX POWER CONSUMPTION OF MEM/CMG (IDEAL) : -
+ MIN POWER CONSUMPTION OF MEM/CMG (IDEAL) : -
+ ENERGY CONSUMPTION OF MEM/CMG (IDEAL) : -
+ AVG POWER CONSUMPTION OF TOFU (IDEAL) : -
+ MAX POWER CONSUMPTION OF TOFU (IDEAL) : -
+ MIN POWER CONSUMPTION OF TOFU (IDEAL) : -
+ ENERGY CONSUMPTION OF TOFU (IDEAL) : -
+ AVG POWER CONSUMPTION OF CPU PERIPHERALS (IDEAL) : -
+ MAX POWER CONSUMPTION OF CPU PERIPHERALS (IDEAL) : -
+ MIN POWER CONSUMPTION OF CPU PERIPHERALS (IDEAL) : -
+ ENERGY CONSUMPTION OF CPU PERIPHERALS (IDEAL) : -
+ AVG POWER CONSUMPTION OF OPTICAL MODULE (IDEAL) : -
+ MAX POWER CONSUMPTION OF OPTICAL MODULE (IDEAL) : -
+ MIN POWER CONSUMPTION OF OPTICAL MODULE (IDEAL) : -
+ ENERGY CONSUMPTION OF OPTICAL MODULE (IDEAL) : -
+ AVG POWER CONSUMPTION OF PCI-E (IDEAL) : -
+ MAX POWER CONSUMPTION OF PCI-E (IDEAL) : -
+ MIN POWER CONSUMPTION OF PCI-E (IDEAL) : -
+ ENERGY CONSUMPTION OF PCI-E (IDEAL) : -
+ AVG POWER CONSUMPTION OF NODE (IDEAL) : -
+ MAX POWER CONSUMPTION OF NODE (IDEAL) : -
+ MIN POWER CONSUMPTION OF NODE (IDEAL) : -
+ ENERGY CONSUMPTION OF NODE (IDEAL) : -
+ AVG POWER CONSUMPTION OF NODE (MEASURED) : 135.298154
+ MAX POWER CONSUMPTION OF NODE (MEASURED) : 135.298154
+ MIN POWER CONSUMPTION OF NODE (MEASURED) : 135.298154
+ ENERGY CONSUMPTION OF NODE (MEASURED) : 0.401065
+ UTILIZATION INFO OF POWER API : 0
+ AVG POWER CONSUMPTION OF CPU/PKG(0) : 58.997328
+ AVG POWER CONSUMPTION OF CPU/PKG(1) : 56.248340
+ MAX POWER CONSUMPTION OF CPU/PKG(0) : 58.997328
+ MAX POWER CONSUMPTION OF CPU/PKG(1) : 56.248340
+ MIN POWER CONSUMPTION OF CPU/PKG(0) : 58.997328
+ MIN POWER CONSUMPTION OF CPU/PKG(1) : 56.248340
+ ENERGY CONSUMPTION OF CPU/PKG(0) : 0.174886
+ ENERGY CONSUMPTION OF CPU/PKG(1) : 0.166737
+ AVG POWER CONSUMPTION OF MEM/PKG(0) : 9.151681
+ AVG POWER CONSUMPTION OF MEM/PKG(1) : 10.900805
+ MAX POWER CONSUMPTION OF MEM/PKG(0) : 9.151681
+ MAX POWER CONSUMPTION OF MEM/PKG(1) : 10.900805
+ MIN POWER CONSUMPTION OF MEM/PKG(0) : 9.151681
+ MIN POWER CONSUMPTION OF MEM/PKG(1) : 10.900805
+ ENERGY CONSUMPTION OF MEM/PKG(0) : 0.027128
+ ENERGY CONSUMPTION OF MEM/PKG(1) : 0.032313
+ AVG POWER CONSUMPTION OF PP0/PKG : -
+ MAX POWER CONSUMPTION OF PP0/PKG : -
+ MIN POWER CONSUMPTION OF PP0/PKG : -
+ ENERGY CONSUMPTION OF PP0/PKG : -
+ POWER CONSUMPTION STATE   : 1
+ POWER CONSUMPTION MEASURE START DATE : 2023/09/08 23:14:45
+ POWER CONSUMPTION MEASURE END DATE : 2023/09/08 23:14:56
+ gpuids                    : 0,1,2,3
+ gpu_driver_version        : 525.60.13
+ gpu_cuda_version          : 12.0
+ gpu_name_0                : Tesla V100-SXM2-32GB
+ gpu_name_1                : Tesla V100-SXM2-32GB
+ gpu_name_2                : Tesla V100-SXM2-32GB
+ gpu_name_3                : Tesla V100-SXM2-32GB
+ gpu_busid_0               : 00000000:3D:00.0
+ gpu_busid_1               : 00000000:3E:00.0
+ gpu_busid_2               : 00000000:B1:00.0
+ gpu_busid_3               : 00000000:B2:00.0
+ gpu_perf_0                : P0
+ gpu_perf_1                : P0
+ gpu_perf_2                : P0
+ gpu_perf_3                : P0
+ gpu_persistence_0         : Enabled
+ gpu_persistence_1         : Enabled
+ gpu_persistence_2         : Enabled
+ gpu_persistence_3         : Enabled
+ gpu_display_0             : Disabled
+ gpu_display_1             : Disabled
+ gpu_display_2             : Disabled
+ gpu_display_3             : Disabled
+ gpu_compute_0             : Default
+ gpu_compute_1             : Default
+ gpu_compute_2             : Default
+ gpu_compute_3             : Default
+ gpu_ave_util_0            : 2.50 %
+ gpu_ave_util_1            : 0.10 %
+ gpu_ave_util_2            : 0.00 %
+ gpu_ave_util_3            : 0.00 %
+ gpu_max_util_0            : 25 %
+ gpu_max_util_1            : 1 %
+ gpu_max_util_2            : 0 %
+ gpu_max_util_3            : 0 %
+ gpu_total_mem_0           : 32768 MiB
+ gpu_total_mem_1           : 32768 MiB
+ gpu_total_mem_2           : 32768 MiB
+ gpu_total_mem_3           : 32768 MiB
+ gpu_ave_mem_0             : 2.30 MiB
+ gpu_ave_mem_1             : 0.30 MiB
+ gpu_ave_mem_2             : 0.30 MiB
+ gpu_ave_mem_3             : 0.00 MiB
+ gpu_max_mem_0             : 23 MiB
+ gpu_max_mem_1             : 3 MiB
+ gpu_max_mem_2             : 3 MiB
+ gpu_max_mem_3             : 0 MiB
+ gpu_power_cap_0           : 300.00 W
+ gpu_power_cap_1           : 300.00 W
+ gpu_power_cap_2           : 300.00 W
+ gpu_power_cap_3           : 300.00 W
+ gpu_ave_pwr_0             : 44.80 W
+ gpu_ave_pwr_1             : 39.00 W
+ gpu_ave_pwr_2             : 40.00 W
+ gpu_ave_pwr_3             : 41.00 W
+ gpu_max_pwr_0             : 55 W
+ gpu_max_pwr_1             : 39 W
+ gpu_max_pwr_2             : 40 W
+ gpu_max_pwr_3             : 41 W
+ gpu_ave_temp_0            : 30.10 C
+ gpu_ave_temp_1            : 29.00 C
+ gpu_ave_temp_2            : 29.00 C
+ gpu_ave_temp_3            : 30.70 C
+ gpu_max_temp_0            : 31 C
+ gpu_max_temp_1            : 29 C
+ gpu_max_temp_2            : 29 C
+ gpu_max_temp_3            : 31 C
+ gpu_volatile_ecc_0        : 0
+ gpu_volatile_ecc_1        : 0
+ gpu_volatile_ecc_2        : 0
+ gpu_volatile_ecc_3        : 0
+ gpu (REQUIRE)             : 4 <DEFAULT>
+ gpu (ALLOC)               : 4
+ gpu (USE)                 : -
+

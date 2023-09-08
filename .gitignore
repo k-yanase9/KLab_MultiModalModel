@@ -24,7 +24,10 @@ test_with_swin_*.sh
 job.sh
 
 # pipenv
-Pipfile
-Pipfile.lock
+# Pipfile
+# Pipfile.lock
+.venv/
+
+.conda_env/
 
 core
