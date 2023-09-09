@@ -130,7 +130,7 @@ def get_optimizer(model, args):
 
 
 def train():
-    port_num = 50000
+    port_num = 27971
     host_list_file = os.environ["PJM_O_NODEINF"]
     local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK'])
     world_rank = int(os.environ["OMPI_COMM_WORLD_RANK"])#dist.get_rank()
@@ -221,6 +221,7 @@ def train():
     prefix_text = f"rank:{world_rank} || "
     logger.info(f"{prefix_text}start training")
     logger.info(f"min_step: {min_step}, max_step: {max_step}")
+    
     for epoch in range(1, args.num_epochs + 1):
         # # 学習ループ
         # image_mask_ratio = 0.0
@@ -234,15 +235,16 @@ def train():
 
         # すべてのiteratorを初期化する
         iterators = [iter(loader) for loader in loaders]
+        train_loss = torch.tensor(0.0).to(device_id)
         for step in range(1, min_step + 1):
             prefix_text = f"epoch:{epoch} step:{step} rank:{world_rank} || "
 
             # iteratorはrankごとに初期化することができる、他のrankのiteratorは初期化されない
             # rank=0のGPUでstep == 3の時にiteratorを初期化する
-            if world_rank == 0 and epoch == 2 and step == 3:
-                iterator_index = 1
-                logger.info(f"{prefix_text} initialize rank:{world_rank} iterator {iterator_index}")
-                iterators[iterator_index] = iter(loaders[iterator_index])
+            # if world_rank == 0 and epoch == 2 and step == 3:
+            #     iterator_index = 1
+            #     logger.info(f"{prefix_text} initialize rank:{world_rank} iterator {iterator_index}")
+            #     iterators[iterator_index] = iter(loaders[iterator_index])
 
             # すべてのiteratorからデータを取得し結合する
             image_list = []
@@ -298,6 +300,15 @@ def train():
             loss = criterion(out, out_text)
             loss.backward()
             optimizer.step()
+            train_loss += loss
+        # 他のノードから集める
+        logger.info(f"{prefix_text}train_loss : {train_loss.detach().cpu().numpy()}")
+        dist.all_reduce(train_loss, op=dist.ReduceOp.SUM)
+        
+        if world_rank == 0:
+            # train_loss /= min_step
+            logger.info(f"{prefix_text}all_train_loss : {train_loss.detach().cpu().numpy()}")
+         
 
     #         loss /= args.accumulation_steps
     #         loss.backward()
