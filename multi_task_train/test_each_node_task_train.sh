@@ -9,7 +9,7 @@
 source /home/w49009a/omote/KLab_MultiModalModel/.venv/bin/activate
 python /home/w49009a/omote/KLab_MultiModalModel/multi_task_train/multi_task_train_multi_node.py \
         --result_dir results/multi_task_train/ \
-        --num_epochs 2 \
+        --num_epochs 10 \
         --lr 0.01 \
         --optimizer AdamW \
 
