@@ -32,6 +32,8 @@ def train():
 
     # create model
     model = MyModel(args).to(device_id)
+    if args.start_epoch > 1:
+        model.load(result_name='best.pth')
     model = DDP(model, device_ids=[device_id])#,find_unused_parameters=True)
     
     optimizer = get_optimizer(model, args)
@@ -51,7 +53,7 @@ def train():
     steps = 0
     min_val_loss = 100
     loss_counter = LossCounter()
-    for epoch in range(1, args.num_epochs+1):
+    for epoch in range(args.start_epoch, args.num_epochs+1):
         # 学習ループ
         image_mask_ratio = 0.0
         if args.image_model_train:
@@ -69,8 +71,10 @@ def train():
             #     tgt_images = tgt_images.to(device_id)
             #     tgt_texts, _ = model.module.image_to_z(tgt_images)
             src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
-            # tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
-            tgt_texts = tgt_texts.to(device_id, non_blocking=True)
+            if args.pretrain:
+                tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
+            else:
+                tgt_texts = tgt_texts.to(device_id, non_blocking=True)
 
             loss, preds = model(src_images, src_texts, tgt_texts, image_mask_ratio=image_mask_ratio)
             loss /= args.accumulation_steps

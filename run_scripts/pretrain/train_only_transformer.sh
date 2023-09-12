@@ -18,12 +18,15 @@ torchrun --nnodes=1 --nproc_per_node=8 train.py \
         --transformer_num_heads $num_heads \
         --transformer_num_layers $enc \
         --transformer_num_decoder_layers $dec \
+        --image_vocab_size 16384 \
+        --loc_vocab_size 1000 \
         --pretrain \
-        --lr 0.01 \
+        --lr 0.001 \
         --optimizer AdamW \
         --lr_scheduler StepLR \
         -b $batch_size \
-        --num_epochs 20 \
-        --root_dir /user/data/ \
+        --start_epoch 21 \
+        --num_epochs 40 \
+        --root_dir /local/ \
         --dataset $dataset \
         --result_dir results/pretrain/cc3m_cc12m_imagenet_inaturalist_places365_redcaps_sun397/enc$enc\_dec$dec/
