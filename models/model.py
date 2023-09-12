@@ -102,17 +102,24 @@ class MyModel(nn.Module):
 
         cls_attention_mask = torch.ones(image_embeddings.shape[0], 1, device=self.transformer.device)
         image_attention_mask = torch.ones(image_embeddings.shape[0], image_embeddings.shape[1], device=self.image_model.device)
-        concat_attention_mask = torch.cat((cls_attention_mask, image_attention_mask, language_attention_mask), dim=1)
+        if self.args.pretrain:
+            concat_attention_mask = torch.cat((image_attention_mask, language_attention_mask), dim=1)
+        else:
+            concat_attention_mask = torch.cat((cls_attention_mask, image_attention_mask, language_attention_mask), dim=1)
 
         if return_loss:
-            # target_attention_mask = torch.ones(tgt_texts.shape[0], tgt_texts.shape[1], device=self.transformer.device)
-            # target_attention_mask[tgt_texts == 0] = 0
-
-            outputs = self.transformer(inputs_embeds=concated_embeddings, attention_mask=concat_attention_mask)
-            sequence_output = outputs[0]
-            logits = self.classifier(sequence_output[:, 0, :])
-            loss = self.criterion(logits, tgt_texts)
-            preds = torch.argmax(logits, dim=1)
+            if self.args.pretrain:
+                target_attention_mask = torch.ones(tgt_texts.shape[0], tgt_texts.shape[1], device=self.transformer.device)
+                target_attention_mask[tgt_texts == 0] = 1
+                logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=target_attention_mask).logits
+                loss = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
+                preds = torch.argmax(logits, dim=2)
+            else:
+                outputs = self.transformer(inputs_embeds=concated_embeddings, attention_mask=concat_attention_mask)
+                sequence_output = outputs[0]
+                logits = self.classifier(sequence_output[:, 0, :])
+                loss = self.criterion(logits, tgt_texts)
+                preds = torch.argmax(logits, dim=1)
             return loss, preds
         else:
             # pred = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).logits
