@@ -14,7 +14,7 @@ dropimageidlist = ["7f1934f5884fad79","429019e83c1c2c94","4f818c006da84c9e","5b8
 class OpenImageDataset_detection(DatasetLoader):
     """openimageのdetectionデータセット
     """    
-    def __init__(self,data_dir:str="/data/dataset/openimage/",phase:str="train",imagesize:tuple[int,int]=(256,256)):
+    def __init__(self,data_dir:str="/data/dataset/openimage/",phase:str="train"):
         super().__init__()        
         if phase=="val":
             phase = "validation"
