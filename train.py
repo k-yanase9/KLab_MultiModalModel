@@ -121,8 +121,10 @@ def train():
                 #    tgt_images = tgt_images.to(device_id)
                 #    tgt_texts, _ = model.module.image_to_z(tgt_images)
                 src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
-                # tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
-                tgt_texts = tgt_texts.to(device_id, non_blocking=True)
+                if args.pretrain:
+                    tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
+                else:
+                    tgt_texts = tgt_texts.to(device_id, non_blocking=True)
                 
                 loss, preds = model(src_images, src_texts, tgt_texts)
                 
