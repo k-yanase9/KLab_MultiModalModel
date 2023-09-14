@@ -57,8 +57,9 @@ def train():
             for line in f:
                 if 'Epoch' in line:
                     val_loss.append(float(line.split(',')[2].split(':')[-1].strip()))
-                    steps = float(line.split(',')[3].split(':')[-1].strip())
+                    steps = int(line.split(',')[3].split(':')[-1].strip())
         min_val_loss = min(val_loss)
+        if rank == 0: logger.info(f'[Loaded] steps : {steps}, Best Val loss : {min_val_loss}')
     else:
         steps = 0
         min_val_loss = 100
