@@ -50,8 +50,18 @@ def train():
 
     if args.num_epochs is None:
         args.num_epochs = int(args.num_steps / len(train_loader)) + 1
-    steps = 0
-    min_val_loss = 100
+
+    if args.start_epoch > 1:
+        val_loss = []
+        with open(os.path.join(args.result_dir, 'train.log'), 'r') as f:
+            for line in f:
+                if 'Epoch' in line:
+                    val_loss.append(float(line.split(',')[2].split(':')[-1].strip()))
+                    steps = float(line.split(',')[3].split(':')[-1].strip())
+        min_val_loss = min(val_loss)
+    else:
+        steps = 0
+        min_val_loss = 100
     loss_counter = LossCounter()
     for epoch in range(args.start_epoch, args.num_epochs+1):
         # 学習ループ
@@ -60,7 +70,7 @@ def train():
             model.module.image_model.train()
         model.module.transformer.train()
         train_loss = torch.tensor(0.0).to(device_id)
-        train_acc = torch.tensor(0.0).to(device_id)
+        if not args.pretrain: train_acc = torch.tensor(0.0).to(device_id)
         train_count = torch.tensor(0).to(device_id)
         pbar = tqdm(total=int(np.ceil(len(train_loader)/args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
         for i, (src_images, tgt_images, src_texts, tgt_texts) in enumerate(train_loader):
@@ -81,7 +91,7 @@ def train():
             loss.backward()
 
             train_loss += loss.item() * src_images.shape[0]
-            train_acc += torch.sum(preds == tgt_texts)
+            if not args.pretrain: train_acc += torch.sum(preds == tgt_texts)
             train_count += src_images.shape[0]
 
             # args.accumulation_steps回の勾配を蓄積してから、optimizer.step()を呼び出す
@@ -94,7 +104,7 @@ def train():
 
         # 他のノードから集める
         dist.all_reduce(train_loss, op=dist.ReduceOp.SUM)
-        dist.all_reduce(train_acc, op=dist.ReduceOp.SUM)
+        if not args.pretrain: dist.all_reduce(train_acc, op=dist.ReduceOp.SUM)
         dist.all_reduce(train_count, op=dist.ReduceOp.SUM)
         pbar.close()
 
@@ -102,7 +112,7 @@ def train():
             train_loss /= train_count
             loss_counter.add("train", train_loss.cpu().numpy().copy())
             train_acc /= train_count
-            logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Acc : {train_acc}, Steps : {steps}')
+            if not args.pretrain: logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Acc : {train_acc}, Steps : {steps}')
 
         if args.lr_scheduler != '' and args.num_steps is None:
             scheduler.step()
@@ -111,7 +121,7 @@ def train():
             model.module.image_model.eval()
         model.module.transformer.eval()
         val_loss = torch.tensor(0.0).to(device_id)
-        val_acc = torch.tensor(0.0).to(device_id)
+        if not args.pretrain: val_acc = torch.tensor(0.0).to(device_id)
         val_count = torch.tensor(0).to(device_id)
         val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
         for src_images, tgt_images, src_texts, tgt_texts in val_loop:
@@ -134,14 +144,17 @@ def train():
 
         # 他のノードから集める
         dist.all_reduce(val_loss, op=dist.ReduceOp.SUM)
-        dist.all_reduce(val_acc, op=dist.ReduceOp.SUM)
+        if not args.pretrain: dist.all_reduce(val_acc, op=dist.ReduceOp.SUM)
         dist.all_reduce(val_count, op=dist.ReduceOp.SUM)
 
         if rank == 0:
             val_loss /= val_count
             loss_counter.add("val", val_loss.cpu().numpy().copy())
             val_acc /= val_count
-            logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}, Acc : {val_acc}')
+            if args.pretrain: 
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}, Steps : {steps}')
+            else:
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}, Acc : {val_acc}')
         
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
