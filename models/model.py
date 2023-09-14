@@ -18,7 +18,7 @@ class MyModel(nn.Module):
         self.args = args
         self.result_dir = args.result_dir
         
-        if args.vae_ckpt_path is not None and args.vae_ckpt_path != "":
+        if args.vae_ckpt_path != "":
             self.vae = VQModel(ckpt_path=args.vae_ckpt_path).requires_grad_(False)
             self.vae.eval()
         else:
