@@ -51,19 +51,19 @@ def train():
     if args.num_epochs is None:
         args.num_epochs = int(args.num_steps / len(train_loader)) + 1
 
+    loss_counter = LossCounter()
     if args.start_epoch > 1:
-        val_loss = []
         with open(os.path.join(args.result_dir, 'train.log'), 'r') as f:
             for line in f:
                 if 'Epoch' in line:
-                    val_loss.append(float(line.split(',')[2].split(':')[-1].strip()))
+                    loss_counter.add("train", float(line.split(',')[1].split(':')[-1].strip()))
+                    loss_counter.add("val", float(line.split(',')[2].split(':')[-1].strip()))
                     steps = int(line.split(',')[3].split(':')[-1].strip())
-        min_val_loss = min(val_loss)
+        min_val_loss = min(loss_counter.losses['val'])
         if rank == 0: logger.info(f'[Loaded] steps : {steps}, Best Val loss : {min_val_loss}')
     else:
         steps = 0
         min_val_loss = 100
-    loss_counter = LossCounter()
     for epoch in range(args.start_epoch, args.num_epochs+1):
         # 学習ループ
         image_mask_ratio = 0.0
@@ -112,8 +112,9 @@ def train():
         if rank == 0:
             train_loss /= train_count
             loss_counter.add("train", train_loss.cpu().numpy().copy())
-            train_acc /= train_count
-            if not args.pretrain: logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Acc : {train_acc}, Steps : {steps}')
+            if not args.pretrain:
+                train_acc /= train_count
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Acc : {train_acc}, Steps : {steps}')
 
         if args.lr_scheduler != '' and args.num_steps is None:
             scheduler.step()
@@ -140,7 +141,7 @@ def train():
                 loss, preds = model(src_images, src_texts, tgt_texts)
                 
                 val_loss += loss.item() * src_images.shape[0]
-                val_acc += torch.sum(preds == tgt_texts)
+                if not args.pretrain: val_acc += torch.sum(preds == tgt_texts)
                 val_count += src_images.shape[0]
 
         # 他のノードから集める
@@ -151,10 +152,10 @@ def train():
         if rank == 0:
             val_loss /= val_count
             loss_counter.add("val", val_loss.cpu().numpy().copy())
-            val_acc /= val_count
             if args.pretrain: 
                 logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}, Steps : {steps}')
             else:
+                val_acc /= val_count
                 logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}, Acc : {val_acc}')
         
             if val_loss < min_val_loss:
