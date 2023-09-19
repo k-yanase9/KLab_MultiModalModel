@@ -19,8 +19,8 @@ class OpenImageDataset(DatasetLoader):
         items = items.split("\n")
         items = [item.split(",") for item in items]
         items = items[1:]
-        self.tgt_texts = [item[2] for item in items]
-        self.src_texts = [f"What is in area {item[1]}?" for item in items]
+        self.tgt_texts = [int(item[2]) for item in items]
+        self.src_texts = [f"What object is in the region: {item[1]} ?" for item in items]
         self.images = [os.path.join(data_dir,f"{phase}_256",f"{item[0]}.jpg") for item in items]
 
         #dropimageidlistに含まれる画像と対応するテキストを除外する
