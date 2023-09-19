@@ -32,9 +32,6 @@ class OpenImageDataset_Caption(DatasetLoader):
                 self.images.pop(drop_index)
     
 
-    def __len__(self):
-        return len(self.items)
-
 
 if __name__ == "__main__":
     dataset = OpenImageDataset_Caption(phase="val")
