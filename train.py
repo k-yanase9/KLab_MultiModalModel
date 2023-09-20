@@ -100,7 +100,7 @@ def train():
                 optimizer.step()
                 pbar.update(1)
                 if rank == 0: steps += 1
-                if args.num_epochs is None:
+                if args.num_steps is not None:
                     scheduler.step()
 
         # 他のノードから集める
