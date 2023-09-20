@@ -1,17 +1,11 @@
 import os
-from copy import deepcopy
-
-import pandas as pd
-import torch
-from PIL import Image
-from torchvision.transforms import ToTensor
 from ..dataset_loader import DatasetLoader
 
 #存在しない画像を除外するためのリスト
 dropimageidlist = ["7f1934f5884fad79","429019e83c1c2c94","4f818c006da84c9e","5b86e93f8654118a","673d74b7d39741c3","6dcd3ce37a17f2be","805baf9650a12710"
                    ,"98ac2996fc46b56d","a46a248a39f2d97c"]
 
-class OpenImageDataset_localization(DatasetLoader):
+class OpenImageDataset(DatasetLoader):
     """openimageのdetectionデータセット
     """    
     def __init__(self,data_dir:str="/data/dataset/openimage/",phase:str="train"):
@@ -25,8 +19,8 @@ class OpenImageDataset_localization(DatasetLoader):
         items = items.split("\n")
         items = [item.split(",") for item in items]
         items = items[1:]
-        self.tgt_texts = [item[2] for item in items]
-        self.src_texts = [f"What is in area {item[1]}?" for item in items]
+        self.tgt_texts = [int(item[2]) for item in items]
+        self.src_texts = [f"What object is in the region: {item[1]} ?" for item in items]
         self.images = [os.path.join(data_dir,f"{phase}_256",f"{item[0]}.jpg") for item in items]
 
         #dropimageidlistに含まれる画像と対応するテキストを除外する

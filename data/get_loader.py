@@ -7,6 +7,7 @@ from .vqa import *
 from .pretrain import *
 from .relationship import *
 from .detection import *
+from .localization import *
 
 def get_data(args, src_tokenizer=None, tgt_tokenizer=None):
     train_datasets, val_datasets = [], []
@@ -81,6 +82,10 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             dataset = imSituDataset(data_dir, phase=phase)
         elif 'imagenet' == dataset_name:
             dataset = ImageNetDatasetLoader(data_dir, phase=phase)
+        elif 'sun397' == dataset_name:
+            dataset = SUN397DatasetLoader(data_dir)
+        elif 'openimage' == dataset_name:
+            dataset = OpenImageDataset(data_dir, phase=phase)
         else:
             raise NotImplementedError
     return dataset

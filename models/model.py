@@ -18,7 +18,7 @@ class MyModel(nn.Module):
         self.args = args
         self.result_dir = args.result_dir
         
-        if args.vae_ckpt_path is not None and args.vae_ckpt_path != "":
+        if args.vae_ckpt_path != "":
             self.vae = VQModel(ckpt_path=args.vae_ckpt_path).requires_grad_(False)
             self.vae.eval()
         else:
@@ -33,22 +33,53 @@ class MyModel(nn.Module):
             # self.num_patches = (self.image_model.config.image_size // self.image_model.config.patch_size) ** 2
             self.num_patches = 16**2
 
-        transformer_config = T5Config(
-            vocab_size=32128 + args.loc_vocab_size + args.image_vocab_size,
-            d_model=args.transformer_d_model,
-            d_ff=args.transformer_d_ff,
-            d_kv=args.transformer_d_kv,
-            num_heads=args.transformer_num_heads,
-            num_layers=args.transformer_num_layers,
-            num_decoder_layers=args.transformer_num_decoder_layers,
-            decoder_start_token_id=0,
-            max_length=args.max_target_length,
-        )
-        self.transformer = T5ForConditionalGeneration(transformer_config)
+        if args.pretrain:
+            transformer_config = T5Config(
+                vocab_size=32128 + args.loc_vocab_size + args.image_vocab_size,
+                d_model=args.transformer_d_model,
+                d_ff=args.transformer_d_ff,
+                d_kv=args.transformer_d_kv,
+                num_heads=args.transformer_num_heads,
+                num_layers=args.transformer_num_layers,
+                num_decoder_layers=args.transformer_num_decoder_layers,
+                decoder_start_token_id=0,
+                max_length=args.max_target_length,
+            )
+            self.transformer = T5ForConditionalGeneration(transformer_config).requires_grad_(True)
+        else:
+            transformer_config = T5Config(
+                vocab_size=32128 + args.loc_vocab_size + args.image_vocab_size,
+                d_model=args.transformer_d_model,
+                d_ff=args.transformer_d_ff,
+                d_kv=args.transformer_d_kv,
+                num_heads=args.transformer_num_heads,
+                num_layers=args.transformer_num_layers,
+                max_length=args.max_target_length,
+            )
+            self.transformer = T5EncoderModel(transformer_config).requires_grad_(True)
+            self.transformer.shared.requires_grad_(False)
 
         if args.ffn:
             self.language_ffn = nn.Linear(self.language_model.config.d_model, self.transformer.config.d_model)
             self.image_ffn = nn.Linear(self.image_model.num_features, self.transformer.config.d_model)
+
+        if not args.pretrain:
+            self.emb_cls_token = EmbClassToken(self.transformer.config.d_model)
+            if 'imagenet' in args.datasets:
+                self.classifier = nn.Linear(self.transformer.config.d_model, 1000)
+            elif 'sun397' in args.datasets:
+                self.classifier = nn.Linear(self.transformer.config.d_model, 397)
+            elif 'openimage' in args.datasets:
+                self.classifier = nn.Linear(self.transformer.config.d_model, 599)
+            else:
+                raise NotImplementedError
+        
+        if args.loss == 'CrossEntropy':
+            self.criterion = nn.CrossEntropyLoss()
+        elif args.loss == 'FocalLoss':
+            self.criterion = FocalLoss()
+        else:
+            raise NotImplementedError
 
     def forward(self, images, src_texts, tgt_texts=None, return_loss=True, num_beams=1, num_return_sequences=1, do_sample=False, image_mask_ratio=0.0):
         with torch.no_grad():
@@ -67,38 +98,31 @@ class MyModel(nn.Module):
             language_embeddings = self.language_ffn(language_embeddings)
             image_embeddings = self.image_ffn(image_embeddings)
 
+        concated_embeddings = torch.cat((image_embeddings,language_embeddings), dim=1)
+        if not self.args.pretrain:
+            concated_embeddings = self.emb_cls_token(concated_embeddings)
+
+        cls_attention_mask = torch.ones(image_embeddings.shape[0], 1, device=self.transformer.device)
         image_attention_mask = torch.ones(image_embeddings.shape[0], image_embeddings.shape[1], device=self.image_model.device)
-        concat_attention_mask = torch.cat((image_attention_mask, language_attention_mask), dim=1)
-        concated_embeddings = torch.cat((image_embeddings, language_embeddings), dim=1)
+        if self.args.pretrain:
+            concat_attention_mask = torch.cat((image_attention_mask, language_attention_mask), dim=1)
+        else:
+            concat_attention_mask = torch.cat((cls_attention_mask, image_attention_mask, language_attention_mask), dim=1)
 
         if return_loss:
-            if image_mask_ratio > 0:
-                pred = self.transformer(
-                    inputs_embeds=concated_embeddings, labels=tgt_texts, attenntion_mask=concat_attention_mask, decoder_attention_mask=target_attention_mask
-                ).logits
-                b, t, v = pred.shape
-                pred = pred.view(b * t, v)
-                tgt_texts = tgt_texts.view(-1)
-                loss = self.loss_fct(pred, tgt_texts)
-                loss = loss.view(b, t)
-                if loss.shape[1] - bool_masked_pos.shape[1] > 0:
-                    add_mask = torch.ones(loss.shape[0], loss.shape[1] - bool_masked_pos.shape[1], device=self.image_model.device)
-                    bool_masked_pos = torch.cat((bool_masked_pos, add_mask), dim=1)
-                loss = loss * bool_masked_pos
-                return loss.mean()
-            else:
+            if self.args.pretrain:
                 target_attention_mask = torch.ones(tgt_texts.shape[0], tgt_texts.shape[1], device=self.transformer.device)
                 target_attention_mask[tgt_texts == 0] = 1
-                if self.args.loss == 'CrossEntropy':
-                    return self.transformer(
-                        inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=target_attention_mask
-                    ).loss
-                elif self.args.loss == 'FocalLoss':
-                    loss_fct = FocalLoss()
-                    logits = self.transformer(
-                        inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=target_attention_mask
-                    ).logits
-                    return loss_fct(logits.view(-1, logits.shape[2]), tgt_texts.view(-1))
+                logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=target_attention_mask).logits
+                loss = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
+                preds = torch.argmax(logits, dim=2)
+            else:
+                outputs = self.transformer(inputs_embeds=concated_embeddings, attention_mask=concat_attention_mask)
+                sequence_output = outputs[0]
+                logits = self.classifier(sequence_output[:, 0, :])
+                loss = self.criterion(logits, tgt_texts)
+                preds = torch.argmax(logits, dim=1)
+            return loss, preds
         else:
             # pred = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).logits
             # generated = torch.argmax(pred, dim=2)
@@ -142,6 +166,9 @@ class MyModel(nn.Module):
         if self.args.ffn:
             checkpoints['language_ffn'] = self.language_ffn.state_dict()
             checkpoints['image_ffn'] = self.image_ffn.state_dict()
+        if not self.args.pretrain:
+            checkpoints['emb_cls_token'] = self.emb_cls_token.state_dict()
+            checkpoints['classifier'] = self.classifier.state_dict()
         torch.save(checkpoints, result_path)
 
     def load(self, result_name="best.pth"):
@@ -153,3 +180,15 @@ class MyModel(nn.Module):
         if self.args.ffn:
             self.language_ffn.load_state_dict(checkpoints['language_ffn'])
             self.image_ffn.load_state_dict(checkpoints['image_ffn'])
+        if not self.args.pretrain:
+            self.emb_cls_token.load_state_dict(checkpoints['emb_cls_token'])
+            self.classifier.load_state_dict(checkpoints['classifier'])
+
+class EmbClassToken(nn.Module):
+    def __init__(self, dim) -> None:
+        super().__init__()
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, dim))
+    
+    def forward(self, x):
+        cls_tokens = self.cls_token.expand(x.shape[0], -1, -1)
+        return torch.cat((cls_tokens, x), dim=1)
