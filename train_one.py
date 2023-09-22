@@ -26,9 +26,12 @@ def train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # create model
     model = MyModel(args).to(device)
-    
     optimizer = get_optimizer(model, args)
     scheduler = get_scheduler(args, optimizer)
+
+    if args.start_epoch != 1:
+        model.load(f'epoch_{args.start_epoch-1}.pth')
+        optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, f'epoch_{args.start_epoch-1}.opt')))
 
     src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True)
     # tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<img_{i}>" for i in range(args.image_vocab_size)])
@@ -65,7 +68,7 @@ def train():
         tgt_texts = tgt_inputs['input_ids'].to(device)
         tgt_attention_masks = tgt_inputs['attention_mask'].to(device)
 
-    for epoch in range(1, args.num_epochs+1):
+    for epoch in range(args.start_epoch, args.num_epochs+1):
         # 学習ループ
         if args.image_model_train:
             model.image_model.train()
@@ -98,9 +101,10 @@ def train():
     
         if args.save_interval is not None:
             if (epoch) % args.save_interval == 0:
-                print(f'Model {epoch} saving...')
+                print(f'Model and Optimizer {epoch} saving...')
                 model.save(result_name=f'epoch_{epoch}.pth')
-                print(f'Model {epoch} saved')
+                torch.save(optimizer.state_dict(), os.path.join(args.result_dir, f'epoch_{epoch}.opt'))
+                logger.info(f'Model and Optimizer {epoch} saved')
             
     loss_counter.plot_loss(args.result_dir)
 
