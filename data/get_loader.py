@@ -12,7 +12,7 @@ from .localization import *
 def get_data(args, src_tokenizer=None, tgt_tokenizer=None):
     train_datasets, val_datasets = [], []
     for dataset_name in args.datasets:
-        if dataset_name in ['redcaps', 'sun397', 'imagenet21k', 'cc12m']:
+        if dataset_name in ['redcaps', 'sun397', 'cc12m']:
             dataset = get_dataset(args, dataset_name, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
             val_rate = 0.1
             val_size = int(len(dataset) * val_rate)
@@ -56,7 +56,7 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
         elif 'imagenet' == dataset_name:
             dataset = ImageNetPretrainDatasetLoader(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'imagenet_21k' == dataset_name:
-            dataset = ImageNet21kPretrainDatasetLoader(args, data_dir, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+            dataset = ImageNet21kPretrainDatasetLoader(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'places365' == dataset_name:
             dataset = Places365PretrainDatasetLoader(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'sun397' == dataset_name:
