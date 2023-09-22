@@ -64,16 +64,20 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
         elif 'inaturalist' == dataset_name:
             dataset = INaturalistPretrainDatasetLoader(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'cc3m' == dataset_name:
-            dataset = CC3MPretrainDatasetLoader(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+            dataset = CC3M_Pretrain(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'cc12m' == dataset_name:
-            dataset = CC12MPretrainDatasetLoader(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+            dataset = CC12M_Pretrain(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         else:
             raise NotImplementedError
     else:
         if 'mscoco' == dataset_name:
-            dataset = COCODatasetLoader(data_dir, phase)
+            dataset = COCO_Caption(data_dir, phase)
         elif 'redcaps' == dataset_name:
-            dataset = RedCapsDatasetLoader(data_dir)
+            dataset = RedCaps_Caption(data_dir, phase)
+        elif 'cc3m' == dataset_name:
+            dataset = CC3M_Caption(data_dir, phase)
+        elif 'cc12m' == dataset_name:
+            dataset = CC12M_Caption(data_dir, phase)
         elif 'vcr' == dataset_name:
             dataset = Vcrdataset(data_dir, phase=phase)
         elif 'vqa2' == dataset_name:

@@ -1,7 +1,7 @@
 import os
 from .pretrain import PretrainDatasetLoader
 
-class RedCapsPretrainDatasetLoader(PretrainDatasetLoader):
+class RedCaps_Pretrain(PretrainDatasetLoader):
     def __init__(self, args, data_dir='/data01/redcaps', phase='train', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
         super().__init__(args, resize, src_tokenizer, tgt_tokenizer, mask_probability)
         text_tsv_path = os.path.join(data_dir, f'{phase}_text.tsv')
