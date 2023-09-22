@@ -17,13 +17,13 @@ pip install -r requirements.txt
 
 | parameter | 説明 | default |
 | - | - | - |
-| image_model_name | 画像の特徴抽出モデル | microsoft/swinv2-base-patch4-window8-256 |
+| image_model_name | 画像の特徴抽出モデル | microsoft/swinv2-large-patch4-window12to16-192to256-22kto1k-ft |
 | image_model_train | 画像の特徴抽出モデルを学習するかどうか | False |
-| language_model_name | 言語の特徴抽出モデル | t5-large |
-| ffn | 特徴抽出モデルの出力をFFNで変換するかどうか | False |
-| image_vocab_size | 画像のボキャブラリサイズ | 16384 |
-| loc_vocab_size | 位置のボキャブラリサイズ | 1000 |
-| vae_ckpt_path | VAEの重みファイルのパス | checkpoints/vqgan.pt |
+| language_model_name | 言語の特徴抽出モデル | google/flan-t5-large |
+| ffn | 特徴抽出モデルの出力をFFNで変換するかどうか | True |
+| additional_vocab_size | 予備のボキャブラリサイズ | 10000 |
+| loc_vocab_size | 位置のボキャブラリサイズ | 1600 |
+| vae_ckpt_path | VAEの重みファイルのパス | なし |
 | max_source_length | 入力文の最大長 | 512 |
 | max_target_length | 出力文の最大長 | 512 |
 
@@ -31,10 +31,9 @@ pip install -r requirements.txt
 
 | parameter | 説明 | default |
 | - | - | - |
-| pretrain | 事前学習かどうか | False |
-| image_mask_ratio | 画像のマスク率 | 0.75 |
+| phase | 事前学習か学習か分類か | False |
 | seed | 乱数シード | 999 |
-| lr | 学習率 | 0.001 |
+| lr | 学習率 | 0.01 |
 | optimizer | Optimizer | AdamW |
 | lr_scheduler | 学習率のスケジューラ | なし |
 | batch_size | 1GPUあたりのバッチサイズ | 64 |
@@ -53,7 +52,7 @@ pip install -r requirements.txt
 
 <br>
 
-## RedCapsでのCaptionの自己教師ありPretrain（動作未確認）
+## 自己教師ありPretrain（CC12Mなど）
 
 15%の単語をマスクして、復元するように学習
 
@@ -68,15 +67,9 @@ pip install -r requirements.txt
 bash run_scripts/pretrain/train_only_transformer.sh
 ```
 
-### SwinTransformerを含めて学習
-
-```console
-bash run_scripts/pretrain/train_with_swin.sh
-```
-
 <br>
 
-## MSCOCOでのCaptionの学習
+## Captionの学習
 
 ```text
 入力：What does th image describe ?
@@ -89,15 +82,9 @@ bash run_scripts/pretrain/train_with_swin.sh
 bash run_scripts/caption/train_only_transformer.sh
 ```
 
-### SwinTransformerを含めて学習
-
-```console
-bash run_scripts/caption/train_with_swin.sh
-```
-
 <br>
 
-## ImageNetでのクラス分類の学習
+## SUN397でのクラス分類の学習
 
 ```text
 入力：What does th image describe ?
@@ -108,10 +95,4 @@ bash run_scripts/caption/train_with_swin.sh
 
 ```console
 bash run_scripts/image_classify/train_only_transformer.sh
-```
-
-### SwinTransformerを含めて学習
-
-```console
-bash run_scripts/image_classify/train_with_swin.sh
 ```

@@ -26,50 +26,49 @@ def train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # create model
     model = MyModel(args).to(device)
-    
     optimizer = get_optimizer(model, args)
     scheduler = get_scheduler(args, optimizer)
 
-    src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True)
-    tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<img_{i}>" for i in range(args.image_vocab_size)])
+    if args.start_epoch != 1:
+        model.load(f'epoch_{args.start_epoch-1}.pth')
+        optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, f'epoch_{args.start_epoch-1}.opt')))
 
+    src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True)
+    # tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<img_{i}>" for i in range(args.image_vocab_size)])
+    tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<add_{i}>" for i in range(args.additional_vocab_size)])
+    
     # データの設定
     train_dataset, val_dataset = get_data(args, src_tokenizer, tgt_tokenizer)
     train_loader = get_dataloader(args, train_dataset, num_workers=1, shuffle=False)
 
     if args.num_epochs is None:
-        print("This code only supports num_epochs mode.")
+        logger.info("This code only supports num_epochs mode.")
         exit()
 
     steps = 0
     loss_counter = LossCounter()
 
-    src_images, tgt_images, src_texts, tgt_texts = train_dataset[0]
-    src_images = src_images.unsqueeze(0)
-    # tgt_images = tgt_images.unsqueeze(0)
+    data_iter = iter(train_loader)
+    src_images, tgt_images, src_texts, tgt_texts = data_iter.__next__()
 
     src_images = src_images.to(device)
 
-    # if args.pretrain:
-    #     tgt_images = tgt_images.to(device)
-    #     tgt_texts, _ = model.image_to_z(tgt_images)
-
-    # matches = [re.findall(pattern, tgt_text)[:256] for tgt_text in tgt_texts]
-    # targets = [[int(m) for m in match] for match in matches]
-    # targets = torch.tensor(targets).to(device)
-    # targets = model.vae.decode_code(targets)
-    # custom_to_pil(targets[0]).save(os.path.join(args.result_dir, "target.png"))
-
     # print("src_images.shape", src_images.shape)
     # print("tgt_images.shape", tgt_images.shape)
-    print("src_texts", src_texts)
-    print("tgt_texts", tgt_texts)
-    src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device) # ['pt', 'tf', 'np', 'jax']
-    tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device) # ['pt', 'tf', 'np', 'jax']
-    print("src_texts", src_texts)
-    print("tgt_texts", tgt_texts)
+    logger.info(f"src_texts: {src_texts}")
+    logger.info(f"tgt_texts: {tgt_texts}")
+    src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+    src_texts = src_inputs['input_ids'].to(device)
+    src_attention_masks = src_inputs['attention_mask'].to(device)
+    if args.phase == 'classify':
+        tgt_texts = tgt_texts.to(device)
+        tgt_attention_masks = None
+    else:
+        tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+        tgt_texts = tgt_inputs['input_ids'].to(device)
+        tgt_attention_masks = tgt_inputs['attention_mask'].to(device)
 
-    for epoch in range(1, args.num_epochs+1):
+    for epoch in range(args.start_epoch, args.num_epochs+1):
         # 学習ループ
         if args.image_model_train:
             model.image_model.train()
@@ -77,9 +76,8 @@ def train():
         
         optimizer.zero_grad()
 
-        image_mask_ratio = 0.0
+        loss, preds = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks, image_mask_ratio=0.0)
 
-        loss = model(src_images, src_texts, tgt_texts, image_mask_ratio=image_mask_ratio)
         loss.backward()
 
         train_loss = loss.item()
@@ -93,32 +91,20 @@ def train():
         if args.lr_scheduler != '':
             scheduler.step()
 
-        logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Steps : {steps}, Image mask ratio : {image_mask_ratio}')
+        logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
 
         if (epoch) % 50 == 0:
             with torch.no_grad():
-                # outputs = model(src_images, src_texts, tgt_texts, return_loss=False, num_beams=4)
-                outputs = model(src_images, src_texts, tgt_texts, return_loss=False)
-                preds = tgt_tokenizer.batch_decode(outputs)
-
-                print(f"Generated text: {preds}")
-                # matches = []
-                # for pred in preds:
-                #     match = re.findall(pattern, pred)
-                #     if len(match) >= 256:
-                #         matches.append([int(m) for m in match[:256]])
-
-                # if len(matches) > 0:
-                #     preds = torch.tensor(matches).to(device)
-                #     preds = model.vae.decode_code(preds)
-                #     custom_to_pil(preds[0]).save(os.path.join(args.result_dir, f"epoch_{epoch}.png"))
-                #     print(f"Generated image {epoch} saved")
+                if args.phase != 'classify':
+                    preds = tgt_tokenizer.batch_decode(preds)
+                logger.info(f"Pred: {preds}")
     
         if args.save_interval is not None:
             if (epoch) % args.save_interval == 0:
-                print(f'Model {epoch} saving...')
+                print(f'Model and Optimizer {epoch} saving...')
                 model.save(result_name=f'epoch_{epoch}.pth')
-                print(f'Model {epoch} saved')
+                torch.save(optimizer.state_dict(), os.path.join(args.result_dir, f'epoch_{epoch}.opt'))
+                logger.info(f'Model and Optimizer {epoch} saved')
             
     loss_counter.plot_loss(args.result_dir)
 

@@ -1,1 +1,1 @@
-from .oidv7_localization import OpenImageDataset_localization
+from .openimage import OpenImageDataset
