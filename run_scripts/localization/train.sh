@@ -3,7 +3,7 @@ dataset="openimage"
 
 dec=0
 
-for enc in 1 2; do
+for enc in 2; do
 torchrun --nnodes=1 --nproc_per_node=4 train.py \
         --transformer_num_layers $enc \
         --transformer_num_decoder_layers $dec \
