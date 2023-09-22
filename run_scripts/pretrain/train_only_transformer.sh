@@ -28,5 +28,6 @@ torchrun --nnodes=1 --nproc_per_node=8 train.py \
         --start_epoch 21 \
         --num_epochs 40 \
         --root_dir /local/ \
+        --save_interval 1 \
         --dataset $dataset \
         --result_dir results/pretrain/cc3m_cc12m_imagenet_inaturalist_places365_redcaps_sun397/enc$enc\_dec$dec/
