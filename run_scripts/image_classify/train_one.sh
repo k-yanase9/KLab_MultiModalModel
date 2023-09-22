@@ -1,10 +1,10 @@
-batch_size=512
-dataset="openimage"
+batch_size=1
+dataset="sun397"
 
+enc=2
 dec=0
 
-for enc in 1 2; do
-torchrun --nnodes=1 --nproc_per_node=4 train.py \
+python train_one.py \
         --transformer_num_layers $enc \
         --transformer_num_decoder_layers $dec \
         --phase classify \
@@ -15,6 +15,5 @@ torchrun --nnodes=1 --nproc_per_node=4 train.py \
         --start_epoch 1 \
         --num_epochs 100 \
         --datasets $dataset \
-        --root_dir /local/ \
-        --result_dir results/localization/$dataset/enc$enc\_dec$dec/
-done
+        --root_dir /data01/ \
+        --result_dir results/image_classify/$dataset/enc$enc\_dec$dec/
