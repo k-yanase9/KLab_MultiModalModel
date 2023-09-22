@@ -12,7 +12,7 @@ from .localization import *
 def get_data(args, src_tokenizer=None, tgt_tokenizer=None):
     train_datasets, val_datasets = [], []
     for dataset_name in args.datasets:
-        if dataset_name in ['redcaps', 'sun397']:
+        if dataset_name in ['sun397']:
             dataset = get_dataset(args, dataset_name, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
             val_rate = 0.1
             val_size = int(len(dataset) * val_rate)
@@ -52,7 +52,7 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
         if src_tokenizer is None or tgt_tokenizer is None:
             raise NotImplementedError
         if 'redcaps' == dataset_name:
-            dataset = RedCapsPretrainDatasetLoader(args, data_dir, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+            dataset = RedCapsPretrainDatasetLoader(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'imagenet' == dataset_name:
             dataset = ImageNetPretrainDatasetLoader(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'imagenet_21k' == dataset_name:
