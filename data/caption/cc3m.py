@@ -2,7 +2,7 @@ import os
 from ..dataset_loader import DatasetLoader, CAPTION_SRC_TEXT
 
 class CC3M_Caption(DatasetLoader):
-    def __init__(self,data_dir="/dada01/cc3m", phase="train", resize=(256,256)):
+    def __init__(self,data_dir="/data01/cc3m", phase="train", resize=256):
         super().__init__(resize)
         tsv_path = os.path.join(data_dir, f'{phase}.tsv')
         
