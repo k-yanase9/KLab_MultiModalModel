@@ -39,7 +39,7 @@ def train():
     train_loader = get_dataloader(args, train_dataset, num_workers=1, shuffle=False)
 
     if args.num_epochs is None:
-        print("This code only supports num_epochs mode.")
+        logger.info("This code only supports num_epochs mode.")
         exit()
 
     steps = 0
@@ -52,8 +52,8 @@ def train():
 
     # print("src_images.shape", src_images.shape)
     # print("tgt_images.shape", tgt_images.shape)
-    print("src_texts:", src_texts)
-    print("tgt_texts:", tgt_texts)
+    logger.info(f"src_texts: {src_texts}")
+    logger.info(f"tgt_texts: {tgt_texts}")
     src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
     src_texts = src_inputs['input_ids'].to(device)
     src_attention_masks = src_inputs['attention_mask'].to(device)
@@ -92,7 +92,9 @@ def train():
 
         if (epoch) % 50 == 0:
             with torch.no_grad():
-                print("Pred:", preds)
+                if args.phase != 'classify':
+                    preds = tgt_tokenizer.batch_decode(preds)
+                logger.info(f"Pred: {preds}")
     
         if args.save_interval is not None:
             if (epoch) % args.save_interval == 0:
