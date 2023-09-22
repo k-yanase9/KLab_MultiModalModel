@@ -81,13 +81,18 @@ def train():
             # if args.pretrain:
             #     tgt_images = tgt_images.to(device_id)
             #     tgt_texts, _ = model.module.image_to_z(tgt_images)
-            src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
+            src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+            src_texts = src_inputs['input_ids'].to(device_id, non_blocking=True)
+            src_attention_masks = src_inputs['attention_mask'].to(device_id, non_blocking=True)
             if args.pretrain:
-                tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
+                tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                tgt_texts = tgt_inputs['input_ids'].to(device_id, non_blocking=True)
+                tgt_attention_masks = tgt_inputs['attention_mask'].to(device_id, non_blocking=True)
             else:
                 tgt_texts = tgt_texts.to(device_id, non_blocking=True)
+                tgt_attention_masks = None
 
-            loss, preds = model(src_images, src_texts, tgt_texts, image_mask_ratio=image_mask_ratio)
+            loss, preds = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks, image_mask_ratio=image_mask_ratio)
             loss /= args.accumulation_steps
             loss.backward()
 
@@ -114,7 +119,7 @@ def train():
             loss_counter.add("train", train_loss.cpu().numpy().copy())
             if not args.pretrain:
                 train_acc /= train_count
-                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Acc : {train_acc}, Steps : {steps}')
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Acc : {train_acc}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
 
         if args.lr_scheduler != '' and args.num_steps is None:
             scheduler.step()
@@ -132,13 +137,18 @@ def train():
                 # if args.pretrain:
                 #    tgt_images = tgt_images.to(device_id)
                 #    tgt_texts, _ = model.module.image_to_z(tgt_images)
-                src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
+                src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                src_texts = src_inputs['input_ids'].to(device_id, non_blocking=True)
+                src_attention_masks = src_inputs['attention_mask'].to(device_id, non_blocking=True)
                 if args.pretrain:
-                    tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
+                    tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'] # ['pt', 'tf', 'np', 'jax']
+                    tgt_texts = tgt_inputs.to(device_id, non_blocking=True)
+                    tgt_attention_masks = tgt_inputs['attention_mask'].to(device_id, non_blocking=True)
                 else:
                     tgt_texts = tgt_texts.to(device_id, non_blocking=True)
+                    tgt_attention_masks = None
                 
-                loss, preds = model(src_images, src_texts, tgt_texts)
+                loss, preds = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
                 
                 val_loss += loss.item() * src_images.shape[0]
                 if not args.pretrain: val_acc += torch.sum(preds == tgt_texts)
@@ -153,7 +163,7 @@ def train():
             val_loss /= val_count
             loss_counter.add("val", val_loss.cpu().numpy().copy())
             if args.pretrain: 
-                logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}, Steps : {steps}')
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
             else:
                 val_acc /= val_count
                 logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}, Acc : {val_acc}')

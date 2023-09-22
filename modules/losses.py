@@ -25,12 +25,13 @@ class LossCounter():
         plt.savefig(os.path.join(result_dir, "loss.png"))
 
 class FocalLoss(torch.nn.Module):
-    def __init__(self, gamma=2):
+    def __init__(self, gamma=2, ignore_index=-100):
         super(FocalLoss, self).__init__()
         self.gamma = gamma
+        self.ignore_index = ignore_index
 
     def forward(self, input, target):
-        ce_loss = F.cross_entropy(input, target, reduction='none')
+        ce_loss = F.cross_entropy(input, target, reduction='none', ignore_index=self.ignore_index)
         pt = torch.exp(-ce_loss)
         focal_loss = ((1 - pt) ** self.gamma * ce_loss).mean()
         return focal_loss
