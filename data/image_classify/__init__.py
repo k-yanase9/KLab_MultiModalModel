@@ -1,1 +1,2 @@
 from .imagenet import ImageNetDatasetLoader
+from .imagenet_21k import ImageNet_21k_DatasetLoader
