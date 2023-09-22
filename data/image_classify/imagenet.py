@@ -9,10 +9,13 @@ class ImageNetDatasetLoader(DatasetLoader):
         # Load class names
         map_clsloc_path = os.path.join(data_dir, 'map_clsloc.txt')
         imagenet_classes = {}
+        
+        class_folder_to_id = {}
         with open(map_clsloc_path, 'r') as f:
-            for line in f.readlines():
+            for i, line in enumerate(f.readlines()):
                 line = line.strip().split(' ')
                 imagenet_classes[line[0]] = line[2]
+                class_folder_to_id[line[0]] = i
 
         for class_folder, class_name in imagenet_classes.items():
             class_folder_path = os.path.join(img_folder_path, class_folder)
@@ -21,4 +24,4 @@ class ImageNetDatasetLoader(DatasetLoader):
                 img_path = os.path.join(class_folder_path, img)
                 self.images.append(img_path)
                 self.src_texts.append('What does the image describe ?')
-                self.tgt_texts.append(f'a photo of {class_name}')
+                self.tgt_texts.append(class_folder_to_id[class_folder])
