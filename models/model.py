@@ -35,7 +35,7 @@ class MyModel(nn.Module):
 
         if args.pretrain:
             transformer_config = T5Config(
-                vocab_size=32128 + args.loc_vocab_size + args.image_vocab_size,
+                vocab_size=32128 + args.loc_vocab_size + args.additional_vocab_size,
                 d_model=args.transformer_d_model,
                 d_ff=args.transformer_d_ff,
                 d_kv=args.transformer_d_kv,
@@ -48,7 +48,7 @@ class MyModel(nn.Module):
             self.transformer = T5ForConditionalGeneration(transformer_config).requires_grad_(True)
         else:
             transformer_config = T5Config(
-                vocab_size=32128 + args.loc_vocab_size + args.image_vocab_size,
+                vocab_size=32128 + args.loc_vocab_size + args.additional_vocab_size,
                 d_model=args.transformer_d_model,
                 d_ff=args.transformer_d_ff,
                 d_kv=args.transformer_d_kv,

@@ -25,7 +25,7 @@ def parse_arguments():
     parser.add_argument('--transformer_num_heads', type=int, default=2, help='メインTransformerのヘッド数')
     parser.add_argument('--transformer_num_layers', type=int, default=8, help='メインTransformerの層数')
     parser.add_argument('--transformer_num_decoder_layers', type=int, default=8, help='メインTransformerのデコーダーの層数')
-    parser.add_argument('--image_vocab_size', type=int, default=0, help='画像のボキャブラリサイズ', choices=[0, 16384])
+    parser.add_argument('--additional_vocab_size', type=int, default=1000, help='予備のボキャブラリサイズ', choices=[0, 1000, 10000, 16384])
     parser.add_argument('--loc_vocab_size', type=int, default=1600, help='位置のボキャブラリサイズ', choices=[1000, 1600])
     parser.add_argument('--vae_ckpt_path', type=str, default='', choices=['', 'checkpoints/vqgan.pt'], help='VAEの重みファイルのパス')
     parser.add_argument('--max_source_length', type=int, default=256, help='入力文の最大長')
