@@ -2,6 +2,7 @@ import torch
 from PIL import Image
 from torchvision import transforms
 
+CAPTION_SRC_TEXT = "What does the image describe ?"
 
 class DatasetLoader(torch.utils.data.Dataset):
     def __init__(self, resize=256):

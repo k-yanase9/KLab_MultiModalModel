@@ -1,23 +1,17 @@
-import json
 import os
-from PIL import Image
-import torch
-from torchvision.transforms import ToTensor
-from ..dataset_loader import DatasetLoader
+from ..dataset_loader import DatasetLoader, CAPTION_SRC_TEXT
 
 class CC3M_Caption(DatasetLoader):
-    def __init__(self,data_dir="/dada01/cc3m",phase="train",imagesize=(256,256)):
-        super().__init__()
+    def __init__(self,data_dir="/data01/cc3m", phase="train", resize=256):
+        super().__init__(resize)
+        tsv_path = os.path.join(data_dir, f'{phase}.tsv')
         
-        with open(os.path.join(data_dir,f"{phase}.tsv"),"r") as f:
-            items = f.read()
-
-        items = items.split("\n")
-        items = [item.split("\t") for item in items]
-
-        items = items[1:]
-
-        self.tgt_texts = [item[1] for item in items]
-        self.src_texts = ["What does the image describe?"]*len(items)
-        self.images = [os.path.join(data_dir,phase,item[0]) for item in items]
-        
+        with open(tsv_path, 'r') as f:
+            lines = f.readlines()
+            
+        for line in lines[1:]:
+            img_name, caption = line.removesuffix('\n').split('\t')
+            img_path = os.path.join(data_dir, phase, img_name)
+            self.images.append(img_path)
+            self.src_texts.append(CAPTION_SRC_TEXT)
+            self.tgt_texts.append(caption)

@@ -1,29 +1,31 @@
 import os
-import json
-from ..dataset_loader import DatasetLoader
+from ..dataset_loader import DatasetLoader, CAPTION_SRC_TEXT
 
 class CC12M_Caption(DatasetLoader):
-    def __init__(self, data_dir='/data01/cc12m', phase='train'):
-        super().__init__()
+    def __init__(self, data_dir='/data01/cc12m', phase='train', resize=256):
+        super().__init__(resize)
+        text_tsv_path = os.path.join(data_dir, f'text_{phase}.tsv')
+        img_tsv_path = os.path.join(data_dir, f'img_{phase}.tsv')
         
-        with open(os.path.join(data_dir,f"text_{phase}.tsv"), 'r') as f:
-            text_items = f.read()
-        text_items = text_items.split('\n')
-        text_items = [item.split('\t') for item in text_items]
+        with open(text_tsv_path, 'r') as f:
+            lines = f.readlines()
 
-        text_items = text_items[1:]
+        for line in lines[1:]:
+            img_name, caption = line.removesuffix('\n').split('\t')
+            img_path = os.path.join(data_dir, 'images', img_name)
+            self.images.append(img_path)
+            self.src_texts.append(CAPTION_SRC_TEXT)
+            self.tgt_texts.append(caption)
 
-        with open(os.path.join(data_dir,f"img_{phase}.tsv"), 'r') as f:
-            img_items = f.read()
-        img_items = img_items.split('\n')
-        img_items = [item.split('\t') for item in img_items]
+        with open(img_tsv_path, 'r') as f:
+            lines = f.readlines()
 
-        img_items = img_items[1:]
-        items = text_items + img_items
-        
-        self.tgt_texts = [item[1] for item in items]
-        self.src_texts = ["What does the image describe?"]*len(items)
-        self.images = [os.path.join(data_dir,"images",item[0]) for item in items]
+        for line in lines[1:]:
+            img_name, caption = line.removesuffix('\n').split('\t')
+            img_path = os.path.join(data_dir, 'images', img_name)
+            self.images.append(img_path)
+            self.src_texts.append(CAPTION_SRC_TEXT)
+            self.tgt_texts.append(caption)
 
 
         
