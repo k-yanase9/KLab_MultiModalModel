@@ -1,5 +1,4 @@
 import os
-import json
 from ..dataset_loader import DatasetLoader, CAPTION_SRC_TEXT
 
 class RedCaps_Caption(DatasetLoader):
