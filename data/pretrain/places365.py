@@ -1,7 +1,7 @@
 from .pretrain import ClassifyPretrainDatasetLoader
 from torchvision.datasets import Places365
 
-class Places365PretrainDatasetLoader(ClassifyPretrainDatasetLoader):
+class Places365_Pretrain(ClassifyPretrainDatasetLoader):
     def __init__(self, args, data_dir='/data01/places365', phase='train', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
         super().__init__(args, resize, src_tokenizer, tgt_tokenizer, mask_probability)
         if phase == 'train':
