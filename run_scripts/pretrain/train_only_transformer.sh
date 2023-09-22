@@ -1,5 +1,5 @@
 batch_size=50
-dataset="cc3m cc12m imagenet inaturalist places365 redcaps sun397"
+dataset="cc3m cc12m imagenet  places365 redcaps sun397"
 
 d_model=768
 d_ff=3072
@@ -18,15 +18,14 @@ torchrun --nnodes=1 --nproc_per_node=8 train.py \
         --transformer_num_heads $num_heads \
         --transformer_num_layers $enc \
         --transformer_num_decoder_layers $dec \
-        --image_vocab_size 16384 \
-        --loc_vocab_size 1000 \
+        --additional_vocab_size 10000 \
+        --loc_vocab_size 1600 \
         --pretrain \
-        --lr 0.001 \
+        --lr 0.01 \
         --optimizer AdamW \
         --lr_scheduler StepLR \
         -b $batch_size \
-        --start_epoch 21 \
-        --num_epochs 40 \
+        --num_epochs 50 \
         --root_dir /local/ \
         --save_interval 1 \
         --dataset $dataset \
