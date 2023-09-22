@@ -7,7 +7,7 @@ class CC12M_Caption(DatasetLoader):
         text_tsv_path = os.path.join(data_dir, f'text_{phase}.tsv')
         img_tsv_path = os.path.join(data_dir, f'img_{phase}.tsv')
         
-         with open(text_tsv_path, 'r') as f:
+        with open(text_tsv_path, 'r') as f:
             lines = f.readlines()
 
         for line in lines[1:]:
