@@ -74,18 +74,23 @@ class MyModel(nn.Module):
             else:
                 raise NotImplementedError
         
+        if args.pretrain:
+            ignore_index = 0
+        else:
+            ignore_index = -100
         if args.loss == 'CrossEntropy':
-            self.criterion = nn.CrossEntropyLoss()
+            self.criterion = nn.CrossEntropyLoss(ignore_index=ignore_index)
         elif args.loss == 'FocalLoss':
-            self.criterion = FocalLoss()
+            self.criterion = FocalLoss(ignore_index=ignore_index)
         else:
             raise NotImplementedError
 
-    def forward(self, images, src_texts, tgt_texts=None, return_loss=True, num_beams=1, num_return_sequences=1, do_sample=False, image_mask_ratio=0.0):
+    def forward(self, images, src_texts, src_attention_masks=None, tgt_texts=None, tgt_attention_masks=None, return_loss=True, num_beams=1, num_return_sequences=1, do_sample=False, image_mask_ratio=0.0):
         with torch.no_grad():
-            language_attention_mask = torch.ones(src_texts.shape[0], src_texts.shape[1], device=self.language_model.device)
-            language_attention_mask[src_texts == 0] = 0
-            language_embeddings = self.language_model(src_texts, attention_mask=language_attention_mask).last_hidden_state
+            if src_attention_masks is None:
+                src_attention_masks = torch.ones(src_texts.shape[0], src_texts.shape[1], device=self.language_model.device)
+                src_attention_masks[src_texts == 0] = 0
+            language_embeddings = self.language_model(src_texts, attention_mask=src_attention_masks).last_hidden_state
 
         if image_mask_ratio > 0:  # 画像パッチにマスクをかける
             bool_masked_pos = self.random_patch_masking(len(images), image_mask_ratio)
@@ -102,18 +107,19 @@ class MyModel(nn.Module):
         if not self.args.pretrain:
             concated_embeddings = self.emb_cls_token(concated_embeddings)
 
-        cls_attention_mask = torch.ones(image_embeddings.shape[0], 1, device=self.transformer.device)
         image_attention_mask = torch.ones(image_embeddings.shape[0], image_embeddings.shape[1], device=self.image_model.device)
         if self.args.pretrain:
-            concat_attention_mask = torch.cat((image_attention_mask, language_attention_mask), dim=1)
+            concat_attention_mask = torch.cat((image_attention_mask, src_attention_masks), dim=1)
         else:
-            concat_attention_mask = torch.cat((cls_attention_mask, image_attention_mask, language_attention_mask), dim=1)
+            cls_attention_mask = torch.ones(image_embeddings.shape[0], 1, device=self.transformer.device)
+            concat_attention_mask = torch.cat((cls_attention_mask, image_attention_mask, src_attention_masks), dim=1)
 
         if return_loss:
             if self.args.pretrain:
-                target_attention_mask = torch.ones(tgt_texts.shape[0], tgt_texts.shape[1], device=self.transformer.device)
-                target_attention_mask[tgt_texts == 0] = 1
-                logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=target_attention_mask).logits
+                if tgt_attention_masks is None:
+                    tgt_attention_masks = torch.ones(tgt_texts.shape[0], tgt_texts.shape[1], device=self.transformer.device)
+                    tgt_attention_masks[tgt_texts == 0] = 0
+                logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=tgt_attention_masks).logits
                 loss = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
                 preds = torch.argmax(logits, dim=2)
             else:

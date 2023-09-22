@@ -65,7 +65,9 @@ def train():
     # print("tgt_images.shape", tgt_images.shape)
     print("src_texts:", src_texts)
     print("tgt_texts:", tgt_texts)
-    src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device) # ['pt', 'tf', 'np', 'jax']
+    src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+    src_texts = src_inputs['input_ids'].to(device)
+    src_attention_masks = src_inputs['attention_mask'].to(device)
     # tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device) # ['pt', 'tf', 'np', 'jax']
     tgt_texts = tgt_texts.to(device)
     print("src_texts tokenized:", src_texts)
@@ -81,7 +83,7 @@ def train():
 
         image_mask_ratio = 0.0
 
-        loss, preds = model(src_images, src_texts, tgt_texts, image_mask_ratio=image_mask_ratio)
+        loss, preds = model(src_images, src_texts, src_attention_masks, tgt_texts, image_mask_ratio=image_mask_ratio)
 
         loss.backward()
 
@@ -96,7 +98,7 @@ def train():
         if args.lr_scheduler != '':
             scheduler.step()
 
-        logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Steps : {steps}, Image mask ratio : {image_mask_ratio}')
+        logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
 
         if (epoch) % 50 == 0:
             with torch.no_grad():
