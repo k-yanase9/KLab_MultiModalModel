@@ -1,5 +1,5 @@
 batch_size=1
-dataset="openimage"
+dataset="sun397"
 
 enc=2
 dec=0
@@ -15,5 +15,5 @@ python train_one.py \
         --start_epoch 1 \
         --num_epochs 100 \
         --datasets $dataset \
-        --root_dir /data/dataset/ \
-        --result_dir results/localization/$dataset/enc$enc\_dec$dec/
+        --root_dir /data01/ \
+        --result_dir results/image_classify/$dataset/enc$enc\_dec$dec/
