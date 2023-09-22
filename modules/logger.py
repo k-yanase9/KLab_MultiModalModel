@@ -14,7 +14,10 @@ def get_logger(args, log_name='train.log'):
 
     # ログのファイル出力先を設定
     log_path = os.path.join(args.result_dir, log_name)
-    fh = logging.FileHandler(log_path, mode='a')
+    if args.start_epoch == 1:
+        fh = logging.FileHandler(log_path, mode='w')
+    else:
+        fh = logging.FileHandler(log_path, mode='a')
     fh.setLevel(logging.INFO)
     fh.setFormatter(formatter)
     logger.addHandler(fh)
