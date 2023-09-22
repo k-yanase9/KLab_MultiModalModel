@@ -48,7 +48,7 @@ def get_dataloader(args, dataset, num_workers=4, shuffle=False):
 
 def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_tokenizer=None):
     data_dir = os.path.join(args.root_dir, dataset_name)
-    if args.pretrain: # 事前学習だったら
+    if args.phase == 'pretrain': # 事前学習だったら
         if src_tokenizer is None or tgt_tokenizer is None:
             raise NotImplementedError
         if 'redcaps' == dataset_name:

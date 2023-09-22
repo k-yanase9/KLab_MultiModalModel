@@ -31,7 +31,7 @@ def parse_arguments():
     parser.add_argument('--max_source_length', type=int, default=256, help='入力文の最大長')
     parser.add_argument('--max_target_length', type=int, default=256, help='出力文の最大長')
     # Training setting
-    parser.add_argument('--pretrain', action='store_true', help='事前学習かどうか')
+    parser.add_argument('--phase', type=str, choices=['pretrain', 'train', 'classify'], help='事前学習か学習か分類か')
     parser.add_argument('--seed', type=int, default=999, help='乱数シード')
     parser.add_argument('--loss', type=str, default='FocalLoss', choices=['CrossEntropy', 'FocalLoss'], help='損失関数')
     parser.add_argument('--lr', type=float, default=0.001, help='学習率')
