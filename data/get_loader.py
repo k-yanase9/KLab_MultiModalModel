@@ -85,9 +85,11 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
         elif 'imsitu' == dataset_name:
             dataset = imSituDataset(data_dir, phase=phase)
         elif 'imagenet' == dataset_name:
-            dataset = ImageNetDatasetLoader(data_dir, phase=phase)
+            dataset = ImageNet_Classify(data_dir, phase=phase)
+        elif 'imagenet21k' == dataset_name:
+            dataset = ImageNet21k_Classify(data_dir, phase=phase)
         elif 'sun397' == dataset_name:
-            dataset = SUN397DatasetLoader(data_dir)
+            dataset = SUN397_Classify(data_dir)
         elif 'openimage' == dataset_name:
             dataset = OpenImageDataset(data_dir, phase=phase)
         else:
