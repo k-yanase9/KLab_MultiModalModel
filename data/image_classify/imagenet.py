@@ -1,7 +1,7 @@
 import os
 from ..dataset_loader import DatasetLoader
 
-class ImageNetDatasetLoader(DatasetLoader):
+class ImageNet_Classify(DatasetLoader):
     def __init__(self, data_dir='/data/datatset/imagenet_2012', phase='train'):
         super().__init__()
         img_folder_path = os.path.join(data_dir, phase)
