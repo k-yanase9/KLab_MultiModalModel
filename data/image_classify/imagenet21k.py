@@ -9,7 +9,6 @@ class ImageNet21k_Classify(DatasetLoader):
         with open(os.path.join(data_dir,f"img_{phase}_256fix.tsv"), 'r') as f:
             temp = f.read().split('\n')
         
-        # 
         data.extend(temp[1:])
         data = data[1:]
         data = [d.split('\t') for d in data]
