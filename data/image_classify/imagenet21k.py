@@ -1,7 +1,7 @@
 import os
 from ..dataset_loader import DatasetLoader
 
-class ImageNet21k_DatasetLoader(DatasetLoader):
+class ImageNet21k_Classify(DatasetLoader):
     def __init__(self, data_dir='/data01/imagenet21k', phase='train'):
         super().__init__()
         with open(os.path.join(data_dir,f"text_{phase}_256fix.tsv"), 'r') as f:

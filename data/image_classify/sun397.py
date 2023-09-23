@@ -1,7 +1,7 @@
 from pathlib import Path
 from ..dataset_loader import DatasetLoader
 
-class SUN397DatasetLoader(DatasetLoader):
+class SUN397_Classify(DatasetLoader):
     def __init__(self, data_dir='/data01/sun397'):
         super().__init__()
         self.data_dir = Path(data_dir) / "SUN397"
