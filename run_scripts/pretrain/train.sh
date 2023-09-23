@@ -1,5 +1,5 @@
-batch_size=50
-dataset="cc3m cc12m imagenet  places365 redcaps sun397"
+batch_size=64
+dataset="cc3m cc12m imagenet imagenet21k places365 redcaps sun397"
 
 enc=2
 dec=12
@@ -7,7 +7,7 @@ dec=12
 torchrun --nnodes=1 --nproc_per_node=8 train.py \
         --transformer_num_layers $enc \
         --transformer_num_decoder_layers $dec \
-        ---phase pretrain \
+        --phase pretrain \
         --loss CrossEntropy \
         --lr 0.01 \
         --lr_scheduler StepLR \
@@ -17,4 +17,4 @@ torchrun --nnodes=1 --nproc_per_node=8 train.py \
         --datasets $dataset \
         --root_dir /local/ \
         --save_interval 1 \
-        --result_dir results/pretrain/cc3m_cc12m_imagenet_inaturalist_places365_redcaps_sun397/enc$enc\_dec$dec/
+        --result_dir results/pretrain/cc3m_cc12m_imagenet_imagenet21k_places365_redcaps_sun397/enc$enc\_dec$dec/

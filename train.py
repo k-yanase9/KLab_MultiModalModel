@@ -147,8 +147,8 @@ def train():
                     tgt_texts = tgt_texts.to(device_id, non_blocking=True)
                     tgt_attention_masks = None
                 else:
-                    tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'] # ['pt', 'tf', 'np', 'jax']
-                    tgt_texts = tgt_inputs.to(device_id, non_blocking=True)
+                    tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                    tgt_texts = tgt_inputs['input_ids'].to(device_id, non_blocking=True)
                     tgt_attention_masks = tgt_inputs['attention_mask'].to(device_id, non_blocking=True)
                 
                 loss, preds = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
@@ -166,10 +166,10 @@ def train():
             val_loss /= val_count
             loss_counter.add("val", val_loss.cpu().numpy().copy())
             if args.phase == 'classify':
-                logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
-            else:
                 val_acc /= val_count
                 logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}, Acc : {val_acc}')
+            else:
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
         
             if val_loss < min_val_loss:
                 min_val_loss = val_loss

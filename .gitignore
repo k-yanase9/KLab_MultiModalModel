@@ -19,6 +19,7 @@ results*/
 # tuning shells
 *_4090-*.sh
 *_A6000*.sh
+train_test.sh
 job.sh
 
 # pipenv
