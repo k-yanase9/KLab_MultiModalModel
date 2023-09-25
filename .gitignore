@@ -23,8 +23,8 @@ train_test.sh
 job.sh
 
 # pipenv
-# Pipfile
-# Pipfile.lock
+Pipfile
+Pipfile.lock
 .venv/
 
 .conda_env/
