@@ -31,3 +31,8 @@ job.sh
 .conda_env/
 
 core
+
+*.out
++.error
+*.stats
+
