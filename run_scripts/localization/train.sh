@@ -9,7 +9,7 @@ torchrun --nnodes=1 --nproc_per_node=4 train.py \
         --transformer_num_decoder_layers $dec \
         --phase classify \
         --loss CrossEntropy \
-        --lr 0.01 \
+        --lr 0.0001 \
         --lr_scheduler StepLR \
         -b $batch_size \
         --start_epoch 1 \

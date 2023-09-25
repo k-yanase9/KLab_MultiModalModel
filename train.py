@@ -123,9 +123,12 @@ def train():
             if args.phase == 'classify': 
                 train_acc /= train_count
                 logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Acc : {train_acc}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
+            else:
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
 
         if args.lr_scheduler != '' and args.num_steps is None:
             scheduler.step()
+
         # 検証ループ
         if args.image_model_train:
             model.module.image_model.eval()
@@ -169,7 +172,7 @@ def train():
                 val_acc /= val_count
                 logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}, Acc : {val_acc}')
             else:
-                logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}')
         
             if val_loss < min_val_loss:
                 min_val_loss = val_loss

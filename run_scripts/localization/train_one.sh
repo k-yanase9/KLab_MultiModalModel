@@ -16,4 +16,4 @@ python train_one.py \
         --num_epochs 100 \
         --datasets $dataset \
         --root_dir /data/dataset/ \
-        --result_dir results/localization/$dataset/enc$enc\_dec$dec/
+        --result_dir results/localization/$dataset/enc$enc\_dec$dec\_one/
