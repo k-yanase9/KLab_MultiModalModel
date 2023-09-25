@@ -1,19 +1,26 @@
 import os
-import json
 from .pretrain import PretrainDatasetLoader
 
-class RedCapsPretrainDatasetLoader(PretrainDatasetLoader):
-    def __init__(self, args, data_dir='/data/dataset/redcaps', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
+class RedCaps_Pretrain(PretrainDatasetLoader):
+    def __init__(self, args, data_dir='/data01/redcaps', phase='train', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
         super().__init__(args, resize, src_tokenizer, tgt_tokenizer, mask_probability)
-        anno_dir = os.path.join(data_dir, 'removed_annotations')
-        img_dir = os.path.join(data_dir, 'images')
+        text_tsv_path = os.path.join(data_dir, f'{phase}_text.tsv')
+        img_tsv_path = os.path.join(data_dir, f'{phase}_img.tsv')
 
-        for annotations_file_name in os.listdir(anno_dir):
-            # if "2019" in annotations_file_name or "2020" in annotations_file_name: # 2019年のデータのみ使用
-            annotations_filepath = os.path.join(anno_dir, annotations_file_name)
-            annotations = json.load(open(annotations_filepath))
-            
-            for ann in annotations["annotations"]:
-                img_path = os.path.join(img_dir, ann["subreddit"], f"{ann['image_id']}.jpg")
-                self.images.append(img_path)
-                self.src_texts.append(ann['raw_caption'])
+        with open(text_tsv_path, 'r') as f:
+            lines = f.readlines()
+
+        for line in lines[1:]:
+            img_name, class_name, caption = line.removesuffix('\n').split('\t')
+            img_path = os.path.join(data_dir, 'images', img_name)
+            self.images.append(img_path)
+            self.src_texts.append(caption)
+
+        with open(img_tsv_path, 'r') as f:
+            lines = f.readlines()
+
+        for line in lines[1:]:
+            img_name, class_name, caption = line.removesuffix('\n').split('\t')
+            img_path = os.path.join(data_dir, 'images', img_name)
+            self.images.append(img_path)
+            self.src_texts.append(caption)

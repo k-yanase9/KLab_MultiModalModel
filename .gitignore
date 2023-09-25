@@ -17,10 +17,9 @@ checkpoints/
 results*/
 
 # tuning shells
-train_only_transformer_*.sh
-train_with_swin_*.sh
-test_only_transformer_*.sh
-test_with_swin_*.sh
+*_4090-*.sh
+*_A6000*.sh
+train_test.sh
 job.sh
 
 # pipenv

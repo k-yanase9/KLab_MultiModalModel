@@ -32,14 +32,19 @@ def train():
 
     # create model
     model = MyModel(args).to(device_id)
-    model = DDP(model, device_ids=[device_id])
+    if args.start_epoch > 1:
+        model.load(result_name='best.pth')
+    model = DDP(model, device_ids=[device_id])#,find_unused_parameters=True)
     
     optimizer = get_optimizer(model, args)
     scheduler = get_scheduler(args, optimizer)
+    if args.start_epoch > 1:
+        optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, 'best.optimizer')))
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
     src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True)
-    tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<img_{i}>" for i in range(args.image_vocab_size)])
+    # tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<img_{i}>" for i in range(args.image_vocab_size)])
+    tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<add_{i}>" for i in range(args.additional_vocab_size)])
 
     # データの設定
     train_dataset, val_dataset = get_data(args, src_tokenizer, tgt_tokenizer)
@@ -48,34 +53,54 @@ def train():
 
     if args.num_epochs is None:
         args.num_epochs = int(args.num_steps / len(train_loader)) + 1
-    steps = 0
-    min_val_loss = 100
+
     loss_counter = LossCounter()
-    for epoch in range(1, args.num_epochs+1):
+    if args.start_epoch > 1:
+        with open(os.path.join(args.result_dir, 'train.log'), 'r') as f:
+            for line in f:
+                if 'Epoch' in line:
+                    loss_counter.add("train", float(line.split(',')[1].split(':')[-1].strip()))
+                    loss_counter.add("val", float(line.split(',')[2].split(':')[-1].strip()))
+                    steps = int(line.split(',')[3].split(':')[-1].strip())
+        min_val_loss = min(loss_counter.losses['val'])
+        if rank == 0: logger.info(f'[Loaded] steps : {steps}, Best Val loss : {min_val_loss}')
+    else:
+        steps = 0
+        min_val_loss = 100
+    for epoch in range(args.start_epoch, args.num_epochs+1):
         # 学習ループ
         image_mask_ratio = 0.0
         if args.image_model_train:
             model.module.image_model.train()
         model.module.transformer.train()
         train_loss = torch.tensor(0.0).to(device_id)
+        if args.phase == 'classify': train_acc = torch.tensor(0.0).to(device_id)
         train_count = torch.tensor(0).to(device_id)
         pbar = tqdm(total=int(np.ceil(len(train_loader)/args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
         for i, (src_images, tgt_images, src_texts, tgt_texts) in enumerate(train_loader):
             if i % args.accumulation_steps == 0:
                 optimizer.zero_grad()
             src_images = src_images.to(device_id, non_blocking=True)
-            # if args.pretrain:
+            # if args.phase == 'pretrain':
             #     tgt_images = tgt_images.to(device_id)
             #     tgt_texts, _ = model.module.image_to_z(tgt_images)
-            src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
-            tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
+            src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+            src_texts = src_inputs['input_ids'].to(device_id, non_blocking=True)
+            src_attention_masks = src_inputs['attention_mask'].to(device_id, non_blocking=True)
+            if args.phase == 'classify':
+                tgt_texts = tgt_texts.to(device_id, non_blocking=True)
+                tgt_attention_masks = None
+            else:
+                tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                tgt_texts = tgt_inputs['input_ids'].to(device_id, non_blocking=True)
+                tgt_attention_masks = tgt_inputs['attention_mask'].to(device_id, non_blocking=True)
 
-            loss = model(src_images, src_texts, tgt_texts, image_mask_ratio=image_mask_ratio)
-
+            loss, preds = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks, image_mask_ratio=image_mask_ratio)
             loss /= args.accumulation_steps
             loss.backward()
 
             train_loss += loss.item() * src_images.shape[0]
+            if args.phase == 'classify': train_acc += torch.sum(preds == tgt_texts)
             train_count += src_images.shape[0]
 
             # args.accumulation_steps回の勾配を蓄積してから、optimizer.step()を呼び出す
@@ -83,67 +108,89 @@ def train():
                 optimizer.step()
                 pbar.update(1)
                 if rank == 0: steps += 1
-                if args.num_epochs is None:
+                if args.num_steps is not None:
                     scheduler.step()
 
         # 他のノードから集める
         dist.all_reduce(train_loss, op=dist.ReduceOp.SUM)
+        if args.phase == 'classify': dist.all_reduce(train_acc, op=dist.ReduceOp.SUM)
         dist.all_reduce(train_count, op=dist.ReduceOp.SUM)
+        pbar.close()
 
         if rank == 0:
             train_loss /= train_count
             loss_counter.add("train", train_loss.cpu().numpy().copy())
+            if args.phase == 'classify': 
+                train_acc /= train_count
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Acc : {train_acc}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
 
         if args.lr_scheduler != '' and args.num_steps is None:
             scheduler.step()
-        pbar.close()
         # 検証ループ
         if args.image_model_train:
             model.module.image_model.eval()
         model.module.transformer.eval()
         val_loss = torch.tensor(0.0).to(device_id)
+        if args.phase == 'classify': val_acc = torch.tensor(0.0).to(device_id)
         val_count = torch.tensor(0).to(device_id)
         val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
         for src_images, tgt_images, src_texts, tgt_texts in val_loop:
             with torch.no_grad():
                 src_images = src_images.to(device_id, non_blocking=True)
-                # if args.pretrain:
+                # if args.phase == 'pretrain':
                 #    tgt_images = tgt_images.to(device_id)
                 #    tgt_texts, _ = model.module.image_to_z(tgt_images)
-                src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
-                tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(device_id, non_blocking=True) # ['pt', 'tf', 'np', 'jax']
+                src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                src_texts = src_inputs['input_ids'].to(device_id, non_blocking=True)
+                src_attention_masks = src_inputs['attention_mask'].to(device_id, non_blocking=True)
+                if args.phase == 'classify':
+                    tgt_texts = tgt_texts.to(device_id, non_blocking=True)
+                    tgt_attention_masks = None
+                else:
+                    tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                    tgt_texts = tgt_inputs['input_ids'].to(device_id, non_blocking=True)
+                    tgt_attention_masks = tgt_inputs['attention_mask'].to(device_id, non_blocking=True)
                 
-                loss = model(src_images, src_texts, tgt_texts)
+                loss, preds = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
                 
                 val_loss += loss.item() * src_images.shape[0]
+                if args.phase == 'classify': val_acc += torch.sum(preds == tgt_texts)
                 val_count += src_images.shape[0]
 
         # 他のノードから集める
         dist.all_reduce(val_loss, op=dist.ReduceOp.SUM)
+        if args.phase == 'classify': dist.all_reduce(val_acc, op=dist.ReduceOp.SUM)
         dist.all_reduce(val_count, op=dist.ReduceOp.SUM)
 
         if rank == 0:
             val_loss /= val_count
             loss_counter.add("val", val_loss.cpu().numpy().copy())
-            logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}, Steps : {steps}, Image Mask Ratio : {image_mask_ratio}')
+            if args.phase == 'classify':
+                val_acc /= val_count
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}, Acc : {val_acc}')
+            else:
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
         
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
-                print('Best Model saving...')
+                print('Best Model and Optimizer saving...')
                 model.module.save()
-                logger.info('Best Model saved')
+                torch.save(optimizer.state_dict(), os.path.join(args.result_dir, 'best.optimizer'))
+                logger.info('Best Model and Optimizer saved')
 
             if args.save_interval is not None:
                 if args.num_steps is None:
                     if (epoch) % args.save_interval == 0:
-                        print(f'Model {epoch} saving...')
+                        print(f'Model and Optimizer {epoch} saving...')
                         model.module.save(result_name=f'epoch_{epoch}.pth')
-                        print(f'Model {epoch} saved')
+                        torch.save(optimizer.state_dict(), os.path.join(args.result_dir, f'epoch_{epoch}.optimizer'))
+                        print(f'Model and Optimizer {epoch} saved')
                 else:
                     if steps % args.save_interval == 0:
-                        print(f'Model {steps} saving...')
+                        print(f'Model and Optimizer {steps} saving...')
                         model.module.save(result_name=f'step_{steps}.pth')
-                        print(f'Model {steps} saved')
+                        torch.save(optimizer.state_dict(), os.path.join(args.result_dir, f'step_{steps}.optimizer'))
+                        print(f'Model and Optimizer {steps} saved')
             
     if rank == 0: loss_counter.plot_loss(args.result_dir)
 

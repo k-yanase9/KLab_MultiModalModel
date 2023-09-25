@@ -2,7 +2,7 @@ import os
 import json
 from pycocotools.coco import COCO
 from collections import defaultdict
-from ..dataset_loader import DatasetLoader
+from ..dataset_loader import DatasetLoader, CAPTION_SRC_TEXT
 
 class SilentCOCO(COCO):
     def __init__(self, annotation_file=None):
@@ -49,8 +49,8 @@ class SilentCOCO(COCO):
         self.imgs = imgs
         self.cats = cats
 
-class COCODatasetLoader(DatasetLoader):
-    def __init__(self, data_dir='/data/datatset/mscoco2017', phase='train'):
+class COCO_Caption(DatasetLoader):
+    def __init__(self, data_dir='/data/dataset/mscoco2017', phase='train'):
         super().__init__()
         anno_path = os.path.join(data_dir, 'annotations', f'captions_{phase}2017.json')
         coco = SilentCOCO(anno_path)
@@ -64,5 +64,5 @@ class COCODatasetLoader(DatasetLoader):
             caption = coco.loadAnns(coco.getAnnIds(image_id))[0]['caption']
             
             self.images.append(img_path)
-            self.src_texts.append('What does the image describe ?')
+            self.src_texts.append(CAPTION_SRC_TEXT)
             self.tgt_texts.append(caption)

@@ -6,3 +6,4 @@ from .image_classify import *
 from .pretrain import *
 from .relationship import *
 from .vqa import *
+from .localization import *

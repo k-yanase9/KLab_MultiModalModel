@@ -1,30 +1,28 @@
 import os
-import tarfile
-from PIL import Image
 from .pretrain import ClassifyPretrainDatasetLoader
 
-class ImageNet21kPretrainDatasetLoader(ClassifyPretrainDatasetLoader):
-    def __init__(self, args, data_dir='/data01/imagenet_21k/', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
+class ImageNet21k_Pretrain(ClassifyPretrainDatasetLoader):
+    def __init__(self, args, data_dir='/data01/imagenet21k/', phase='train', resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
         super().__init__(args, resize, src_tokenizer, tgt_tokenizer, mask_probability)
+        text_tsv_path = os.path.join(data_dir, f'text_{phase}_256fix.tsv')
+        img_tsv_path = os.path.join(data_dir, f'img_{phase}_256fix.tsv')
 
-        # Load class names
-        ids_txt_path = os.path.join(data_dir, 'imagenet21k_wordnet_ids.txt')
-        class_name_txt_path = os.path.join(data_dir, 'imagenet21k_wordnet_lemmas.txt')
+        with open(text_tsv_path, 'r') as f:
+            lines = f.readlines()
 
-        with open(ids_txt_path, 'r') as f:
-            ids = [line.strip() for line in f.readlines()]
+        for line in lines[1:]:
+            img_name, label = line.removesuffix('\n').split('\t')
+            img_path = os.path.join(data_dir, img_name)
+            class_name = label.split()[0].replace('_', ' ')
+            self.images.append(img_path)
+            self.src_texts.append(f'{class_name} .')
 
-        with open(class_name_txt_path, 'r') as f:
-            class_names = [line.strip() for line in f.readlines()]
+        with open(img_tsv_path, 'r') as f:
+            lines = f.readlines()
 
-        imagenet_classes = dict(zip(ids, class_names))
-
-        img_folder_path = os.path.join(data_dir, 'images/')
-        folders = os.listdir(img_folder_path)
-        for folder in folders:
-            folder_path = os.path.join(img_folder_path, folder)
-            if os.path.isdir(folder_path):
-                for img_name in os.listdir(folder_path):
-                    img_path = os.path.join(folder_path, img_name)
-                    self.images.append(img_path)
-                    self.src_texts.append(imagenet_classes[folder])
+        for line in lines[1:]:
+            img_name, label = line.removesuffix('\n').split('\t')
+            img_path = os.path.join(data_dir, img_name)
+            class_name = label.split()[0].replace('_', ' ')
+            self.images.append(img_path)
+            self.src_texts.append(f'{class_name} .')
