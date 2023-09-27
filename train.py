@@ -56,9 +56,9 @@ def train():
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
     tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<add_{i}>" for i in range(args.additional_vocab_size)])
     if args.language_model_train:
-        src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True)
-    else:
         src_tokenizer = tgt_tokenizer
+    else:
+        src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True)
         
     # データの設定
     train_dataset, val_dataset = get_data(args, src_tokenizer, tgt_tokenizer)
