@@ -42,10 +42,12 @@ def train():
         optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, 'best.optimizer')))
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
-    src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True)
-    # tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<img_{i}>" for i in range(args.image_vocab_size)])
     tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<add_{i}>" for i in range(args.additional_vocab_size)])
-
+    if args.language_model_train:
+        src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True)
+    else:
+        src_tokenizer = tgt_tokenizer
+        
     # データの設定
     train_dataset, val_dataset = get_data(args, src_tokenizer, tgt_tokenizer)
     train_loader = get_distributed_dataloader(args, train_dataset, shuffle=True)

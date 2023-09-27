@@ -18,6 +18,7 @@ def parse_arguments():
                             't5-small', 't5-base', 't5-large', 't5-3b', 't5-11b',
                             'google/flan-t5-small', 'google/flan-t5-base', 'google/flan-t5-large', 'google/flan-t5-xl', 'google/flan-t5-xxl',
                         ], help='言語の特徴抽出モデル')
+    parser.add_argument('--language_model_train', action='store_true', help='言語の特徴抽出モデルの埋め込みを学習するかどうか')
     parser.add_argument('--ffn', action='store_false', help='特徴抽出モデルの出力をFFNで変換するかどうか')
     parser.add_argument('--transformer_d_model', type=int, default=768, help='メインTransformerのd_model')
     parser.add_argument('--transformer_d_ff', type=int, default=3072, help='メインTransformerのd_ff')
