@@ -1,9 +1,9 @@
-batch_size=512
+batch_size=256
 dataset="openimage"
 
 dec=0
 
-for enc in 3 4 5 6 7 8; do
+for enc in 2 3; do
 torchrun --nnodes=1 --nproc_per_node=4 train.py \
         --language_model_train \
         --transformer_num_layers $enc \

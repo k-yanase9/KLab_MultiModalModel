@@ -72,8 +72,8 @@ def train():
     for epoch in range(args.start_epoch, args.num_epochs+1):
         # 学習ループ
         image_mask_ratio = 0.0
-        if args.image_model_train:
-            model.module.image_model.train()
+        if args.language_model_train: model.module.language_model.train()
+        if args.image_model_train: model.module.image_model.train()
         model.module.transformer.train()
         train_loss = torch.tensor(0.0).to(device_id)
         if args.phase == 'classify': train_acc = torch.tensor(0.0).to(device_id)
@@ -132,8 +132,8 @@ def train():
             scheduler.step()
 
         # 検証ループ
-        if args.image_model_train:
-            model.module.image_model.eval()
+        if args.language_model_train: model.module.language_model.eval()
+        if args.image_model_train: model.module.image_model.eval()
         model.module.transformer.eval()
         val_loss = torch.tensor(0.0).to(device_id)
         if args.phase == 'classify': val_acc = torch.tensor(0.0).to(device_id)
