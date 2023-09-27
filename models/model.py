@@ -28,7 +28,7 @@ class MyModel(nn.Module):
         self.language_model = T5EncoderModel.from_pretrained(args.language_model_name).requires_grad_(False)  # device_map="auto"
         if args.language_model_train:
             language_model_config = T5Config.from_pretrained(args.language_model_name)
-            self.language_model.shared = nn.Embedding(vocab_size, language_model_config.d_model).requires_grad_(True)
+            self.language_model.encoder.embed_tokens = nn.Embedding(vocab_size, language_model_config.d_model).requires_grad_(True)
 
         if "resnet" in args.image_model_name:  # 事前学習用に書き換えたのでおそらく動かない
             self.image_model = ResNetModel.from_pretrained(args.image_model_name).requires_grad_(args.image_model_train)
