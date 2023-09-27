@@ -14,7 +14,7 @@ from models.model import MyModel
 
 def train():
     args = parse_arguments()
-    if False:
+    if args.multinode:
         port_num = 27971
         host_list_file = os.environ["PJM_O_NODEINF"]
         args.world_size = int(os.environ["OMPI_COMM_WORLD_SIZE"])
