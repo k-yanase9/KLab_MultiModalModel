@@ -27,11 +27,11 @@ class OpenImageDataset_detection(DatasetLoader):
         items = items[1:-1]
         self.tgt_texts = [item[1] for item in items]
         self.src_texts = ["What objects are in the image?"]*len(items)
-        self.images = [os.path.join(data_dir,f"{phase}_256",f"{item[0]}.jpg") for item in items]
+        self.images = [os.path.join(data_dir,f"{phase}_256_png",f"{item[0]}.png") for item in items]
 
         #dropimageidlistに含まれる画像と対応するテキストを除外する
         for drop_id in dropimageidlist:
-            drop_path = os.path.join(data_dir,f"{phase}_256",f"{drop_id}.jpg")
+            drop_path = os.path.join(data_dir,f"{phase}_256_png",f"{drop_id}.png")
             if drop_path in self.images:
                 drop_index = self.images.index(drop_path)
                 self.tgt_texts.pop(drop_index)

@@ -20,11 +20,11 @@ class OpenImageDataset_Caption(DatasetLoader):
 
         self.tgt_texts = [item["caption"] for item in self.items]
         self.src_texts = ["What does the image describe?"]*len(self.items)
-        self.images = [os.path.join(data_dir,f"{phase}_256",f"{item['image_id']}.jpg") for item in self.items]
+        self.images = [os.path.join(data_dir,f"{phase}_256_png",f"{item['image_id']}.png") for item in self.items]
 
         #dropimageidlistに含まれる画像と対応するキャプションを除外する
         for drop_id in dropimageidlist:  
-            drop_path = os.path.join(data_dir,f"{phase}_256",f"{drop_id}.jpg")
+            drop_path = os.path.join(data_dir,f"{phase}_256_png",f"{drop_id}.png")
             if drop_path in self.images:
                 drop_index = self.images.index(drop_path)
                 self.tgt_texts.pop(drop_index)
