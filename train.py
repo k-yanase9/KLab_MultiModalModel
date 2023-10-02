@@ -1,5 +1,6 @@
 import os
 import random
+import pkgutil
 import numpy as np
 import torch
 import torch.distributed as dist
@@ -11,6 +12,11 @@ from tqdm import tqdm
 from data import *
 from modules import *
 from models.model import MyModel
+
+use_wandb = False
+if pkgutil.find_loader("wandb") is not None:
+    import wandb
+    use_wandb = True
 
 def train():
     args = parse_arguments()
@@ -32,7 +38,9 @@ def train():
         local_rank = world_rank % args.world_size
         dist_url = "env://"
 
-    if world_rank == 0: os.makedirs(args.result_dir, exist_ok=True)
+    if world_rank == 0: 
+        os.makedirs(args.result_dir, exist_ok=True)
+        if use_wandb: wandb_init(args)
 
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -54,11 +62,11 @@ def train():
         optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, 'best.optimizer')))
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
-    tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<add_{i}>" for i in range(args.additional_vocab_size)])
+    tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=args.max_target_length, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<add_{i}>" for i in range(args.additional_vocab_size)])
     if args.language_model_train:
         src_tokenizer = tgt_tokenizer
     else:
-        src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True)
+        src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=args.max_source_length, use_fast=True)
         
     # データの設定
     train_dataset, val_dataset = get_data(args, src_tokenizer, tgt_tokenizer)
@@ -121,7 +129,9 @@ def train():
             if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
                 optimizer.step()
                 pbar.update(1)
-                if world_rank == 0: steps += 1
+                if world_rank == 0: 
+                    steps += 1
+                    if use_wandb: wandb.log({"iter":steps, "iter/loss": loss.item(), "iter/lr": optimizer.param_groups[0]["lr"]})
                 if args.num_steps is not None:
                     scheduler.step()
 
@@ -137,8 +147,10 @@ def train():
             if args.phase == 'classify': 
                 train_acc /= train_count
                 logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Acc : {train_acc}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
+                if use_wandb: wandb.log({"epoch":epoch, "train/loss": train_loss, "train/acc": train_acc, "train/lr": optimizer.param_groups[0]["lr"]})
             else:
                 logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
+                if use_wandb: wandb.log({"epoch":epoch, "train/loss": train_loss, "train/lr": optimizer.param_groups[0]["lr"]})
 
         if args.lr_scheduler != '' and args.num_steps is None:
             scheduler.step()
@@ -185,8 +197,10 @@ def train():
             if args.phase == 'classify':
                 val_acc /= val_count
                 logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}, Acc : {val_acc}')
+                if use_wandb: wandb.log({"epoch": epoch, "val/loss": val_loss, "val/acc": val_acc})
             else:
                 logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}')
+                if use_wandb: wandb.log({"epoch": epoch, "val/loss": val_loss})
         
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
@@ -209,7 +223,21 @@ def train():
                         torch.save(optimizer.state_dict(), os.path.join(args.result_dir, f'step_{steps}.optimizer'))
                         print(f'Model and Optimizer {steps} saved')
             
-    if world_rank == 0: loss_counter.plot_loss(args.result_dir)
+    if world_rank == 0: 
+        loss_counter.plot_loss(args.result_dir)
+        if use_wandb: wandb.finish()
+
+def wandb_init(args):
+    wandb.init(
+        project=f"mmm_{args.phase}", 
+        name="_".join(args.datasets),
+        config=args
+    )
+    wandb.define_metric("epoch")
+    wandb.define_metric("iter")
+    wandb.define_metric("iter/*", step_metric="iter")
+    wandb.define_metric("train/*", step_metric="epoch")
+    wandb.define_metric("val/*", step_metric="epoch")
 
 if __name__=="__main__":
     train()

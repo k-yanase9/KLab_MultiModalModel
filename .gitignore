@@ -15,6 +15,7 @@ checkpoints/
 
 # result files
 results*/
+wandb/
 
 # tuning shells
 *_4090-*.sh
