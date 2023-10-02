@@ -9,6 +9,7 @@ vqgan.ipynb
 
 # search files
 imagenet_counter.py
+datachecker.py
 
 # weights
 checkpoints/
