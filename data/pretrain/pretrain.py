@@ -23,8 +23,9 @@ class PretrainDatasetLoader(DatasetLoader):
 
         image = Image.open(image).convert('RGB')#.resize((256,256))
         src_image = self.src_transforms(image)
-        tgt_image = self.tgt_transforms(image)
-        tgt_image = 2.*tgt_image-1.
+        # tgt_image = self.tgt_transforms(image)
+        # tgt_image = 2.*tgt_image-1.
+        tgt_image = torch.zeros(1)
 
         return src_image, tgt_image, src_text, tgt_text
     
