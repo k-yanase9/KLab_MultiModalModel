@@ -13,14 +13,7 @@ def get_data(args, src_tokenizer=None, tgt_tokenizer=None):
     train_datasets, val_datasets = [], []
     for dataset_name in args.datasets:
         if dataset_name in ['sun397']:
-            dataset = get_dataset(args, dataset_name, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
-            val_rate = 0.1
-            val_size = int(len(dataset) * val_rate)
-            train_size = len(dataset) - val_size
-
-            train_dataset, val_dataset = random_split(
-                dataset, [train_size, val_size], generator=torch.Generator().manual_seed(args.seed)
-            )
+            raise NotImplementedError
             
         else:
             train_dataset = get_dataset(args, dataset_name, phase="train", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
@@ -90,6 +83,8 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             dataset = ImageNet21k_Classify(data_dir, phase=phase)
         elif 'sun397' == dataset_name:
             dataset = SUN397_Classify(data_dir)
+        elif 'places365' == dataset_name:
+            dataset = Places365_Classify(data_dir, phase=phase)
         elif 'openimage' == dataset_name:
             dataset = OpenImageDataset(data_dir, phase=phase)
         else:

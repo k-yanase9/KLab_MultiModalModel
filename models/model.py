@@ -74,6 +74,8 @@ class MyModel(nn.Module):
                 self.classifier = nn.Linear(self.transformer.config.d_model, 1000)
             elif 'sun397' in args.datasets:
                 self.classifier = nn.Linear(self.transformer.config.d_model, 397)
+            elif 'places365' in args.datasets:
+                self.classifier = nn.Linear(self.transformer.config.d_model, 365)
             elif 'openimage' in args.datasets:
                 self.classifier = nn.Linear(self.transformer.config.d_model, 599)
             else:
