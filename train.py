@@ -100,21 +100,22 @@ def train():
         if args.phase == 'classify': train_acc = torch.tensor(0.0).to(local_rank)
         train_count = torch.tensor(0).to(local_rank)
         pbar = tqdm(total=int(np.ceil(len(train_loader)/args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
-        for i, (src_images, tgt_images, src_texts, tgt_texts) in enumerate(train_loader):
+        for i, (src_images, tgt_images, src_inputs, tgt_inputs) in enumerate(train_loader):
             if i % args.accumulation_steps == 0:
                 optimizer.zero_grad()
             src_images = src_images.to(local_rank, non_blocking=True)
             # if args.phase == 'pretrain':
             #     tgt_images = tgt_images.to(local_rank)
             #     tgt_texts, _ = model.module.image_to_z(tgt_images)
-            src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
-            src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-            src_attention_masks = src_inputs['attention_mask'].to(local_rank, non_blocking=True)
             if args.phase == 'classify':
+                src_inputs = src_tokenizer(src_inputs, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
+                src_attention_masks = src_inputs['attention_mask'].to(local_rank, non_blocking=True)
                 tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
                 tgt_attention_masks = None
             else:
-                tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
+                src_attention_masks = src_inputs['attention_mask'].to(local_rank, non_blocking=True)
                 tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
                 tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
 
