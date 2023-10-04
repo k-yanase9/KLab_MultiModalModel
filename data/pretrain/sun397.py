@@ -14,4 +14,4 @@ class SUN397_Pretrain(ClassifyPretrainDatasetLoader):
             img_path, class_name = line.split("\t")
             img_path = self.data_dir / img_path
             self.images.append(img_path)
-            self.src_texts.append(f'{class_name} .')
+            self.src_texts.append(class_name.strip())
