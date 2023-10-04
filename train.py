@@ -73,8 +73,9 @@ def train():
     train_loader = get_distributed_dataloader(args, train_dataset, shuffle=True)
     val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)
 
-    if args.num_epochs is None:
-        args.num_epochs = int(args.num_steps / len(train_loader)) + 1
+    if args.num_steps is not None:
+        calc_epoch = args.num_steps / len(train_loader)
+        args.num_epochs = int(calc_epoch) if calc_epoch.is_integer() else int(calc_epoch) + 1
 
     loss_counter = LossCounter()
     if args.start_epoch > 1:
@@ -229,8 +230,8 @@ def train():
 
 def wandb_init(args):
     wandb.init(
-        project=f"mmm_{args.phase}", 
-        name="_".join(args.datasets),
+        project=f"{args.phase}_"+"_".join(args.datasets), 
+        name=args.lr_scheduler if args.lr_scheduler != '' else 'wo_scheduler',
         config=args
     )
     wandb.define_metric("epoch")
