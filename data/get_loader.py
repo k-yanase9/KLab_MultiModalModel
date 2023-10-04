@@ -1,6 +1,6 @@
 import os
 import torch
-from torch.utils.data import random_split, DataLoader, distributed, ConcatDataset
+from torch.utils.data import DataLoader, distributed, ConcatDataset
 from .caption import *
 from .image_classify import *
 from .vqa import *
@@ -12,12 +12,8 @@ from .localization import *
 def get_data(args, src_tokenizer=None, tgt_tokenizer=None):
     train_datasets, val_datasets = [], []
     for dataset_name in args.datasets:
-        if dataset_name in ['sun397']:
-            raise NotImplementedError
-            
-        else:
-            train_dataset = get_dataset(args, dataset_name, phase="train", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
-            val_dataset = get_dataset(args, dataset_name, phase="val", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+        train_dataset = get_dataset(args, dataset_name, phase="train", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+        val_dataset = get_dataset(args, dataset_name, phase="val", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         train_datasets.append(train_dataset)
         val_datasets.append(val_dataset)
 
@@ -32,7 +28,7 @@ def get_data(args, src_tokenizer=None, tgt_tokenizer=None):
 
 def get_distributed_dataloader(args, dataset, num_workers=4, shuffle=True):
     sampler = distributed.DistributedSampler(dataset, drop_last=True, shuffle=shuffle)
-    dataloader = DataLoader(dataset, batch_size=args.batch_size, num_workers=num_workers, pin_memory=True, sampler=sampler)
+    dataloader = DataLoader(dataset, batch_size=args.batch_size, num_workers=num_workers, pin_memory=True, sampler=sampler, drop_last=True)
     return dataloader
 
 def get_dataloader(args, dataset, num_workers=4, shuffle=False):
@@ -53,7 +49,7 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
         elif 'places365' == dataset_name:
             dataset = Places365_Pretrain(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'sun397' == dataset_name:
-            dataset = SUN397_Pretrain(args, data_dir, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+            dataset = SUN397_Pretrain(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'inaturalist' == dataset_name:
             dataset = INaturalist_Pretrain(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'cc3m' == dataset_name:
@@ -82,7 +78,7 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
         elif 'imagenet21k' == dataset_name:
             dataset = ImageNet21k_Classify(data_dir, phase=phase)
         elif 'sun397' == dataset_name:
-            dataset = SUN397_Classify(data_dir)
+            dataset = SUN397_Classify(data_dir, phase=phase)
         elif 'places365' == dataset_name:
             dataset = Places365_Classify(data_dir, phase=phase)
         elif 'openimage' == dataset_name:
