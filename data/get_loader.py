@@ -1,5 +1,4 @@
 import os
-import torch
 from torch.utils.data import DataLoader, distributed, ConcatDataset
 from .caption import *
 from .image_classify import *
@@ -79,8 +78,6 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             dataset = ImageNet21k_Classify(data_dir, phase=phase)
         elif 'sun397' == dataset_name:
             dataset = SUN397_Classify(data_dir, phase=phase)
-        elif 'places365' == dataset_name:
-            dataset = Places365_Classify(data_dir, phase=phase)
         elif 'openimage' == dataset_name:
             dataset = OpenImageDataset(data_dir, phase=phase)
         else:
