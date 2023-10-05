@@ -56,6 +56,7 @@ def train():
         model.load(result_name='best.pth')
     model = DDP(model, device_ids=[local_rank])#,find_unused_parameters=True)
     
+    scaler = torch.cuda.amp.GradScaler(enabled=True)
     optimizer = get_optimizer(model, args)
     scheduler = get_scheduler(args, optimizer)
     if args.start_epoch > 1:
@@ -70,6 +71,7 @@ def train():
         
     # データの設定
     train_dataset, val_dataset = get_data(args, src_tokenizer, tgt_tokenizer)
+    if world_rank == 0: logger.info(f'Train Dataset : {len(train_dataset)}, Val Dataset : {len(val_dataset)}')
     train_loader = get_distributed_dataloader(args, train_dataset, shuffle=True)
     val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)
 
@@ -100,28 +102,27 @@ def train():
         if args.phase == 'classify': train_acc = torch.tensor(0.0).to(local_rank)
         train_count = torch.tensor(0).to(local_rank)
         pbar = tqdm(total=int(np.ceil(len(train_loader)/args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
-        for i, (src_images, tgt_images, src_inputs, tgt_inputs) in enumerate(train_loader):
-            if i % args.accumulation_steps == 0:
-                optimizer.zero_grad()
+        for i, (src_images, tgt_images, src_texts, tgt_texts) in enumerate(train_loader):                
             src_images = src_images.to(local_rank, non_blocking=True)
             # if args.phase == 'pretrain':
             #     tgt_images = tgt_images.to(local_rank)
             #     tgt_texts, _ = model.module.image_to_z(tgt_images)
             if args.phase == 'classify':
-                src_inputs = src_tokenizer(src_inputs, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
                 src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                src_attention_masks = src_inputs['attention_mask'].to(local_rank, non_blocking=True)
                 tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
                 tgt_attention_masks = None
             else:
-                src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                src_attention_masks = src_inputs['attention_mask'].to(local_rank, non_blocking=True)
-                tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
-                tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
+                src_texts = src_texts.to(local_rank, non_blocking=True)
+                tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
+                tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
+                tgt_attention_masks[tgt_texts == 0] = 0
+            src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
+            src_attention_masks[src_texts == 0] = 0
 
-            loss, preds = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks, image_mask_ratio=image_mask_ratio)
+            loss, preds = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks, image_mask_ratio=image_mask_ratio)
             loss /= args.accumulation_steps
-            loss.backward()
+            scaler.scale(loss).backward()
 
             train_loss += loss.item() * src_images.shape[0]
             if args.phase == 'classify': train_acc += torch.sum(preds == tgt_texts)
@@ -129,7 +130,9 @@ def train():
 
             # args.accumulation_steps回の勾配を蓄積してから、optimizer.step()を呼び出す
             if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
-                optimizer.step()
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
                 pbar.update(1)
                 if world_rank == 0: 
                     steps += 1
