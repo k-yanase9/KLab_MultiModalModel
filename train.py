@@ -58,7 +58,6 @@ def train():
     
     scaler = torch.cuda.amp.GradScaler(enabled=args.multinode)
     optimizer = get_optimizer(model, args)
-    scheduler = get_scheduler(args, optimizer)
     if args.start_epoch > 1:
         optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, 'best.optimizer')))
 
@@ -75,9 +74,9 @@ def train():
     train_loader = get_distributed_dataloader(args, train_dataset, shuffle=True)
     val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)
 
-    if args.num_steps is not None:
-        calc_epoch = args.num_steps / len(train_loader)
-        args.num_epochs = int(calc_epoch) if calc_epoch.is_integer() else int(calc_epoch) + 1
+    if args.lr_scheduler in ['LinearWarmup', 'CosineWarmup'] and args.num_steps is None:
+        args.num_steps = args.num_epochs * len(train_loader)
+    scheduler = get_scheduler(args, optimizer)
 
     loss_counter = LossCounter()
     if args.start_epoch > 1:
