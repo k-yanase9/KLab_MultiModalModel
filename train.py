@@ -74,7 +74,7 @@ def train():
     train_loader = get_distributed_dataloader(args, train_dataset, shuffle=True)
     val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)
 
-    if args.lr_scheduler in ['LinearWarmup', 'CosineWarmup'] and args.num_steps is None:
+    if 'Warmup' in args.lr_scheduler and args.num_steps is None:
         args.num_steps = args.num_epochs * len(train_loader)
     scheduler = get_scheduler(args, optimizer)
 
