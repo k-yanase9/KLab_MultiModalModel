@@ -83,11 +83,19 @@ def train():
         with open(os.path.join(args.result_dir, 'train.log'), 'r') as f:
             for line in f:
                 if 'Epoch' in line:
-                    loss_counter.add("train", float(line.split(',')[1].split(':')[-1].strip()))
-                    loss_counter.add("val", float(line.split(',')[2].split(':')[-1].strip()))
-                    steps = int(line.split(',')[3].split(':')[-1].strip())
+                    if 'Train' in line:
+                        loss_counter.add("train", float(line.split(',')[1].split(':')[-1].strip()))
+                        steps = int(line.split(',')[3].split(':')[-1].strip())
+                    elif 'Val' in line:
+                        loss_counter.add("val", float(line.split(',')[1].split(':')[-1].strip()))
         min_val_loss = min(loss_counter.losses['val'])
         if world_rank == 0: logger.info(f'[Loaded] steps : {steps}, Best Val loss : {min_val_loss}')
+        if 'Warmup' in args.lr_scheduler :
+            for _ in range(steps):
+                scheduler.step()
+        else:
+            for _ in range(args.start_epoch-1):
+                scheduler.step()
     else:
         steps = 0
         min_val_loss = 100
