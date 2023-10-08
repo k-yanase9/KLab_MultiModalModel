@@ -19,6 +19,7 @@ class PretrainDatasetLoader(DatasetLoader):
         image, text = self.images[idx], self.src_texts[idx]
         src_text = self.tgt_tokenizer.encode_plus(text, return_attention_mask=False, verbose=False)["input_ids"][:-1]
         tgt_text = self.generate_target_ids(src_text)
+        tgt_text += [self.tgt_tokenizer.eos_token_id]
         src_text = torch.from_numpy(np.array(src_text))
         tgt_text = torch.from_numpy(np.array(tgt_text))
 
@@ -92,6 +93,7 @@ class ClassifyPretrainDatasetLoader(PretrainDatasetLoader):
 
         src_text = self.tgt_tokenizer.encode_plus(text, return_attention_mask=False, verbose=False)["input_ids"][:-1]
         tgt_text = self.generate_target_ids(src_text)
+        tgt_text += [self.tgt_tokenizer.eos_token_id]
         src_text = torch.from_numpy(np.array(src_text))
         tgt_text = torch.from_numpy(np.array(tgt_text))
 
