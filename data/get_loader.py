@@ -16,12 +16,11 @@ def get_data(args, src_tokenizer=None, tgt_tokenizer=None):
         train_datasets.append(train_dataset)
         val_datasets.append(val_dataset)
 
-    if len(args.datasets) > 1:
-        train_dataset = ConcatDataset(train_datasets)
-        val_dataset = ConcatDataset(val_datasets)
+    train_dataset = ConcatDataset(train_datasets)
+    val_dataset = ConcatDataset(val_datasets)
 
-    elif len(args.datasets) == 0:
-        raise NotImplementedError
+    if len(args.datasets) == 0:
+        raise ValueError
     
     return train_dataset, val_dataset
 
