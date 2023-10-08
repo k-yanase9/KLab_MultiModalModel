@@ -3,6 +3,7 @@ import argparse
 def parse_arguments():
     parser = argparse.ArgumentParser(description='プログラムの説明')
     parser.add_argument('--multinode', action='store_true', help='マルチノードで学習するかどうか')
+    parser.add_argument('--float_type', default='bfloat16', choices=['bfloat16', 'float16', 'float32'])
     # Model setting
     parser.add_argument('-i', '--image_model_name', type=str, default="microsoft/swinv2-large-patch4-window12to16-192to256-22kto1k-ft", 
                         choices=[

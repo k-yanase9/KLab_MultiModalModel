@@ -56,7 +56,7 @@ def train():
         model.load(result_name='best.pth')
     model = DDP(model, device_ids=[local_rank])#,find_unused_parameters=True)
     
-    scaler = torch.cuda.amp.GradScaler(enabled=args.multinode)
+    scaler = torch.cuda.amp.GradScaler(enabled=True if args.float_type == 'float16' else False)
     optimizer = get_optimizer(model, args)
     if args.start_epoch > 1:
         optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, 'best.optimizer')))

@@ -93,10 +93,18 @@ class MyModel(nn.Module):
             raise NotImplementedError
 
     def forward(self, images, src_texts, src_attention_masks=None, tgt_texts=None, tgt_attention_masks=None, return_loss=True, num_beams=1, num_return_sequences=1, do_sample=False, image_mask_ratio=0.0):
+        if self.args.float_type == 'bfloat16':
+            dtype = torch.bfloat16 
+        elif self.args.float_type == 'float16':
+            dtype = torch.float16
+        else:
+            dtype = torch.float32
+
         if src_attention_masks is None:
             src_attention_masks = torch.ones_like(src_texts, device=self.language_model.device)
             src_attention_masks[src_texts == 0] = 0
-        with torch.autocast(device_type='cuda', dtype=torch.bfloat16, enabled=True):
+
+        with torch.autocast(device_type='cuda', dtype=dtype, enabled=True if self.args.float_type == 'bfloat16' else False):
             language_embeddings = self.language_model(src_texts, attention_mask=src_attention_masks).last_hidden_state
 
         # if image_mask_ratio > 0:  # 画像パッチにマスクをかける
@@ -104,11 +112,11 @@ class MyModel(nn.Module):
         # else:
         #     bool_masked_pos = None
         # image_embeddings = self.image_model(pixel_values=images, bool_masked_pos=bool_masked_pos).last_hidden_state
-        with torch.autocast(device_type='cuda', dtype=torch.bfloat16, enabled=True):
+        with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
             image_embeddings = self.image_model(pixel_values=images).last_hidden_state
 
         if self.args.ffn:
-            with torch.autocast(device_type='cuda', dtype=torch.bfloat16, enabled=True):
+            with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
                 language_embeddings = self.language_ffn(language_embeddings)
                 image_embeddings = self.image_ffn(image_embeddings)
 
@@ -125,7 +133,7 @@ class MyModel(nn.Module):
 
         if return_loss:
             if self.args.phase == 'classify':
-                with torch.autocast(device_type='cuda', dtype=torch.bfloat16, enabled=True):
+                with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
                     outputs = self.transformer(inputs_embeds=concated_embeddings, attention_mask=concat_attention_mask)
                     sequence_output = outputs[0]
                     logits = self.classifier(sequence_output[:, 0, :])
@@ -135,7 +143,7 @@ class MyModel(nn.Module):
                 if tgt_attention_masks is None:
                     tgt_attention_masks = torch.ones(tgt_texts.shape[0], tgt_texts.shape[1], device=self.transformer.device)
                     tgt_attention_masks[tgt_texts == 0] = 0
-                with torch.autocast(device_type='cuda', dtype=torch.bfloat16, enabled=True):
+                with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
                     logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=tgt_attention_masks).logits
                     loss = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
                 preds = torch.argmax(logits, dim=2)
