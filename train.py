@@ -224,18 +224,11 @@ def train():
                 logger.info('Best Model and Optimizer saved')
 
             if args.save_interval is not None:
-                if args.num_steps is None:
-                    if (epoch) % args.save_interval == 0:
-                        print(f'Model and Optimizer {epoch} saving...')
-                        model.module.save(result_name=f'epoch_{epoch}.pth')
-                        torch.save(optimizer.state_dict(), os.path.join(args.result_dir, f'epoch_{epoch}.optimizer'))
-                        print(f'Model and Optimizer {epoch} saved')
-                else:
-                    if steps % args.save_interval == 0:
-                        print(f'Model and Optimizer {steps} saving...')
-                        model.module.save(result_name=f'step_{steps}.pth')
-                        torch.save(optimizer.state_dict(), os.path.join(args.result_dir, f'step_{steps}.optimizer'))
-                        print(f'Model and Optimizer {steps} saved')
+                if (epoch) % args.save_interval == 0:
+                    print(f'Model and Optimizer {epoch} saving...')
+                    model.module.save(result_name=f'epoch_{epoch}.pth')
+                    torch.save(optimizer.state_dict(), os.path.join(args.result_dir, f'epoch_{epoch}.optimizer'))
+                    print(f'Model and Optimizer {epoch} saved')
             
     if world_rank == 0: 
         loss_counter.plot_loss(args.result_dir)
