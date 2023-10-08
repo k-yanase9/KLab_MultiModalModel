@@ -20,4 +20,4 @@ class ImageNet_Pretrain(ClassifyPretrainDatasetLoader):
             for img in os.listdir(class_folder_path):
                 img_path = os.path.join(class_folder_path, img)
                 self.images.append(img_path)
-                self.src_texts.append(f'{class_name} .')
+                self.src_texts.append(class_name.strip())
