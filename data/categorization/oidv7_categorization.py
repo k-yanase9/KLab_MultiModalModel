@@ -33,10 +33,12 @@ class OpenImageDataset_categorization(DatasetLoader):
         self.images = [os.path.join(data_dir,f"{phase}_256_png",f"{item[0]}.png") for item in items]
 
         #dropimageidlistに含まれる画像と対応するテキストを除外する
+        #同じimageidは複数あるので、dropimageidlistに含まれるimageidをすべて削除する
         for drop_id in dropimageidlist:
             drop_path = os.path.join(data_dir,f"{phase}_256_png",f"{drop_id}.png")
-            if drop_path in self.images:
+            while drop_path in self.images:
                 drop_index = self.images.index(drop_path)
+                print(f"drop image:{drop_index}")
                 self.tgt_texts.pop(drop_index)
                 self.src_texts.pop(drop_index)
                 self.images.pop(drop_index)
