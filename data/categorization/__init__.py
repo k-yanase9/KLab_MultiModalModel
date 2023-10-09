@@ -1,1 +1,1 @@
-from .oidv7_categorization import OpenImageDataset_categorization
+from .oidv7_categorization import OpenImageDataset_Categorization

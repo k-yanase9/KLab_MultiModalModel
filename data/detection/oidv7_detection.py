@@ -19,12 +19,13 @@ class OpenImageDataset_detection(DatasetLoader):
         if phase=="val":
             phase = "validation"
 
-        with open(os.path.join(data_dir,"bbox",f"{phase}_detection_40.csv")) as f:
+        with open(os.path.join(data_dir,"tsv",f"{phase}_40_dec.tsv")) as f:
             items = f.read()
 
         items = items.split("\n")
-        items = [item.split(",") for item in items]
-        items = items[1:-1]
+        items = [item.split("\t") for item in items]
+        items = items[1:]
+        items = [item for item in items if len(item)==2]
         self.tgt_texts = [item[1] for item in items]
         self.src_texts = ["What objects are in the image?"]*len(items)
         self.images = [os.path.join(data_dir,f"{phase}_256_png",f"{item[0]}.png") for item in items]
@@ -32,7 +33,7 @@ class OpenImageDataset_detection(DatasetLoader):
         #dropimageidlistに含まれる画像と対応するテキストを除外する
         for drop_id in dropimageidlist:
             drop_path = os.path.join(data_dir,f"{phase}_256_png",f"{drop_id}.png")
-            if drop_path in self.images:
+            while drop_path in self.images:
                 drop_index = self.images.index(drop_path)
                 self.tgt_texts.pop(drop_index)
                 self.src_texts.pop(drop_index)
