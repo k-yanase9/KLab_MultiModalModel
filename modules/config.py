@@ -2,8 +2,8 @@ import argparse
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='プログラムの説明')
-    parser.add_argument('--multinode', action='store_true', help='マルチノードで学習するかどうか')
     # Model setting
+    parser.add_argument('--float_type', default='bfloat16', choices=['bfloat16', 'float16', 'float32'], help='浮動小数点の精度')
     parser.add_argument('-i', '--image_model_name', type=str, default="microsoft/swinv2-large-patch4-window12to16-192to256-22kto1k-ft", 
                         choices=[
                             "microsoft/resnet-50",
@@ -33,6 +33,7 @@ def parse_arguments():
     parser.add_argument('--max_source_length', type=int, default=512, help='入力文の最大長')
     parser.add_argument('--max_target_length', type=int, default=512, help='出力文の最大長')
     # Training setting
+    parser.add_argument('--multinode', action='store_true', help='マルチノードで学習するかどうか')
     parser.add_argument('--phase', type=str, default='train', choices=['pretrain', 'train', 'classify'], help='事前学習か学習か分類か')
     parser.add_argument('--seed', type=int, default=999, help='乱数シード')
     parser.add_argument('--loss', type=str, default='CrossEntropy', choices=['CrossEntropy', 'FocalLoss'], help='損失関数')
@@ -44,7 +45,7 @@ def parse_arguments():
     parser.add_argument('--start_epoch', type=int, default=1, help='初期エポック')
     parser.add_argument('--num_epochs', type=int, default=None, help='学習エポック数')
     parser.add_argument('--num_steps', type=int, default=None, help='学習ステップ数')
-    parser.add_argument('--warmup_steps', type=int, default=None, help='学習率を上げるステップ数')
+    parser.add_argument('--warmup_rate', type=float, default=0.01, help='ウォームアップの割合')
     parser.add_argument('--save_interval', type=int, default=None, help='モデルの保存間隔')
     parser.add_argument('--datasets', nargs='+', default=['imagenet', 'sun397'], choices=['redcaps', 'imagenet', 'imagenet21k', 'places365', 'inaturalist', 'cc3m', 'cc12m', 'sun397', 'mscoco', 'vcr', 'vqa2', 'imsitu', 'imagenet', 'openimage'], help='使用データセットの名前')
     # Dir setting

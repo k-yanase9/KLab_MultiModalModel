@@ -3,6 +3,9 @@ from transformers import get_cosine_schedule_with_warmup, get_linear_schedule_wi
 
 
 def get_scheduler(args, optimizer):
+    if 'Warmup' in args.lr_scheduler:
+        warmup_steps = int(args.num_steps * args.warmup_rate)
+
     if args.lr_scheduler == 'CosineAnnealingLR':
         return CosineAnnealingLR(optimizer, T_max=args.num_epochs, eta_min=args.lr / 100)
     elif args.lr_scheduler == 'ExponentialLR':
@@ -22,8 +25,8 @@ def get_scheduler(args, optimizer):
     elif args.lr_scheduler == 'LambdaLR':
         return LambdaLR(optimizer, lr_lambda=lambda epoch: 0.99**epoch)
     elif args.lr_scheduler == 'LinearWarmup':
-        return get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=args.num_steps)
+        return get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=args.num_steps)
     elif args.lr_scheduler == 'CosineWarmup':
-        return get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=args.num_steps)
+        return get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=args.num_steps)
     else:
         return None
