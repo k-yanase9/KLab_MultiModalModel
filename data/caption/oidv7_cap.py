@@ -7,7 +7,7 @@ from ..dataset_loader import DatasetLoader
 
 #存在しない画像を除外するためのリスト
 dropimageidlist =["7f1934f5884fad79","429019e83c1c2c94","4f818c006da84c9e","5b86e93f8654118a","673d74b7d39741c3","6dcd3ce37a17f2be","805baf9650a12710"
-                   ,"98ac2996fc46b56d","a46a248a39f2d97c"]
+                   ,"98ac2996fc46b56d","a46a248a39f2d97c","9316d4095eab6d10","9ee38bb2e69da0ac","37625d59d0e0782a"]
 
 class OpenImageDataset_Caption(DatasetLoader):
     def __init__(self,data_dir="/data/dataset/openimage",phase="train",imagesize=(256,256)):
