@@ -5,6 +5,7 @@ from .image_classify import *
 from .vqa import *
 from .pretrain import *
 from .relationship import *
+from .categorization import *
 from .detection import *
 from .localization import *
 
@@ -62,6 +63,13 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             dataset = CC12M_Pretrain(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         else:
             raise NotImplementedError
+    elif args.phase == 'classify':
+        if 'sun397' == dataset_name:
+            dataset = SUN397_Classify(data_dir, phase=phase, is_tgt_id=True)
+        elif 'openimage' == dataset_name:
+            dataset = OpenImageDataset_Categorization(data_dir, phase=phase, is_tgt_id=True)
+        else:
+            raise NotImplementedError
     else:
         if 'mscoco' == dataset_name:
             dataset = COCO_Caption(data_dir, phase)
@@ -83,8 +91,6 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             dataset = ImageNet21k_Classify(data_dir, phase=phase)
         elif 'sun397' == dataset_name:
             dataset = SUN397_Classify(data_dir, phase=phase)
-        elif 'openimage' == dataset_name:
-            dataset = OpenImageDataset(data_dir, phase=phase)
         else:
             raise NotImplementedError
     return dataset

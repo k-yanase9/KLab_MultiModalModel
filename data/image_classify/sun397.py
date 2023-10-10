@@ -2,7 +2,7 @@ from pathlib import Path
 from ..dataset_loader import DatasetLoader
 
 class SUN397_Classify(DatasetLoader):
-    def __init__(self, data_dir='/data01/sun397', phase='train'):
+    def __init__(self, data_dir='/data01/sun397', phase='train', is_tgt_id=False):
         super().__init__()
         self.data_dir = Path(data_dir) / "SUN397_256"
 
@@ -13,9 +13,12 @@ class SUN397_Classify(DatasetLoader):
             lines = f.readlines()
 
         for line in lines[1:]:
-            img_path, _ = line.split("\t")
+            img_path, class_name = line.split("\t")
             label = '/' + '/'.join(img_path.split('/')[:-1])
             img_path = self.data_dir / img_path
             self.images.append(img_path)
             self.src_texts.append('What does the image describe ?')
-            self.tgt_texts.append(self.classes.index(label))
+            if is_tgt_id:
+                self.tgt_texts.append(self.classes.index(label))
+            else:
+                self.tgt_texts.append(class_name.strip())

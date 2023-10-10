@@ -2,7 +2,7 @@ import os
 from ..dataset_loader import DatasetLoader
 
 class ImageNet_Classify(DatasetLoader):
-    def __init__(self, data_dir='/data/datatset/imagenet_2012', phase='train'):
+    def __init__(self, data_dir='/data01/imagenet', phase='train', is_tgt_id=False):
         super().__init__()
         img_folder_path = os.path.join(data_dir, f'{phase}_256')
 
@@ -24,4 +24,7 @@ class ImageNet_Classify(DatasetLoader):
                 img_path = os.path.join(class_folder_path, img)
                 self.images.append(img_path)
                 self.src_texts.append('What does the image describe ?')
-                self.tgt_texts.append(class_folder_to_id[class_folder])
+                if is_tgt_id:
+                    self.tgt_texts.append(class_folder_to_id[class_folder])
+                else:
+                    self.tgt_texts.append(class_name)
