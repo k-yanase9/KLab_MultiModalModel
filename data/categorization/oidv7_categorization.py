@@ -20,7 +20,7 @@ class OpenImageDataset_Categorization(DatasetLoader):
 
 
         if is_tgt_id:
-            self.tgt_texts = [item[3] for item in items]
+            self.tgt_texts = [int(item[3].split(',')[0]) for item in items]
         else:
             self.tgt_texts = [item[2] for item in items]
 
