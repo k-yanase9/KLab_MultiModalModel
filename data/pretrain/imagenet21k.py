@@ -15,7 +15,7 @@ class ImageNet21k_Pretrain(ClassifyPretrainDatasetLoader):
             img_path = os.path.join(data_dir, img_name)
             class_name = label.split()[0].replace('_', ' ')
             self.images.append(img_path)
-            self.src_texts.append(f'{class_name} .')
+            self.src_texts.append(class_name.strip())
 
         with open(img_tsv_path, 'r') as f:
             lines = f.readlines()
