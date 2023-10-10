@@ -7,3 +7,4 @@ from .pretrain import *
 from .relationship import *
 from .vqa import *
 from .localization import *
+from .categorization import *

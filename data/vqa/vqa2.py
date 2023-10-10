@@ -9,4 +9,4 @@ class Vqa2dataset(DatasetLoader):
 
         self.src_texts = [item["question"] for item in quetions['questions']]
         self.tgt_texts = [item["multiple_choice_answer"] for item in answers['annotations']]
-        self.images = [f'{data_dir}/{phase}2014/COCO_{phase}2014_{str(item["image_id"]).zfill(12)}.jpg' for item in quetions['questions']]
+        self.images = [f'{data_dir}/{phase}2014_256_png/COCO_{phase}2014_{str(item["image_id"]).zfill(12)}.png' for item in quetions['questions']]
