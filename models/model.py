@@ -149,15 +149,20 @@ class MyModel(nn.Module):
                 preds = torch.argmax(logits, dim=2)
             return loss, preds
         else:
-            # pred = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts).logits
-            # generated = torch.argmax(pred, dim=2)
-            generated = self.transformer.generate(
-                inputs_embeds=concated_embeddings,
-                num_beams=num_beams,
-                num_return_sequences=num_return_sequences,
-                do_sample=do_sample,
-                max_length=self.args.max_target_length,
-            )
+            if self.args.phase == 'classify':
+                with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
+                    outputs = self.transformer(inputs_embeds=concated_embeddings, attention_mask=concat_attention_mask)
+                    sequence_output = outputs[0]
+                    generated = self.classifier(sequence_output[:, 0, :])
+            else:
+                with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
+                    generated = self.transformer.generate(
+                        inputs_embeds=concated_embeddings,
+                        num_beams=num_beams,
+                        num_return_sequences=num_return_sequences,
+                        do_sample=do_sample,
+                        max_length=self.args.max_target_length,
+                    )
             return generated
 
     def random_patch_masking(self, batch_size, image_mask_ratio):
