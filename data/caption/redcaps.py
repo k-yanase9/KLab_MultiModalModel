@@ -4,26 +4,15 @@ from ..dataset_loader import DatasetLoader, CAPTION_SRC_TEXT
 class RedCaps_Caption(DatasetLoader):
     def __init__(self, data_dir='/data01/redcaps', phase='train', resize=256):
         super().__init__(resize)
-        text_tsv_path = os.path.join(data_dir, f'{phase}_text.tsv')
-        img_tsv_path = os.path.join(data_dir, f'{phase}_img.tsv')
         
-        with open(text_tsv_path, 'r') as f:
-            lines = f.readlines()
+        with open(os.path.join(data_dir, f'{phase}.tsv'), 'r') as f:
+            items = f.read().split('\n')
 
-        for line in lines[1:]:
-            img_name, class_name, caption = line.removesuffix('\n').split('\t')
-            img_path = os.path.join(data_dir, 'images', img_name)
-            self.images.append(img_path)
-            self.src_texts.append(CAPTION_SRC_TEXT)
-            self.tgt_texts.append(caption)
+        items = items[1:]
+        items = [item.split('\t') for item in items]
 
-        with open(img_tsv_path, 'r') as f:
-            lines = f.readlines()
+        self.images = [os.path.join(data_dir, 'images', item[0]) for item in items]
+        self.src_texts = [CAPTION_SRC_TEXT for _ in range(len(items))]
+        self.tgt_texts = [item[2] for item in items]
 
-        for line in lines[1:]:
-            img_name, class_name, caption = line.removesuffix('\n').split('\t')
-            img_path = os.path.join(data_dir, 'images', img_name)
-            self.images.append(img_path)
-            self.src_texts.append(CAPTION_SRC_TEXT)
-            self.tgt_texts.append(caption)
         
