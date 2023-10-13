@@ -15,7 +15,7 @@ class ImageNet21k_Classify(DatasetLoader):
 
         self.images = [os.path.join(data_dir, d[0]) for d in data]
         self.src_texts = ["What does the image describe ?"]*len(data)
-        self.tgt_texts = [f'a photo of {d[1]}' for d in data]
+        self.tgt_texts = [d[1] for d in data]
 
 
         

@@ -1,9 +1,4 @@
 import os
-from copy import deepcopy
-
-import pandas as pd
-import torch
-from PIL import Image
 from ..dataset_loader import DatasetLoader
 
 #存在しない画像を除外するためのリスト
@@ -13,7 +8,7 @@ dropimageidlist =["7f1934f5884fad79","429019e83c1c2c94","4f818c006da84c9e","5b86
 class OpenImageDataset_Categorization(DatasetLoader):
     """openimageのcategorizationデータセット
     """    
-    def __init__(self,data_dir:str="/data/dataset/openimage/",phase:str="train",is_tgt_id:bool=True):
+    def __init__(self,data_dir:str="/data/dataset/openimage/",phase:str="train",is_tgt_id:bool=False):
         super().__init__()        
         if phase=="val":
             phase = "validation"
@@ -25,7 +20,7 @@ class OpenImageDataset_Categorization(DatasetLoader):
 
 
         if is_tgt_id:
-            self.tgt_texts = [item[3] for item in items]
+            self.tgt_texts = [int(item[3].split(',')[0]) for item in items]
         else:
             self.tgt_texts = [item[2] for item in items]
 
