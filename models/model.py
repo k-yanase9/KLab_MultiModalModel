@@ -78,6 +78,8 @@ class MyModel(nn.Module):
                 self.classifier = nn.Linear(self.transformer.config.d_model, 365)
             elif 'openimage' in args.datasets:
                 self.classifier = nn.Linear(self.transformer.config.d_model, 599)
+            elif 'mscoco' in args.datasets:
+                self.classifier = nn.Linear(self.transformer.config.d_model, 92)
             else:
                 raise NotImplementedError
         
