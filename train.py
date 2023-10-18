@@ -235,9 +235,13 @@ def train():
         if use_wandb: wandb.finish()
 
 def wandb_init(args):
+    if args.phase == 'classify':
+        name = f'enc{args.transformer_num_layers}_{args.language_model_name.split("/")[-1]}'
+    else:
+        name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}'
     wandb.init(
         project=f"{args.phase}_"+"_".join(args.datasets), 
-        name=args.lr_scheduler if args.lr_scheduler != '' else 'wo_scheduler',
+        name=name,
         config=args
     )
     wandb.define_metric("epoch")
