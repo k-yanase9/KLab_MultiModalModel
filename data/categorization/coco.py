@@ -13,7 +13,7 @@ class COCO_Categorization(DatasetLoader):
             img_path, loc, cat_id, cat_name = line.split("\t")
             img_path = os.path.join(data_dir, img_path)
             self.images.append(img_path)
-            self.src_texts.append(f'What is the category of the region {loc}?')
+            self.src_texts.append(f'What is the category of the region {loc} ?')
             if is_tgt_id:
                 self.tgt_texts.append(int(cat_id))
             else:
