@@ -17,14 +17,18 @@ class MyModel(nn.Module):
         super().__init__()
         self.args = args
         self.result_dir = args.result_dir
+        vocab_size = 32128 + args.loc_vocab_size + args.additional_vocab_size
         
         if args.vae_ckpt_path != "":
             self.vae = VQModel(ckpt_path=args.vae_ckpt_path).requires_grad_(False)
             self.vae.eval()
         else:
             self.vae = None
+
         self.language_model = T5EncoderModel.from_pretrained(args.language_model_name).requires_grad_(False)  # device_map="auto"
-        self.language_model.eval()
+        if args.language_model_train:
+            language_model_config = T5Config.from_pretrained(args.language_model_name)
+            self.language_model.encoder.embed_tokens = nn.Embedding(vocab_size, language_model_config.d_model).requires_grad_(True)
 
         if "resnet" in args.image_model_name:  # 事前学習用に書き換えたのでおそらく動かない
             self.image_model = ResNetModel.from_pretrained(args.image_model_name).requires_grad_(args.image_model_train)
@@ -36,7 +40,7 @@ class MyModel(nn.Module):
 
         if args.phase == 'classify':
             transformer_config = T5Config(
-                vocab_size=32128 + args.loc_vocab_size + args.additional_vocab_size,
+                vocab_size=vocab_size,
                 d_model=args.transformer_d_model,
                 d_ff=args.transformer_d_ff,
                 d_kv=args.transformer_d_kv,
@@ -48,7 +52,7 @@ class MyModel(nn.Module):
             self.transformer.shared.requires_grad_(False)
         else:
             transformer_config = T5Config(
-                vocab_size=32128 + args.loc_vocab_size + args.additional_vocab_size,
+                vocab_size=vocab_size,
                 d_model=args.transformer_d_model,
                 d_ff=args.transformer_d_ff,
                 d_kv=args.transformer_d_kv,
@@ -70,6 +74,8 @@ class MyModel(nn.Module):
                 self.classifier = nn.Linear(self.transformer.config.d_model, 1000)
             elif 'sun397' in args.datasets:
                 self.classifier = nn.Linear(self.transformer.config.d_model, 397)
+            elif 'places365' in args.datasets:
+                self.classifier = nn.Linear(self.transformer.config.d_model, 365)
             elif 'openimage' in args.datasets:
                 self.classifier = nn.Linear(self.transformer.config.d_model, 599)
             else:
@@ -87,22 +93,32 @@ class MyModel(nn.Module):
             raise NotImplementedError
 
     def forward(self, images, src_texts, src_attention_masks=None, tgt_texts=None, tgt_attention_masks=None, return_loss=True, num_beams=1, num_return_sequences=1, do_sample=False, image_mask_ratio=0.0):
-        with torch.no_grad():
-            if src_attention_masks is None:
-                src_attention_masks = torch.ones(src_texts.shape[0], src_texts.shape[1], device=self.language_model.device)
-                src_attention_masks[src_texts == 0] = 0
+        if self.args.float_type == 'bfloat16':
+            dtype = torch.bfloat16 
+        elif self.args.float_type == 'float16':
+            dtype = torch.float16
+        else:
+            dtype = torch.float32
+
+        if src_attention_masks is None:
+            src_attention_masks = torch.ones_like(src_texts, device=self.language_model.device)
+            src_attention_masks[src_texts == 0] = 0
+
+        with torch.autocast(device_type='cuda', dtype=dtype, enabled=True if self.args.float_type == 'bfloat16' else False):
             language_embeddings = self.language_model(src_texts, attention_mask=src_attention_masks).last_hidden_state
 
-        if image_mask_ratio > 0:  # 画像パッチにマスクをかける
-            bool_masked_pos = self.random_patch_masking(len(images), image_mask_ratio)
-        else:
-            bool_masked_pos = None
+        # if image_mask_ratio > 0:  # 画像パッチにマスクをかける
+        #     bool_masked_pos = self.random_patch_masking(len(images), image_mask_ratio)
+        # else:
+        #     bool_masked_pos = None
         # image_embeddings = self.image_model(pixel_values=images, bool_masked_pos=bool_masked_pos).last_hidden_state
-        image_embeddings = self.image_model(pixel_values=images).last_hidden_state
+        with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
+            image_embeddings = self.image_model(pixel_values=images).last_hidden_state
 
         if self.args.ffn:
-            language_embeddings = self.language_ffn(language_embeddings)
-            image_embeddings = self.image_ffn(image_embeddings)
+            with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
+                language_embeddings = self.language_ffn(language_embeddings)
+                image_embeddings = self.image_ffn(image_embeddings)
 
         concated_embeddings = torch.cat((image_embeddings,language_embeddings), dim=1)
         if self.args.phase == 'classify':
@@ -117,17 +133,19 @@ class MyModel(nn.Module):
 
         if return_loss:
             if self.args.phase == 'classify':
-                outputs = self.transformer(inputs_embeds=concated_embeddings, attention_mask=concat_attention_mask)
-                sequence_output = outputs[0]
-                logits = self.classifier(sequence_output[:, 0, :])
-                loss = self.criterion(logits, tgt_texts)
+                with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
+                    outputs = self.transformer(inputs_embeds=concated_embeddings, attention_mask=concat_attention_mask)
+                    sequence_output = outputs[0]
+                    logits = self.classifier(sequence_output[:, 0, :])
+                    loss = self.criterion(logits, tgt_texts)
                 preds = torch.argmax(logits, dim=1)
             else:
                 if tgt_attention_masks is None:
                     tgt_attention_masks = torch.ones(tgt_texts.shape[0], tgt_texts.shape[1], device=self.transformer.device)
                     tgt_attention_masks[tgt_texts == 0] = 0
-                logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=tgt_attention_masks).logits
-                loss = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
+                with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
+                    logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=tgt_attention_masks).logits
+                    loss = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
                 preds = torch.argmax(logits, dim=2)
             return loss, preds
         else:

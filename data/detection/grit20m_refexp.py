@@ -12,7 +12,7 @@ class Grit20m_RefExp(DatasetLoader):
     """    
     def __init__(self,data_dir:str="/data/dataset/grit20m/",phase:str="train"):
         super().__init__()        
-        with open(os.path.join(data_dir,f"{phase}_ref_exp.tsv")) as f:
+        with open(os.path.join(data_dir,f"split_{phase}_ref_exp.tsv")) as f:
             items = f.read()
 
         items = items.split("\n")
@@ -21,6 +21,6 @@ class Grit20m_RefExp(DatasetLoader):
         
         self.tgt_texts = [item[2] for item in items]
         self.src_texts = [item[1] for item in items]
-        self.images = [os.path.join(data_dir,item[0]) for item in items]
+        self.images = [os.path.join(data_dir,item[0].replace("images", "images_256_png")) for item in items]
 
     

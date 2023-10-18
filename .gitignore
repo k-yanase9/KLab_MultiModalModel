@@ -9,15 +9,18 @@ vqgan.ipynb
 
 # search files
 imagenet_counter.py
+datachecker.py
 
 # weights
 checkpoints/
 
 # result files
 results*/
+wandb/
 
 # tuning shells
 *_4090-*.sh
+*_3090-*.sh
 *_A6000*.sh
 train_test.sh
 job.sh
