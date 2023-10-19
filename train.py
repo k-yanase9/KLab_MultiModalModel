@@ -114,16 +114,21 @@ def train():
             # if args.phase == 'pretrain':
             #     tgt_images = tgt_images.to(local_rank)
             #     tgt_texts, _ = model.module.image_to_z(tgt_images)
-            if args.phase == 'classify':
-                src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
-                src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                tgt_attention_masks = None
-            else:
+            if args.phase == 'pretrain':
                 src_texts = src_texts.to(local_rank, non_blocking=True)
                 tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
                 tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
                 tgt_attention_masks[tgt_texts == 0] = 0
+            else:
+                src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
+                if args.phase == 'classify':
+                    tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
+                    tgt_attention_masks = None
+                else:
+                    tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                    tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
+                    tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True) 
             src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
             src_attention_masks[src_texts == 0] = 0
 
@@ -181,16 +186,21 @@ def train():
                 # if args.phase == 'pretrain':
                 #    tgt_images = tgt_images.to(local_rank)
                 #    tgt_texts, _ = model.module.image_to_z(tgt_images)
-                if args.phase == 'classify':
-                    src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
-                    src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                    tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                    tgt_attention_masks = None
-                else:
+                if args.phase == 'pretrain':
                     src_texts = src_texts.to(local_rank, non_blocking=True)
                     tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
                     tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
                     tgt_attention_masks[tgt_texts == 0] = 0
+                else:
+                    src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                    src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
+                    if args.phase == 'classify':
+                        tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
+                        tgt_attention_masks = None
+                    else:
+                        tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                        tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
+                        tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
                 src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
                 src_attention_masks[src_texts == 0] = 0
                 
