@@ -108,17 +108,6 @@ def train():
             
     loss_counter.plot_loss(args.result_dir)
 
-    # 結果をcsvに1行で保存
-    split_result = args.result_dir.split("/")
-    csv_path = os.path.join(split_result[0], split_result[1], split_result[2], f"{split_result[3]}.csv")
-
-    if not os.path.exists(csv_path):
-        with open(csv_path, "w") as f:
-            f.write("image_model_name,language_model_name,transformer_num_layers,transformer_num_decoder_layers,seed,lr,optimizer,lr_scheduler,batch_size,num_epochs,datasets,train_loss,result_dir\n")
-            
-    with open(csv_path, "a") as f:
-        f.write(f"{args.image_model_name},{args.language_model_name},{args.transformer_num_layers},{args.transformer_num_decoder_layers},{args.seed},{args.lr},{args.optimizer},{args.lr_scheduler},{args.batch_size},{args.num_epochs},{args.datasets},{train_loss},{args.result_dir}\n")
-
 def custom_to_pil(x):
     x = x.detach().cpu()
     x = torch.clamp(x, -1., 1.)
