@@ -53,13 +53,13 @@ def train():
     # create model
     model = MyModel(args).to(local_rank)
     if args.start_epoch > 1:
-        model.load(result_name='best.pth')
+        model.load(result_name=f'epoch_{args.start_epoch-1}.pth' if args.save_interval is not None else 'best.pth')
     model = DDP(model, device_ids=[local_rank])#,find_unused_parameters=True)
     
     scaler = torch.cuda.amp.GradScaler(enabled=True if args.float_type == 'float16' else False)
     optimizer = get_optimizer(model, args)
     if args.start_epoch > 1:
-        optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, 'best.optimizer')))
+        optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, f'epoch_{args.start_epoch-1}.optimizer' if args.save_interval is not None else 'best.optimizer')))
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
     tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=args.max_target_length, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<add_{i}>" for i in range(args.additional_vocab_size)])
@@ -243,7 +243,7 @@ def wandb_init(args):
     if args.phase == 'classify':
         name = f'enc{args.transformer_num_layers}_{args.language_model_name.split("/")[-1]}'
     else:
-        name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}'
+        name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
     wandb.init(
         id=name,
         project=f"{args.phase}_"+"_".join(args.datasets), 
