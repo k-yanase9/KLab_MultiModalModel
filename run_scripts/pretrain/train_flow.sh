@@ -1,8 +1,9 @@
 # 1ノード2GPU
 
-batch_size=200
-# dataset="cc3m cc12m imagenet imagenet21k places365 redcaps sun397"
-dataset="redcaps"
+batch_size=64
+dataset="cc3m cc12m imagenet imagenet21k places365 redcaps sun397"
+# dataset="redcaps"
+epoch=1
 
 enc=2
 dec=12
@@ -13,11 +14,12 @@ dec=12
         --transformer_num_decoder_layers $dec \
         --phase pretrain \
         --loss CrossEntropy \
-        --lr 1e-5 \
-        --lr_scheduler CosineAnnealingLR \
+        --lr 1e-4 \
+        --lr_scheduler LinearWarmup \
         -b $batch_size \
         --start_epoch 1 \
-        --num_epochs 1 \
+        --num_epochs $epoch \
+        --warmup_rate 0.001 \
         --datasets $dataset \
         --root_dir /data/group1/z40441a/ \
-        --result_dir results/pretrain/$dataset/enc$enc\_dec$dec/
+        --result_dir results/pretrain/cc3m_cc12m_imagenet_imagenet21k_places365_redcaps_sun397/enc$enc\_dec$dec/
