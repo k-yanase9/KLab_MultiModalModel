@@ -85,7 +85,7 @@ def train():
                 if 'Epoch' in line:
                     if 'Train' in line:
                         loss_counter.add("train", float(line.split(',')[1].split(':')[-1].strip()))
-                        steps = int(line.split(',')[3].split(':')[-1].strip())
+                        steps = int(line.split(',')[2].split(':')[-1].strip())
                     elif 'Val' in line:
                         loss_counter.add("val", float(line.split(',')[1].split(':')[-1].strip()))
         min_val_loss = min(loss_counter.losses['val'])
@@ -229,6 +229,11 @@ def train():
                     model.module.save(result_name=f'epoch_{epoch}.pth')
                     torch.save(optimizer.state_dict(), os.path.join(args.result_dir, f'epoch_{epoch}.optimizer'))
                     print(f'Model and Optimizer {epoch} saved')
+
+        if epoch == args.stop_epoch:
+            if world_rank == 0: 
+                logger.info(f'Train stoped at {epoch} epoch')
+            break
             
     if world_rank == 0: 
         loss_counter.plot_loss(args.result_dir)
@@ -240,9 +245,11 @@ def wandb_init(args):
     else:
         name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}'
     wandb.init(
+        id=name,
         project=f"{args.phase}_"+"_".join(args.datasets), 
         name=name,
-        config=args
+        config=args,
+        resume=True if args.start_epoch > 1 else False
     )
     wandb.define_metric("epoch")
     wandb.define_metric("iter")
