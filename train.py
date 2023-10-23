@@ -85,7 +85,10 @@ def train():
                 if 'Epoch' in line:
                     if 'Train' in line:
                         loss_counter.add("train", float(line.split(',')[1].split(':')[-1].strip()))
-                        steps = int(line.split(',')[2].split(':')[-1].strip())
+                        if args.phase == 'classify':
+                            steps = int(line.split(',')[3].split(':')[-1].strip())
+                        else:
+                            steps = int(line.split(',')[2].split(':')[-1].strip())
                     elif 'Val' in line:
                         loss_counter.add("val", float(line.split(',')[1].split(':')[-1].strip()))
         min_val_loss = min(loss_counter.losses['val'])
@@ -255,7 +258,7 @@ def wandb_init(args):
     else:
         name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
     wandb.init(
-        id=name,
+        id=name+f'b{args.batch_size}',
         project=f"{args.phase}_"+"_".join(args.datasets), 
         name=name,
         config=args,
