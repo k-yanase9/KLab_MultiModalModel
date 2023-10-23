@@ -1,4 +1,5 @@
 import csv
+import random
 
 import torch
 import torch.nn as nn
@@ -47,7 +48,7 @@ class MyDataset(Dataset):
 
 
 class MyChainDataset(Dataset):
-    def __init__(self, dataset_list, key_list = None):
+    def __init__(self, dataset_list, key_list=None):
         """_summary_
         dataset_listにはDatasetのリストを入れる
         key_listはdataset_listの各データセットから取り出すデータのキーのリストを入れる
@@ -77,3 +78,47 @@ class MyChainDataset(Dataset):
             else:
                 idx -= len(dataset)
         raise IndexError
+
+
+class MixIterator:
+    """
+    Concat items from all given iterators.
+    """
+
+    def __init__(self, source_iterators, weights):
+        """
+        Args:
+                source_iterators: list of iterators to zip, item by item
+        """
+        assert len(weights) == len(source_iterators)
+        self.weights = weights
+        self.population = list(range(len(source_iterators)))
+
+    def __next__(self):
+        _random = Random()
+        res = {}  # (note: can't use a generator expression, as it gets confused when a next() call raises StopIteration)
+        idx = _random.choices(self.population, self.weights)[0]
+        res.update(next(self._source_iterators[idx]))
+        return res
+
+    def close(self):
+        for it in self._source_iterators:
+            it.close()
+
+
+from torch.utils.data import DataLoader
+
+
+# https://github.com/microsoft/unilm/blob/master/kosmos-2/unilm/data/basic_loader.py#L11
+class MixLoader(Dataloader):
+    def __init__(self, dataloaders, weights):
+        super().__init__()
+        self.dataloaders = list(dataloaders)
+        self.weights = weights
+        self._build_iter()
+
+    def _build_iter(self):
+        """
+        Build infinibatch iterator and assign to self._iter
+        """
+        self._iter = MixIterator([dataloader.iterator for dataloader in self.dataloaders], self.weights)
