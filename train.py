@@ -53,13 +53,13 @@ def train():
     # create model
     model = MyModel(args).to(local_rank)
     if args.start_epoch > 1:
-        model.load(result_name='best.pth')
+        model.load(result_name=f'epoch_{args.start_epoch-1}.pth' if args.save_interval is not None else 'best.pth')
     model = DDP(model, device_ids=[local_rank])#,find_unused_parameters=True)
     
     scaler = torch.cuda.amp.GradScaler(enabled=True if args.float_type == 'float16' else False)
     optimizer = get_optimizer(model, args)
     if args.start_epoch > 1:
-        optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, 'best.optimizer')))
+        optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, f'epoch_{args.start_epoch-1}.optimizer' if args.save_interval is not None else 'best.optimizer')))
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
     tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=args.max_target_length, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<add_{i}>" for i in range(args.additional_vocab_size)])
@@ -85,7 +85,7 @@ def train():
                 if 'Epoch' in line:
                     if 'Train' in line:
                         loss_counter.add("train", float(line.split(',')[1].split(':')[-1].strip()))
-                        steps = int(line.split(',')[3].split(':')[-1].strip())
+                        steps = int(line.split(',')[2].split(':')[-1].strip())
                     elif 'Val' in line:
                         loss_counter.add("val", float(line.split(',')[1].split(':')[-1].strip()))
         min_val_loss = min(loss_counter.losses['val'])
@@ -114,16 +114,21 @@ def train():
             # if args.phase == 'pretrain':
             #     tgt_images = tgt_images.to(local_rank)
             #     tgt_texts, _ = model.module.image_to_z(tgt_images)
-            if args.phase == 'classify':
-                src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
-                src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                tgt_attention_masks = None
-            else:
+            if args.phase == 'pretrain':
                 src_texts = src_texts.to(local_rank, non_blocking=True)
                 tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
                 tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
                 tgt_attention_masks[tgt_texts == 0] = 0
+            else:
+                src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
+                if args.phase == 'classify':
+                    tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
+                    tgt_attention_masks = None
+                else:
+                    tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                    tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
+                    tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True) 
             src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
             src_attention_masks[src_texts == 0] = 0
 
@@ -181,16 +186,21 @@ def train():
                 # if args.phase == 'pretrain':
                 #    tgt_images = tgt_images.to(local_rank)
                 #    tgt_texts, _ = model.module.image_to_z(tgt_images)
-                if args.phase == 'classify':
-                    src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
-                    src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                    tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                    tgt_attention_masks = None
-                else:
+                if args.phase == 'pretrain':
                     src_texts = src_texts.to(local_rank, non_blocking=True)
                     tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
                     tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
                     tgt_attention_masks[tgt_texts == 0] = 0
+                else:
+                    src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                    src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
+                    if args.phase == 'classify':
+                        tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
+                        tgt_attention_masks = None
+                    else:
+                        tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                        tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
+                        tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
                 src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
                 src_attention_masks[src_texts == 0] = 0
                 
@@ -229,16 +239,27 @@ def train():
                     model.module.save(result_name=f'epoch_{epoch}.pth')
                     torch.save(optimizer.state_dict(), os.path.join(args.result_dir, f'epoch_{epoch}.optimizer'))
                     print(f'Model and Optimizer {epoch} saved')
+
+        if epoch == args.stop_epoch:
+            if world_rank == 0: 
+                logger.info(f'Train stoped at {epoch} epoch')
+            break
             
     if world_rank == 0: 
         loss_counter.plot_loss(args.result_dir)
         if use_wandb: wandb.finish()
 
 def wandb_init(args):
+    if args.phase == 'classify':
+        name = f'enc{args.transformer_num_layers}_{args.language_model_name.split("/")[-1]}'
+    else:
+        name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
     wandb.init(
+        id=name,
         project=f"{args.phase}_"+"_".join(args.datasets), 
-        name=args.lr_scheduler if args.lr_scheduler != '' else 'wo_scheduler',
-        config=args
+        name=name,
+        config=args,
+        resume=True if args.start_epoch > 1 else False
     )
     wandb.define_metric("epoch")
     wandb.define_metric("iter")

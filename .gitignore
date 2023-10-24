@@ -1,5 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+core
+core-python3*
 
 # IPython Notebook
 .ipynb_checkpoints
@@ -28,5 +30,3 @@ job.sh
 # pipenv
 Pipfile
 Pipfile.lock
-
-core

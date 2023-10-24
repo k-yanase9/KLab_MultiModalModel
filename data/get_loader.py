@@ -68,6 +68,8 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             dataset = SUN397_Classify(data_dir, phase=phase, is_tgt_id=True)
         elif 'openimage' == dataset_name:
             dataset = OpenImageDataset_Categorization(data_dir, phase=phase, is_tgt_id=True)
+        elif 'mscoco' == dataset_name:
+            dataset = COCO_Categorization(data_dir, phase=phase, is_tgt_id=True)
         else:
             raise NotImplementedError
     else:

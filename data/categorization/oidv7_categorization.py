@@ -24,7 +24,7 @@ class OpenImageDataset_Categorization(DatasetLoader):
         else:
             self.tgt_texts = [item[2] for item in items]
 
-        self.src_texts = [f"What is the category of the region {item[1]}" for item in items]
+        self.src_texts = [f"What is the category of the region {item[1]} ?" for item in items]
         self.images = [os.path.join(data_dir,f"{phase}_256_png",f"{item[0]}.png") for item in items]
 
         #dropimageidlistに含まれる画像と対応するテキストを除外する

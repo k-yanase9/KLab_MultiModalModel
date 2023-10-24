@@ -1,1 +1,2 @@
 from .oidv7_categorization import OpenImageDataset_Categorization
+from .coco import COCO_Categorization
