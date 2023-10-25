@@ -58,4 +58,4 @@ def evaluate_score(pred_text, actual_text):
             else:
                 final_scores[metric] = score
 
-    return final_scores['CIDEr'], final_scores['Bleu_4']
+    return final_scores
