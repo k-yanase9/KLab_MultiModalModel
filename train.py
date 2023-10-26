@@ -258,8 +258,10 @@ def wandb_init(args):
         name = f'enc{args.transformer_num_layers}_{args.language_model_name.split("/")[-1]}'
     else:
         name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
+    if args.id is None:
+        args.id = wandb.util.generate_id()
     wandb.init(
-        id=name+f'_b{args.batch_size}',
+        id=args.id,
         project=f"{args.phase}_"+"_".join(args.datasets), 
         name=name,
         config=args,
