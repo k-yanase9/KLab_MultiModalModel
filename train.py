@@ -104,6 +104,7 @@ def train():
         min_val_loss = 100
     for epoch in range(args.start_epoch, args.num_epochs+1):
         # 学習ループ
+        train_loader.sampler.set_epoch(epoch)
         image_mask_ratio = 0.0
         if args.language_model_train: model.module.language_model.train()
         if args.image_model_train: model.module.image_model.train()
@@ -258,7 +259,7 @@ def wandb_init(args):
     else:
         name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
     wandb.init(
-        id=name+f'b{args.batch_size}',
+        id=name+f'_b{args.batch_size}',
         project=f"{args.phase}_"+"_".join(args.datasets), 
         name=name,
         config=args,
