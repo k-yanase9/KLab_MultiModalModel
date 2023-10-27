@@ -39,7 +39,7 @@ def test():
         gts = []
         str_preds = []
         str_gts = []
-        for src_images, tgt_images, src_texts, tgt_texts in tqdm(dataloader, desc=epoch):
+        for src_images, tgt_images, src_texts, tgt_texts in tqdm(dataloader, desc=f'{epoch}/{len(checkpoints_names)}'):
             with torch.no_grad():
                 src_images = src_images.to(device)
                 src_texts = src_texts.to(device)
