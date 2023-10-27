@@ -25,6 +25,7 @@ wandb/
 *_3090-*.sh
 *_A6000*.sh
 train_test.sh
+test_*.sh
 job.sh
 
 # pipenv
