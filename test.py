@@ -16,6 +16,7 @@ if pkgutil.find_loader("wandb") is not None:
 
 def test():
     args = parse_arguments()
+    args.data_phase = 'train'
     if use_wandb: wandb_init(args)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = MyModel(args).to(device)
@@ -23,7 +24,7 @@ def test():
     tgt_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=args.max_target_length, use_fast=True, extra_ids=0, additional_special_tokens =[f"<extra_id_{i}>" for i in range(100)] + [f"<loc_{i}>" for i in range(args.loc_vocab_size)] + [f"<add_{i}>" for i in range(args.additional_vocab_size)])
     checkpoints_names = [file_name for file_name in os.listdir(args.result_dir) if file_name.endswith('.pth') and file_name.startswith('epoch_')]
     # logger = get_logger(args, f'test_{args.datasets[0]}.log')
-    dataset = get_dataset(args, dataset_name=args.datasets[0], phase='val', src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+    dataset = get_dataset(args, dataset_name=args.datasets[0], phase=args.data_phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
     for checkpoints_name in checkpoints_names:
         epoch = checkpoints_name.split('_')[1].split('.')[0]
         print(f'loading {checkpoints_name}...', end='')
@@ -49,7 +50,7 @@ def test():
                 outputs = outputs[:,1:]
                 for src, gt, pred in zip(src_texts.cpu().numpy(), tgt_texts.numpy(), outputs.cpu().numpy()):
                     # 5トークン目以降の<pad>と<eos>を除去
-                    srcs.append(src[src!=0])
+                    if args.data_phase != 'train': srcs.append(src[src!=0])
                     if 0 in gt[:4]:
                         gts.append(gt[:4])
                     else:
@@ -60,29 +61,31 @@ def test():
                         if 1 in pred2:
                             pred2 += [0] * max(4-len(pred2),0)
                             break
-                    preds.append(pred2)
+                    if args.data_phase != 'train': preds.append(pred2)
                     # 文字列に変換
                     str_pred = ' '.join(map(str, pred2))
                     str_gt = ' '.join(map(str, gts[-1]))
                     str_preds.append(str_pred)
                     str_gts.append(str_gt)
         result, results = evaluate_score(str_gts, str_preds)
-        srcs = src_tokenizer.batch_decode(srcs)
-        preds = tgt_tokenizer.batch_decode(preds)
-        gts = tgt_tokenizer.batch_decode(gts)
+        if args.data_phase != 'train':
+            srcs = src_tokenizer.batch_decode(srcs)
+            preds = tgt_tokenizer.batch_decode(preds)
+            gts = tgt_tokenizer.batch_decode(gts)
         result['epoch'] = int(epoch)
         if use_wandb:
-            my_table = wandb.Table(columns=["id", "Input", "Ground Truth", "Prediction", "Ground Truth (num)", "Prediction (num)"]+list(results.keys()))
-            for id, contents in enumerate(zip(srcs, gts, preds, str_gts, str_preds, *results.values())):
-                my_table.add_data(id+1, *contents)
-            wandb.log({"results_ep"+epoch: my_table})
+            if args.data_phase != 'train':
+                my_table = wandb.Table(columns=["id", "Input", "Ground Truth", "Prediction", "Ground Truth (num)", "Prediction (num)"]+list(results.keys()))
+                for id, contents in enumerate(zip(srcs, gts, preds, str_gts, str_preds, *results.values())):
+                    my_table.add_data(id+1, *contents)
+                wandb.log({"results_ep"+epoch: my_table})
             wandb.log(result)
     wandb.finish()
 
 def wandb_init(args):
     wandb.init(
         project=f"pretrain_test", 
-        name=f"{args.datasets[0]}_b{args.batch_size}",
+        name=f"{args.datasets[0]}_{args.data_phase}_b{args.batch_size}",
         config=args,
     )
     wandb.define_metric("epoch")
