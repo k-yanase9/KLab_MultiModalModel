@@ -4,3 +4,4 @@ transformers[torch]
 sentencepiece
 pycocotools
 notebook
+pycocoevalcap

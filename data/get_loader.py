@@ -35,7 +35,7 @@ def get_distributed_dataloader(args, dataset, num_workers=4, shuffle=True):
 
 def get_dataloader(args, dataset, num_workers=4, shuffle=False):
     if args.phase == 'pretrain': 
-        dataloader = DataLoader(dataset, batch_size=args.batch_size, collate_fn=dataset.datasets[0].collate_fn, num_workers=num_workers, pin_memory=True, drop_last=True, shuffle=shuffle)
+        dataloader = DataLoader(dataset, batch_size=args.batch_size, collate_fn=dataset.collate_fn, num_workers=num_workers, pin_memory=True, drop_last=True, shuffle=shuffle)
     else:
         dataloader = DataLoader(dataset, batch_size=args.batch_size, num_workers=num_workers, pin_memory=True, drop_last=True, shuffle=shuffle)
     return dataloader

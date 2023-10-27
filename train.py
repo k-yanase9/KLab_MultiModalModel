@@ -85,7 +85,10 @@ def train():
                 if 'Epoch' in line:
                     if 'Train' in line:
                         loss_counter.add("train", float(line.split(',')[1].split(':')[-1].strip()))
-                        steps = int(line.split(',')[2].split(':')[-1].strip())
+                        if args.phase == 'classify':
+                            steps = int(line.split(',')[3].split(':')[-1].strip())
+                        else:
+                            steps = int(line.split(',')[2].split(':')[-1].strip())
                     elif 'Val' in line:
                         loss_counter.add("val", float(line.split(',')[1].split(':')[-1].strip()))
         min_val_loss = min(loss_counter.losses['val'])
@@ -101,6 +104,7 @@ def train():
         min_val_loss = 100
     for epoch in range(args.start_epoch, args.num_epochs+1):
         # 学習ループ
+        train_loader.sampler.set_epoch(epoch)
         image_mask_ratio = 0.0
         if args.language_model_train: model.module.language_model.train()
         if args.image_model_train: model.module.image_model.train()
@@ -254,8 +258,10 @@ def wandb_init(args):
         name = f'enc{args.transformer_num_layers}_{args.language_model_name.split("/")[-1]}'
     else:
         name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
+    if args.id is None:
+        args.id = wandb.util.generate_id()
     wandb.init(
-        id=name,
+        id=args.id,
         project=f"{args.phase}_"+"_".join(args.datasets), 
         name=name,
         config=args,
