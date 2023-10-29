@@ -13,47 +13,47 @@ from tqdm import tqdm
 from transformers import AutoTokenizer
 
 from data import *
-from data.multi_task_dataloader import MultiTaskDataLoader, make_multi_task_collate_fn
+from data.multi_task_dataloader import MultiTaskDataLoader, make_multi_task_collate_fn, get_multi_task_data
 from models.model import MyModel
 from modules import *
 
 
-def get_dataset_dict(args, dataset_name_dict: dict[str, List[str]], phase, src_tokenizer=None, tgt_tokenizer=None):
-    dataset_dict = {
-        key: ConcatDataset(
-            [
-                Subset(
-                    get_dataset(
-                        args,
-                        dataset_name,
-                        phase=phase,
-                        src_tokenizer=src_tokenizer,
-                        tgt_tokenizer=tgt_tokenizer,
-                    ),
-                    indices=range(0, 10000),
-                )
-                for dataset_name in dataset_name_dict[key]
-            ]
-        )
-        for key in dataset_name_dict.keys()
-    }
-    return dataset_dict
+# def get_dataset_dict(args, dataset_name_dict: dict[str, List[str]], phase, src_tokenizer=None, tgt_tokenizer=None):
+#     dataset_dict = {
+#         key: ConcatDataset(
+#             [
+#                 Subset(
+#                     get_dataset(
+#                         args,
+#                         dataset_name,
+#                         phase=phase,
+#                         src_tokenizer=src_tokenizer,
+#                         tgt_tokenizer=tgt_tokenizer,
+#                     ),
+#                     indices=range(0, 10000),
+#                 )
+#                 for dataset_name in dataset_name_dict[key]
+#             ]
+#         )
+#         for key in dataset_name_dict.keys()
+#     }
+#     return dataset_dict
 
 
-def get_multi_task_data(args, train_dataset_name_dict, val_dataset_name_dict, src_tokenizer=None, tgt_tokenizer=None):
-    if len(train_dataset_name_dict) == 0:
-        raise ValueError
-    train_dataset_dict, val_dataset_dict = {}, {}
-    train_dataset_dict = get_dataset_dict(args, train_dataset_name_dict, phase="train", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
-    val_dataset_dict = get_dataset_dict(args, val_dataset_name_dict, phase="val", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
-    return train_dataset_dict, val_dataset_dict
+# def get_multi_task_data(args, train_dataset_name_dict, val_dataset_name_dict, src_tokenizer=None, tgt_tokenizer=None):
+#     if len(train_dataset_name_dict) == 0:
+#         raise ValueError
+#     train_dataset_dict, val_dataset_dict = {}, {}
+#     train_dataset_dict = get_dataset_dict(args, train_dataset_name_dict, phase="train", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+#     val_dataset_dict = get_dataset_dict(args, val_dataset_name_dict, phase="val", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+#     return train_dataset_dict, val_dataset_dict
 
 
-use_wandb = True
-# if pkgutil.find_loader("wandb") is not None:
-#     import wandb
+use_wandb = False
+if pkgutil.find_loader("wandb") is not None:
+    import wandb
 
-#     use_wandb = True
+    use_wandb = True
 
 
 def train():
@@ -116,17 +116,21 @@ def train():
     else:
         src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=args.max_source_length, use_fast=True)
 
-    # データの設定
+    ## --  データの設定
     # train_dataset, val_dataset = get_data(args, src_tokenizer, tgt_tokenizer)
     # if world_rank == 0:
     #     logger.info(f'Train Dataset : {len(train_dataset)}, Val Dataset : {len(val_dataset)}')
     # train_loader = get_distributed_dataloader(args, train_dataset, shuffle=True)
     # val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)
+
+    # 引数の設定
     train_dataset_name_dict = {"caption": ["cc3m"], "classify": ["imagenet", "sun397"]}
     val_dataset_name_dict = {"caption": ["cc3m"], "classify": ["imagenet", "sun397"]}
     batch_size_dict = {"caption": 5, "classify": 10}
+
     train_dataset_dict, val_dataset_dict = get_multi_task_data(args, train_dataset_name_dict, val_dataset_name_dict, src_tokenizer, tgt_tokenizer)
-    each_task_collate_fn_dict = {key: dataset.datasets[0].dataset.collate_fn for key, dataset in train_dataset_dict.items()}
+    # each_task_collate_fn_dict = {key: dataset.datasets[0].dataset.collate_fn for key, dataset in train_dataset_dict.items()}
+    each_task_collate_fn_dict = {key: dataset.datasets[0].collate_fn for key, dataset in train_dataset_dict.items()}
 
     train_loader = MultiTaskDataLoader(
         train_dataset_dict,
