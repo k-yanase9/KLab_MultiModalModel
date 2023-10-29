@@ -188,6 +188,7 @@ def train():
         min_val_loss = 100
     for epoch in range(args.start_epoch, args.num_epochs + 1):
         # 学習ループ
+        train_loader.set_epoch(epoch)
         image_mask_ratio = 0.0
         if args.language_model_train:
             model.module.language_model.train()
