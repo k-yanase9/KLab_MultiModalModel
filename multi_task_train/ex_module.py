@@ -110,7 +110,7 @@ from torch.utils.data import DataLoader
 
 
 # https://github.com/microsoft/unilm/blob/master/kosmos-2/unilm/data/basic_loader.py#L11
-class MixLoader(Dataloader):
+class MixLoader(DataLoader):
     def __init__(self, dataloaders, weights):
         super().__init__()
         self.dataloaders = list(dataloaders)

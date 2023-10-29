@@ -1,33 +1,85 @@
 import os
+import pkgutil
 import random
-import sys
+from typing import Any, Callable, Dict, List
 
 import numpy as np
-import PIL
 import torch
 import torch.distributed as dist
-import torchvision
+import torch.nn.functional as F
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torchvision import transforms
+from torch.utils.data import ConcatDataset, DataLoader, Subset
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-import data as data_module
 from data import *
+from data.multi_task_dataloader import MultiTaskDataLoader, make_multi_task_collate_fn
 from models.model import MyModel
 from modules import *
 
 
+def get_dataset_dict(args, dataset_name_dict: dict[str, List[str]], phase, src_tokenizer=None, tgt_tokenizer=None):
+    dataset_dict = {
+        key: ConcatDataset(
+            [
+                Subset(
+                    get_dataset(
+                        args,
+                        dataset_name,
+                        phase=phase,
+                        src_tokenizer=src_tokenizer,
+                        tgt_tokenizer=tgt_tokenizer,
+                    ),
+                    indices=range(0, 10000),
+                )
+                for dataset_name in dataset_name_dict[key]
+            ]
+        )
+        for key in dataset_name_dict.keys()
+    }
+    return dataset_dict
+
+
+def get_multi_task_data(args, train_dataset_name_dict, val_dataset_name_dict, src_tokenizer=None, tgt_tokenizer=None):
+    if len(train_dataset_name_dict) == 0:
+        raise ValueError
+    train_dataset_dict, val_dataset_dict = {}, {}
+    train_dataset_dict = get_dataset_dict(args, train_dataset_name_dict, phase="train", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+    val_dataset_dict = get_dataset_dict(args, val_dataset_name_dict, phase="val", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+    return train_dataset_dict, val_dataset_dict
+
+
+use_wandb = True
+# if pkgutil.find_loader("wandb") is not None:
+#     import wandb
+
+#     use_wandb = True
+
+
 def train():
-    dist.init_process_group("nccl")
-    rank = dist.get_rank()
-
     args = parse_arguments()
-    args.gpu_nums = torch.cuda.device_count()  # GPU数
-    device_id = rank % args.gpu_nums
+    if args.multinode:
+        port_num = 27971
+        host_list_file = os.environ["PJM_O_NODEINF"]
+        args.world_size = int(os.environ["OMPI_COMM_WORLD_SIZE"])
+        world_rank = int(os.environ["OMPI_COMM_WORLD_RANK"])
+        local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK'])
+        with open(host_list_file) as f:
+            host = f.readlines()
+        host[0] = host[0].rstrip("\n")
+        dist_url = "tcp://" + host[0] + ":" + str(port_num)
+        dist.init_process_group(backend="nccl", init_method=dist_url, rank=world_rank, world_size=args.world_size)
+    else:
+        dist.init_process_group(backend="nccl")
+        args.world_size = torch.cuda.device_count()  # GPU数
+        world_rank = dist.get_rank()
+        local_rank = world_rank % args.world_size
+        dist_url = "env://"
 
-    if rank == 0:
+    if world_rank == 0:
         os.makedirs(args.result_dir, exist_ok=True)
+        if use_wandb:
+            wandb_init(args)
 
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -35,226 +87,264 @@ def train():
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
-    if rank == 0:
+    if world_rank == 0:
         logger = get_logger(args)
 
     # create model
-    model = MyModel(args).to(device_id)
-    model = DDP(model, device_ids=[device_id])
+    model = MyModel(args).to(local_rank)
+    if args.start_epoch > 1:
+        model.load(result_name='best.pth')
+    model = DDP(model, device_ids=[local_rank])  # ,find_unused_parameters=True)
 
+    scaler = torch.cuda.amp.GradScaler(enabled=True if args.float_type == 'float16' else False)
     optimizer = get_optimizer(model, args)
-    scheduler = get_scheduler(args, optimizer)
-    # if rank == 0:
-    #     logger.info(scheduler.step_size)
+    if args.start_epoch > 1:
+        optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, 'best.optimizer')))
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
-    src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=256, use_fast=True)
     tgt_tokenizer = AutoTokenizer.from_pretrained(
         args.language_model_name,
-        model_max_length=256,
+        model_max_length=args.max_target_length,
         use_fast=True,
         extra_ids=0,
         additional_special_tokens=[f"<extra_id_{i}>" for i in range(100)]
         + [f"<loc_{i}>" for i in range(args.loc_vocab_size)]
-        + [f"<img_{i}>" for i in range(args.image_vocab_size)],
+        + [f"<add_{i}>" for i in range(args.additional_vocab_size)],
     )
+    if args.language_model_train:
+        src_tokenizer = tgt_tokenizer
+    else:
+        src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=args.max_source_length, use_fast=True)
 
     # データの設定
-    batch_size_list = [5, 4, 21]
-    coco_dataset = data_module.caption.COCODatasetLoader("/home/omote/gpu-node/mscoco2017", phase="val")  # データ数4
-    oidv7_caption_dataset = data_module.caption.OpenImageDataset_Caption("/home/omote/gpu-node/openimage", phase="val")  # データ数3
-    detection_dataset = data_module.detection.oidv7_detection.OpenImageDataset_detection("/home/omote/gpu-node/openimage", phase="val")  # データ数3 add transforms
-    vqa_dataset = data_module.vqa.vqa2.Vqa2dataset("/home/omote/gpu-node/vqa2", phase="val")  # データ数3 add transforms
-    dataset_list = [
-        data_module.MultiChainDataset(dataset_list=[coco_dataset, oidv7_caption_dataset], key_list=[[0, 2, 3], [0, 1, 2]]),
-        detection_dataset,
-        vqa_dataset,
-    ]
+    # train_dataset, val_dataset = get_data(args, src_tokenizer, tgt_tokenizer)
+    # if world_rank == 0:
+    #     logger.info(f'Train Dataset : {len(train_dataset)}, Val Dataset : {len(val_dataset)}')
+    # train_loader = get_distributed_dataloader(args, train_dataset, shuffle=True)
+    # val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)
+    train_dataset_name_dict = {"caption": ["cc3m"], "classify": ["imagenet", "sun397"]}
+    val_dataset_name_dict = {"caption": ["cc3m"], "classify": ["imagenet", "sun397"]}
+    batch_size_dict = {"caption": 5, "classify": 10}
+    train_dataset_dict, val_dataset_dict = get_multi_task_data(args, train_dataset_name_dict, val_dataset_name_dict, src_tokenizer, tgt_tokenizer)
+    each_task_collate_fn_dict = {key: dataset.datasets[0].dataset.collate_fn for key, dataset in train_dataset_dict.items()}
 
-    additional_transforms = transforms.Compose(
-        [
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
+    train_loader = MultiTaskDataLoader(
+        train_dataset_dict,
+        batch_size_dict=batch_size_dict,
+        each_task_collate_fn_dict=each_task_collate_fn_dict,
+        multi_task_collate_fn=make_multi_task_collate_fn(src_tokenizer, tgt_tokenizer),
+        is_ddp=True,
+        seed=args.seed,
+        loader_drop_last=True,
+        sampler_drop_last=True,
+        num_workers=4,
+        shuffle=True,
+        pin_memory=True,
     )
-    distributed_samplers = [
-        torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=True, drop_last=True)
-        for dataset in dataset_list
-    ]
-    loaders = [
-        torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=distributed_sampler, num_workers=4, pin_memory=True)
-        for dataset, batch_size, distributed_sampler in zip(dataset_list, batch_size_list, distributed_samplers)
-    ]
+    val_loader = MultiTaskDataLoader(
+        val_dataset_dict,
+        batch_size_dict=batch_size_dict,
+        each_task_collate_fn_dict=each_task_collate_fn_dict,
+        multi_task_collate_fn=make_multi_task_collate_fn(src_tokenizer, tgt_tokenizer),
+        is_ddp=True,
+        seed=args.seed,
+        loader_drop_last=True,
+        sampler_drop_last=True,
+        num_workers=4,
+        shuffle=False,
+        pin_memory=True,
+    )
+    ##--
 
-    val_sampler = torch.utils.data.distributed.DistributedSampler(coco_dataset, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=False)
-    val_loader = torch.utils.data.DataLoader(coco_dataset, batch_size=10, sampler=val_sampler, num_workers=4, pin_memory=True)
+    if 'Warmup' in args.lr_scheduler and args.num_steps is None:
+        args.num_steps = args.num_epochs * len(train_loader)
+    scheduler = get_scheduler(args, optimizer)
 
-    # if args.num_epochs is None:
-    #     args.num_epochs = int(args.num_steps / len(train_loader)) + 1
-
-    min_step = min([len(loader) for loader in loaders])
-    max_step = max([len(loader) for loader in loaders])
-    if rank == 0:
-        logger.info(f"min_step: {min_step}, max_step: {max_step}")
-        logger.info(f"batch_size_list: {batch_size_list}")
-        logger.info(f"len(dataset_list): {[len(dataset) for dataset in dataset_list]}")
-        logger.info(f"len(loaders): {[len(loader) for loader in loaders]}")
-
-    steps = 0
-    min_val_loss = 100
     loss_counter = LossCounter()
-    for epoch in range(1, args.num_epochs + 1):
-        # すべてのiteratorを初期化する
-        iterators = [iter(loader) for loader in loaders]
-
+    if args.start_epoch > 1:
+        with open(os.path.join(args.result_dir, 'train.log'), 'r') as f:
+            for line in f:
+                if 'Epoch' in line:
+                    if 'Train' in line:
+                        loss_counter.add("train", float(line.split(',')[1].split(':')[-1].strip()))
+                        steps = int(line.split(',')[3].split(':')[-1].strip())
+                    elif 'Val' in line:
+                        loss_counter.add("val", float(line.split(',')[1].split(':')[-1].strip()))
+        min_val_loss = min(loss_counter.losses['val'])
+        if world_rank == 0:
+            logger.info(f'[Loaded] steps : {steps}, Best Val loss : {min_val_loss}')
+        if 'Warmup' in args.lr_scheduler:
+            for _ in range(steps):
+                scheduler.step()
+        else:
+            for _ in range(args.start_epoch - 1):
+                scheduler.step()
+    else:
+        steps = 0
+        min_val_loss = 100
+    for epoch in range(args.start_epoch, args.num_epochs + 1):
         # 学習ループ
         image_mask_ratio = 0.0
+        if args.language_model_train:
+            model.module.language_model.train()
         if args.image_model_train:
             model.module.image_model.train()
         model.module.transformer.train()
-        train_loss = torch.tensor(0.0).to(device_id)
-        train_count = torch.tensor(0).to(device_id)
-        pbar = tqdm(total=int(np.ceil(min_step / args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
-        for i in range(min_step):
-            # すべてのiteratorからデータを取得し結合する
-            image_list = []
-            src_text_list = []
-            tgt_text_list = []
-            caption_data = next(iterators[0])
-            detection_data = next(iterators[1])
-            vqa_data = next(iterators[2])
-            image_list.append(caption_data[0])
-            image_list.append(additional_transforms(detection_data[0]))
-            image_list.append(additional_transforms(vqa_data[0]))
-            src_text_list.extend(caption_data[1])
-            src_text_list.extend(detection_data[1])
-            src_text_list.extend(vqa_data[1])
-            tgt_text_list.extend(caption_data[2])
-            tgt_text_list.extend(detection_data[2])
-            tgt_text_list.extend(vqa_data[2])
-            src_images = torch.cat(image_list, dim=0)
-            src_texts = src_text_list
-            tgt_texts = tgt_text_list
-
-            image_dir = f"results/images/rank-{rank}"
-            mean = [0.485, 0.456, 0.406]
-            std = [0.229, 0.224, 0.225]
-            if not os.path.exists(image_dir):
-                # ディレクトリが存在しない場合、ディレクトリを作成する
-                os.makedirs(image_dir)
-            if i == 0 or i == min_step - 1:
-                if i == 0:
-                    text_f = open(f"results/rank-{rank}_src_tgt.txt", "w")
-                elif i == min_step - 1:
-                    text_f = open(f"results/rank-{rank}_src_tgt.txt", "a")
-                for b in range(src_images.shape[0]):
-                    img = src_images[b].cpu()
-                    img = img * torch.tensor(std).view(3, 1, 1)
-                    img = img + torch.tensor(mean).view(3, 1, 1)
-                    img = transforms.ToPILImage()(img)
-                    # img = PIL.Image.fromarray(img)
-                    img.save(f"{image_dir}/step-{i}_batch-{b}.png")
-
-                    text_f.write(f"step-{i}_batch-{b}\n{src_texts[b]}\n{tgt_texts[b]}\n")
-                text_f.write("\n\n\n\n")
-                text_f.close()
-
-            if i % args.accumulation_steps == 0:
-                optimizer.zero_grad()
-            src_images = src_images.to(device_id, non_blocking=True)
-            # if args.pretrain:
-            #     tgt_images = tgt_images.to(device_id)
+        train_loss = torch.tensor(0.0).to(local_rank)
+        if args.phase == 'classify':
+            train_acc = torch.tensor(0.0).to(local_rank)
+        train_count = torch.tensor(0).to(local_rank)
+        pbar = tqdm(total=int(np.ceil(len(train_loader) / args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
+        for i, (src_images, tgt_images, src_texts, tgt_texts) in enumerate(train_loader):
+            src_images = src_images.to(local_rank, non_blocking=True)
+            # if args.phase == 'pretrain':
+            #     tgt_images = tgt_images.to(local_rank)
             #     tgt_texts, _ = model.module.image_to_z(tgt_images)
-            src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(
-                device_id, non_blocking=True
-            )  # ['pt', 'tf', 'np', 'jax']
-            tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(
-                device_id, non_blocking=True
-            )  # ['pt', 'tf', 'np', 'jax']
+            if args.phase == 'classify':
+                src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')  # ['pt', 'tf', 'np', 'jax']
+                src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
+                tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
+                tgt_attention_masks = None
+            else:
+                src_texts = src_texts.to(local_rank, non_blocking=True)
+                tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
+                tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
+                tgt_attention_masks[tgt_texts == 0] = 0
+            src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
+            src_attention_masks[src_texts == 0] = 0
 
-            loss = model(src_images, src_texts, tgt_texts, image_mask_ratio=image_mask_ratio)
-
+            loss, preds = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks, image_mask_ratio=image_mask_ratio)
             loss /= args.accumulation_steps
-            loss.backward()
+            scaler.scale(loss).backward()
 
             train_loss += loss.item() * src_images.shape[0]
+            if args.phase == 'classify':
+                train_acc += torch.sum(preds == tgt_texts)
             train_count += src_images.shape[0]
 
             # args.accumulation_steps回の勾配を蓄積してから、optimizer.step()を呼び出す
-            if (i + 1) % args.accumulation_steps == 0 or i + 1 == min_step:
-                optimizer.step()
+            if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
                 pbar.update(1)
-                if rank == 0:
+                if world_rank == 0:
                     steps += 1
-                if args.num_epochs is None:
+                    if use_wandb:
+                        wandb.log({"iter": steps, "iter/loss": loss.item(), "iter/lr": optimizer.param_groups[0]["lr"]})
+                if args.num_steps is not None:
                     scheduler.step()
 
         # 他のノードから集める
         dist.all_reduce(train_loss, op=dist.ReduceOp.SUM)
+        if args.phase == 'classify':
+            dist.all_reduce(train_acc, op=dist.ReduceOp.SUM)
         dist.all_reduce(train_count, op=dist.ReduceOp.SUM)
+        pbar.close()
 
-        if rank == 0:
+        if world_rank == 0:
             train_loss /= train_count
             loss_counter.add("train", train_loss.cpu().numpy().copy())
+            if args.phase == 'classify':
+                train_acc /= train_count
+                logger.info(
+                    f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Acc : {train_acc}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}'
+                )
+                if use_wandb:
+                    wandb.log({"epoch": epoch, "train/loss": train_loss, "train/acc": train_acc, "train/lr": optimizer.param_groups[0]["lr"]})
+            else:
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
+                if use_wandb:
+                    wandb.log({"epoch": epoch, "train/loss": train_loss, "train/lr": optimizer.param_groups[0]["lr"]})
 
         if args.lr_scheduler != '' and args.num_steps is None:
             scheduler.step()
-        pbar.close()
+
         # 検証ループ
+        if args.language_model_train:
+            model.module.language_model.eval()
         if args.image_model_train:
             model.module.image_model.eval()
         model.module.transformer.eval()
-        val_loss = torch.tensor(0.0).to(device_id)
-        val_count = torch.tensor(0).to(device_id)
-        val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
+        val_loss = torch.tensor(0.0).to(local_rank)
+        if args.phase == 'classify':
+            val_acc = torch.tensor(0.0).to(local_rank)
+        val_count = torch.tensor(0).to(local_rank)
+        val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
         for src_images, tgt_images, src_texts, tgt_texts in val_loop:
             with torch.no_grad():
-                src_images = src_images.to(device_id, non_blocking=True)
-                # if args.pretrain:
-                #    tgt_images = tgt_images.to(device_id)
+                src_images = src_images.to(local_rank, non_blocking=True)
+                # if args.phase == 'pretrain':
+                #    tgt_images = tgt_images.to(local_rank)
                 #    tgt_texts, _ = model.module.image_to_z(tgt_images)
-                src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(
-                    device_id, non_blocking=True
-                )  # ['pt', 'tf', 'np', 'jax']
-                tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(
-                    device_id, non_blocking=True
-                )  # ['pt', 'tf', 'np', 'jax']
+                if args.phase == 'classify':
+                    src_inputs = src_tokenizer(
+                        src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt'
+                    )  # ['pt', 'tf', 'np', 'jax']
+                    src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
+                    tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
+                    tgt_attention_masks = None
+                else:
+                    src_texts = src_texts.to(local_rank, non_blocking=True)
+                    tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
+                    tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
+                    tgt_attention_masks[tgt_texts == 0] = 0
+                src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
+                src_attention_masks[src_texts == 0] = 0
 
-                loss = model(src_images, src_texts, tgt_texts)
+                loss, preds = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
 
                 val_loss += loss.item() * src_images.shape[0]
+                if args.phase == 'classify':
+                    val_acc += torch.sum(preds == tgt_texts)
                 val_count += src_images.shape[0]
 
         # 他のノードから集める
         dist.all_reduce(val_loss, op=dist.ReduceOp.SUM)
+        if args.phase == 'classify':
+            dist.all_reduce(val_acc, op=dist.ReduceOp.SUM)
         dist.all_reduce(val_count, op=dist.ReduceOp.SUM)
 
-        if rank == 0:
+        if world_rank == 0:
             val_loss /= val_count
             loss_counter.add("val", val_loss.cpu().numpy().copy())
-            logger.info(
-                f'[Epoch ({epoch}/{args.num_epochs})] Train loss : {train_loss}, Val loss : {val_loss}, Steps : {steps}, Image Mask Ratio : {image_mask_ratio}'
-            )
+            if args.phase == 'classify':
+                val_acc /= val_count
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}, Acc : {val_acc}')
+                if use_wandb:
+                    wandb.log({"epoch": epoch, "val/loss": val_loss, "val/acc": val_acc})
+            else:
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}')
+                if use_wandb:
+                    wandb.log({"epoch": epoch, "val/loss": val_loss})
 
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
-                print('Best Model saving...')
+                print('Best Model and Optimizer saving...')
                 model.module.save()
-                logger.info('Best Model saved')
+                torch.save(optimizer.state_dict(), os.path.join(args.result_dir, 'best.optimizer'))
+                logger.info('Best Model and Optimizer saved')
 
             if args.save_interval is not None:
-                if args.num_steps is None:
-                    if (epoch) % args.save_interval == 0:
-                        print(f'Model {epoch} saving...')
-                        model.module.save(result_name=f'epoch_{epoch}.pth')
-                        print(f'Model {epoch} saved')
-                else:
-                    if steps % args.save_interval == 0:
-                        print(f'Model {steps} saving...')
-                        model.module.save(result_name=f'step_{steps}.pth')
-                        print(f'Model {steps} saved')
+                if (epoch) % args.save_interval == 0:
+                    print(f'Model and Optimizer {epoch} saving...')
+                    model.module.save(result_name=f'epoch_{epoch}.pth')
+                    torch.save(optimizer.state_dict(), os.path.join(args.result_dir, f'epoch_{epoch}.optimizer'))
+                    print(f'Model and Optimizer {epoch} saved')
 
-    if rank == 0:
+    if world_rank == 0:
         loss_counter.plot_loss(args.result_dir)
+        if use_wandb:
+            wandb.finish()
+
+
+def wandb_init(args):
+    wandb.init(project=f"{args.phase}_" + "_".join(args.datasets), name=args.lr_scheduler if args.lr_scheduler != '' else 'wo_scheduler', config=args)
+    wandb.define_metric("epoch")
+    wandb.define_metric("iter")
+    wandb.define_metric("iter/*", step_metric="iter")
+    wandb.define_metric("train/*", step_metric="epoch")
+    wandb.define_metric("val/*", step_metric="epoch")
 
 
 if __name__ == "__main__":

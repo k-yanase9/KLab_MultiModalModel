@@ -1,13 +1,16 @@
 import os
-from torch.utils.data import DataLoader, distributed, ConcatDataset
+
+from torch.utils.data import ConcatDataset, DataLoader, distributed
+
 from .caption import *
-from .image_classify import *
-from .vqa import *
-from .pretrain import *
-from .relationship import *
 from .categorization import *
 from .detection import *
+from .image_classify import *
 from .localization import *
+from .pretrain import *
+from .relationship import *
+from .vqa import *
+
 
 def get_data(args, src_tokenizer=None, tgt_tokenizer=None):
     train_datasets, val_datasets = [], []
@@ -22,27 +25,46 @@ def get_data(args, src_tokenizer=None, tgt_tokenizer=None):
 
     if len(args.datasets) == 0:
         raise ValueError
-    
+
     return train_dataset, val_dataset
+
 
 def get_distributed_dataloader(args, dataset, num_workers=4, shuffle=True):
     sampler = distributed.DistributedSampler(dataset, drop_last=True, shuffle=shuffle)
-    if args.phase == 'pretrain': 
-        dataloader = DataLoader(dataset, batch_size=args.batch_size, collate_fn=dataset.datasets[0].collate_fn, num_workers=num_workers, pin_memory=True, sampler=sampler, drop_last=True)
+    if args.phase == 'pretrain':
+        dataloader = DataLoader(
+            dataset,
+            batch_size=args.batch_size,
+            collate_fn=dataset.datasets[0].collate_fn,
+            num_workers=num_workers,
+            pin_memory=True,
+            sampler=sampler,
+            drop_last=True,
+        )
     else:
         dataloader = DataLoader(dataset, batch_size=args.batch_size, num_workers=num_workers, pin_memory=True, sampler=sampler, drop_last=True)
     return dataloader
 
+
 def get_dataloader(args, dataset, num_workers=4, shuffle=False):
-    if args.phase == 'pretrain': 
-        dataloader = DataLoader(dataset, batch_size=args.batch_size, collate_fn=dataset.datasets[0].collate_fn, num_workers=num_workers, pin_memory=True, drop_last=True, shuffle=shuffle)
+    if args.phase == 'pretrain':
+        dataloader = DataLoader(
+            dataset,
+            batch_size=args.batch_size,
+            collate_fn=dataset.datasets[0].collate_fn,
+            num_workers=num_workers,
+            pin_memory=True,
+            drop_last=True,
+            shuffle=shuffle,
+        )
     else:
         dataloader = DataLoader(dataset, batch_size=args.batch_size, num_workers=num_workers, pin_memory=True, drop_last=True, shuffle=shuffle)
     return dataloader
 
+
 def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_tokenizer=None):
     data_dir = os.path.join(args.root_dir, dataset_name)
-    if args.phase == 'pretrain': # 事前学習だったら
+    if args.phase == 'pretrain':  # 事前学習だったら
         if src_tokenizer is None or tgt_tokenizer is None:
             raise NotImplementedError
         if 'redcaps' == dataset_name:
