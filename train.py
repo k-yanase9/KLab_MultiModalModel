@@ -4,7 +4,6 @@ import pkgutil
 import numpy as np
 import torch
 import torch.distributed as dist
-import numpy as np
 from torch.nn.parallel import DistributedDataParallel as DDP
 from transformers import AutoTokenizer
 from tqdm import tqdm
