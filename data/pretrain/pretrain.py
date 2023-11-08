@@ -82,11 +82,13 @@ class ClassifyPretrainDatasetLoader(PretrainDatasetLoader):
         image, text = self.images[idx], self.src_texts[idx]
         rate = random.random()
         period = '.'# if rate * 10 % 2 == 0 else ' .'
-        if rate < 0.25:
+        if rate < 0.2:
+            pass
+        elif rate < 0.4:
             text = 'A short image description: ' + text + period
-        elif rate < 0.5:
+        elif rate < 0.6:
             text = 'An image of ' + text + period
-        elif rate < 0.75:
+        elif rate < 0.8:
             text = 'A photo of ' + text + period
         else:
             text = 'An image that shows ' + text + period

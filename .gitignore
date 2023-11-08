@@ -1,5 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+core
+core-python3*
 
 # IPython Notebook
 .ipynb_checkpoints
@@ -23,11 +25,13 @@ wandb/
 *_3090-*.sh
 *_A6000*.sh
 train_test.sh
+test_*.sh
 job.sh
 
 # pipenv
 Pipfile
 Pipfile.lock
+
 .venv/
 
 .conda_env/
@@ -37,4 +41,3 @@ core
 *.out
 +.error
 *.stats
-

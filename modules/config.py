@@ -2,6 +2,7 @@ import argparse
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='プログラムの説明')
+    parser.add_argument('--id', default=None, help='実験ID')
     # Model setting
     parser.add_argument('--float_type', default='bfloat16', choices=['bfloat16', 'float16', 'float32'], help='浮動小数点の精度')
     parser.add_argument('-i', '--image_model_name', type=str, default="microsoft/swinv2-large-patch4-window12to16-192to256-22kto1k-ft", 
@@ -43,6 +44,7 @@ def parse_arguments():
     parser.add_argument('-b', '--batch_size', type=int, default=64, help='1GPUあたりのバッチサイズ')
     parser.add_argument('--accumulation_steps', type=int, default=1, help='勾配の蓄積回数')
     parser.add_argument('--start_epoch', type=int, default=1, help='初期エポック')
+    parser.add_argument('--stop_epoch', type=int, default=0, help="停止エポック")
     parser.add_argument('--num_epochs', type=int, default=None, help='学習エポック数')
     parser.add_argument('--num_steps', type=int, default=None, help='学習ステップ数')
     parser.add_argument('--warmup_rate', type=float, default=0.01, help='ウォームアップの割合')
@@ -52,4 +54,6 @@ def parse_arguments():
     parser.add_argument('--root_dir', type=str, default='/local/', help='データのディレクトリ')
     parser.add_argument('--result_dir', type=str, default='results/', help='結果を保存するディレクトリ')
     args = parser.parse_args()
+    if args.stop_epoch == 0:
+        args.stop_epoch = args.num_epochs
     return args

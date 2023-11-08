@@ -1,1 +1,2 @@
 from .oidv7_localization import OpenImageDataset_Localization
+from .objects365_localization import Objects365_localization
