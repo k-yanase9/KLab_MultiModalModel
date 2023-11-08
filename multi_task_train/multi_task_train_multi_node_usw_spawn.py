@@ -2,17 +2,13 @@ import argparse
 import logging
 import os
 import random
-import sys
 
 import numpy as np
 import torch
 import torch.distributed as dist
-from ex_module import ExModel, MyDataset
+from ex_module import ExModel, MyChainDataset, MyDataset
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data import ConcatDataset, DataLoader, distributed
-
-sys.path.append('../')
-from data.multi_task_dataloader import MultiTaskDataLoader
+import torch.multiprocessing as mp
 
 
 # ユーザー関数定義
@@ -99,7 +95,7 @@ def parse_arguments():
     return args
 
 
-def get_logger(args, log_name='train.log'):
+def get_logger(args, world_rank,log_name='train.log'):
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s: %(message)s')
@@ -111,7 +107,7 @@ def get_logger(args, log_name='train.log'):
     logger.addHandler(sh)
 
     # ログのファイル出力先を設定
-    fh = logging.FileHandler(os.path.join(args.result_dir, log_name), mode='w')
+    fh = logging.FileHandler(os.path.join(args.result_dir,f"rank_{world_rank}", log_name), mode='w')
     fh.setLevel(logging.INFO)
     fh.setFormatter(formatter)
     logger.addHandler(fh)
@@ -133,16 +129,22 @@ def get_optimizer(model, args):
         raise NotImplementedError
 
 
-def train():
-    dist.init_process_group("nccl")
-    rank = dist.get_rank()
+def train(_,world_rank,local_rank,world_size,port_num,host_list_file):
+    with open(host_list_file) as f:
+        host = f.readlines()
+    host[0] = host[0].rstrip("\n")
+    dist_url = "tcp://" + host[0] + ":" + str(port_num)
+    
+    dist.init_process_group(backend="nccl",init_method=dist_url,rank=world_rank,world_size=world_size)
 
     args = parse_arguments()
-    args.gpu_nums = torch.cuda.device_count()  # GPU数
-    device_id = rank % args.gpu_nums
+    args.gpu_nums = world_size #torch.cuda.device_count()  # GPU数
+    #device_id = rank % args.gpu_nums
+    device_id = torch.device("cuda:{}".format(local_rank))
+    
 
-    if not os.path.exists(args.result_dir):
-        os.makedirs(args.result_dir, exist_ok=True)
+    if not os.path.exists(os.path.join(args.result_dir,f"rank_{world_rank}")):
+        os.makedirs(os.path.join(args.result_dir,f"rank_{world_rank}"), exist_ok=True)
 
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -150,12 +152,12 @@ def train():
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
     # if rank == 0:
-    logger = get_logger(args)
+    logger = get_logger(args,world_rank)
     logger.info("make_logger")
 
     # create model
     model = ExModel(args).to(device_id)
-    model = DDP(model, device_ids=[device_id])
+    model = DDP(model, device_ids=[device_id],output_device=device_id)
 
     optimizer = get_optimizer(model, args)
     criterion = torch.nn.MSELoss()
@@ -172,43 +174,49 @@ def train():
 
     # if args.num_epochs is None:
     #     args.num_epochs = int(args.num_steps / len(train_loader)) + 1
-    def get_dataset(path):
-        return MyDataset(path)
 
-    def get_data(dataset_name_dict):
-        dataset_dict = {
-            key: ConcatDataset([get_dataset(f"./dataset_{task_kind}.csv") for task_kind in dataset_name_dict[key]]) for key in dataset_name_dict.keys()
-        }
-        return dataset_dict
+    task_num = 3  # taskの数=datasetの数
+    batch_size_list = [5, 50, 10]  # 1 : 10 : 2
+    batch_size_list = [15, 50]
+    # 60,200
+    # 300,1000
+    # データの数は task1: 100,task2: 1100,task3: 300
+    # step当たりのbatch_sizeはgpu数は4で4xbatch_size[20,200,40]
+    # step=5で[100.1000,200]となりtask1のデータが終わる
 
-    dataset_name_dict = {"taskA": ["1", "4"], "taskB": ["2"], "taskC": ["3", "5"]}
-    batch_size_dict = {"taskA": 10, "taskB": 20, "taskC": 10}
-    max_batch_size = 40
-    # dataset_name_dict = {"taskA": ["1", "3"], "taskB": ["2"]}
-    # batch_size_dict = {"taskA": 15, "taskB": 50}
-    # max_batch_size = 65
-    assert max_batch_size == sum([batch_size_dict[key] for key in batch_size_dict.keys()]), "batch_size_dictの合計がmax_batch_sizeと一致しません"
-    dataset_dict = get_data(dataset_name_dict)
+    # データセット読み込み
+    datasets = [MyDataset(f"dataset_{i+1}.csv") for i in range(task_num)]
+    # dataset_1 = MyDataset("dataset_1.csv")
+    # dataset_2 = MyDataset("dataset_2.csv")
+    # dataset_3 = MyDataset("dataset_3.csv")
 
-    # def multi_task_collate_fn(sample):
-    #     # [[image_list],[in_text_list],[out_text_list]]が入力される
+    datasets = [MyChainDataset([datasets[0], datasets[2]]), datasets[1]]
 
-    #     image_list = sample[0]
-    #     in_text_list = sample[1]
-    #     out_text_list = sample[2]
-    #     return torch.stack(image_list), in_text_list, out_text_list
+    distributed_samplers = [
+        torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=world_size, rank=world_rank, shuffle=False, drop_last=True)
+        for dataset in datasets
+    ]
+    # distributed_sampler_1 = torch.utils.data.distributed.DistributedSampler(dataset_1, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=False)
+    # distributed_sampler_2 = torch.utils.data.distributed.DistributedSampler(dataset_2, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=False)
+    # distributed_sampler_3 = torch.utils.data.distributed.DistributedSampler(dataset_3, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=False)
+    loaders = [
+        torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=distributed_sampler, num_workers=4, pin_memory=True)
+        for dataset, batch_size, distributed_sampler in zip(datasets, batch_size_list, distributed_samplers)
+    ]
+    min_step = min([len(loader) for loader in loaders])
+    max_step = max([len(loader) for loader in loaders])
 
-    multi_dataloader = MultiTaskDataLoader(
-        dataset_dict, batch_size_dict, shuffle=True, loader_drop_last=True, sampler_drop_last=True, is_ddp=True, seed=0
-    )  # multi_task_collate_fn=multi_task_collate_fn)
-    min_step = len(multi_dataloader)
-    max_step = max(multi_dataloader.step_list)
+    # loader_1 = torch.utils.data.DataLoader(dataset, batch_size=10, sampler=distributed_sampler_1)
+    # loader_2 = torch.utils.data.DataLoader(dataset_2, batch_size=100, sampler=distributed_sampler_2)
+    # loader_3 = torch.utils.data.DataLoader(dataset_3, batch_size=20, sampler=distributed_sampler_3)
 
-    prefix_text = f"rank:{rank} || "
+    # steps = 0
+    # min_val_loss = 100
+    # loss_counter = LossCounter()
+    prefix_text = f"rank:{world_rank} || "
     logger.info(f"{prefix_text}start training")
     logger.info(f"min_step: {min_step}, max_step: {max_step}")
     for epoch in range(1, args.num_epochs + 1):
-        multi_dataloader.set_epoch(epoch)
         # # 学習ループ
         # image_mask_ratio = 0.0
         # if args.image_model_train:
@@ -220,13 +228,29 @@ def train():
         # pbar = tqdm(total=int(np.ceil(min_step / args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
 
         # すべてのiteratorを初期化する
-        for index, (image, in_text, out_text) in enumerate(multi_dataloader):
-            step = index + 1
-            prefix_text = f"epoch:{epoch} step:{step} rank:{rank} || "
+        iterators = [iter(loader) for loader in loaders]
+        for step in range(1, min_step + 1):
+            prefix_text = f"epoch:{epoch} step:{step} rank:{world_rank} || "
 
-            image = image.to(device_id)
-            in_text = in_text.to(device_id)
-            out_text = out_text.to(device_id)
+            # iteratorはrankごとに初期化することができる、他のrankのiteratorは初期化されない
+            # rank=0のGPUでstep == 3の時にiteratorを初期化する
+            if world_rank == 0 and epoch == 2 and step == 3:
+                iterator_index = 1
+                logger.info(f"{prefix_text} initialize rank:{world_rank} iterator {iterator_index}")
+                iterators[iterator_index] = iter(loaders[iterator_index])
+
+            # すべてのiteratorからデータを取得し結合する
+            image_list = []
+            in_text_list = []
+            out_text_list = []
+            for iterator in iterators:
+                image, in_text, out_text = next(iterator)
+                image_list.append(image)
+                in_text_list.append(in_text)
+                out_text_list.append(out_text)
+            image = torch.cat(image_list).to(device_id)
+            in_text = torch.cat(in_text_list).to(device_id)
+            out_text = torch.cat(out_text_list).to(device_id)
 
             # データをlogで確認
             sample_image_list = []
@@ -234,7 +258,7 @@ def train():
             sample_out_list = []
             sample_num = 2  # 1バッチの中から何個サンプルするか
             in_batch_index = 0  # バッチ中のindex
-            for batch_size in batch_size_dict.values():
+            for batch_size in batch_size_list:
                 sample_image_list.append(image[in_batch_index : in_batch_index + sample_num].flatten())
                 sample_in_list.append(in_text[in_batch_index : in_batch_index + sample_num].flatten())
                 sample_out_list.append(out_text[in_batch_index : in_batch_index + sample_num].flatten())
@@ -355,4 +379,12 @@ def train():
 
 
 if __name__ == "__main__":
-    train()
+    # master_addr    = os.getenv('MASTER_ADDR', default='localhost')
+    # master_port    = os.getenv('MASTER_PORT', default=27890)
+    # dist_url       = 'tcp://{}:{}'.format(master_addr, master_port)
+    port_num = 50000
+    host_list_file = os.environ["PJM_O_NODEINF"]
+    local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK'])
+    world_rank = int(os.environ["OMPI_COMM_WORLD_RANK"])#dist.get_rank()
+    world_size = int(os.environ["OMPI_COMM_WORLD_SIZE"]) 
+    mp.spawn(train, nprocs=4, args=(world_rank,local_rank, world_size,port_num,host_list_file))
