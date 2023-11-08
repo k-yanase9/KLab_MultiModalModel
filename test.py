@@ -1,6 +1,7 @@
 import os
 import random
 import pkgutil
+import numpy as np
 import torch
 from transformers import AutoTokenizer
 from tqdm import tqdm
@@ -33,7 +34,11 @@ def test():
         
         dataloader = get_dataloader(args, dataset, num_workers=4, shuffle=False)
         random.seed(999)
+        np.random.seed(999)
         torch.manual_seed(999)
+        torch.cuda.manual_seed(999)
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
         srcs = []
         preds = []
         gts = []
@@ -83,7 +88,9 @@ def test():
     wandb.finish()
 
 def wandb_init(args):
+    wandb_id = wandb.util.generate_id()
     wandb.init(
+        id=f'test_{wandb_id}',
         project=f"pretrain_test", 
         name=f"{args.datasets[0]}_{args.data_phase}_b{args.batch_size}",
         config=args,

@@ -91,7 +91,9 @@ def test():
     wandb.finish()
 
 def wandb_init(args):
+    wandb_id = wandb.util.generate_id()
     wandb.init(
+        id=f'test_all_sentence_{wandb_id}',
         project=f"pretrain_test_all_sentence", 
         name=f"{args.datasets[0]}_{args.data_phase}_b{args.batch_size}",
         config=args,

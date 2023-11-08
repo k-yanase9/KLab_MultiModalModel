@@ -119,11 +119,8 @@ def train():
     for epoch in range(args.start_epoch, args.num_epochs + 1):
         # 学習ループ
         train_loader.sampler.set_epoch(epoch)
-        image_mask_ratio = 0.0
-        if args.language_model_train:
-            model.module.language_model.train()
-        if args.image_model_train:
-            model.module.image_model.train()
+        if args.language_model_train: model.module.language_model.train()
+        if args.image_model_train: model.module.image_model.train()
         model.module.transformer.train()
         train_loss = torch.tensor(0.0).to(local_rank)
         if args.phase == 'classify':
@@ -154,7 +151,7 @@ def train():
             src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
             src_attention_masks[src_texts == 0] = 0
 
-            loss, preds = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks, image_mask_ratio=image_mask_ratio)
+            loss, preds = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks)
             loss /= args.accumulation_steps
             scaler.scale(loss).backward()
 
