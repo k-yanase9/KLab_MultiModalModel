@@ -5,6 +5,7 @@ import torch
 from torch import nn
 from transformers import ResNetModel, Swinv2Model, T5Config, T5EncoderModel, T5ForConditionalGeneration, logging
 
+# from models.transformer import Transformer, TransformerConfig
 from models.vqgan import VQModel
 from modules.losses import FocalLoss
 
@@ -39,17 +40,21 @@ class MyModel(nn.Module):
             self.num_patches = 16**2
 
         if args.phase == 'classify':
-            transformer_config = T5Config(
-                vocab_size=vocab_size,
-                d_model=args.transformer_d_model,
-                d_ff=args.transformer_d_ff,
-                d_kv=args.transformer_d_kv,
-                num_heads=args.transformer_num_heads,
-                num_layers=args.transformer_num_layers,
-                max_length=args.max_target_length,
-            )
-            self.transformer = T5EncoderModel(transformer_config).requires_grad_(True)
-            self.transformer.shared.requires_grad_(False)
+            if False: # Original Transformer
+                transformer_config = TransformerConfig(vocab_size=vocab_size, d_model=args.transformer_d_model, num_heads=args.transformer_num_heads, d_ff=args.transformer_d_ff, num_layers=args.transformer_num_layers, max_length=args.max_target_length)
+                self.transformer = Transformer(transformer_config)
+            else:
+                transformer_config = T5Config(
+                    vocab_size=vocab_size,
+                    d_model=args.transformer_d_model,
+                    d_ff=args.transformer_d_ff,
+                    d_kv=args.transformer_d_kv,
+                    num_heads=args.transformer_num_heads,
+                    num_layers=args.transformer_num_layers,
+                    max_length=args.max_target_length,
+                )
+                self.transformer = T5EncoderModel(transformer_config).requires_grad_(True)
+                self.transformer.shared.requires_grad_(False)
         else:
             transformer_config = T5Config(
                 vocab_size=vocab_size,
@@ -94,7 +99,7 @@ class MyModel(nn.Module):
         else:
             raise NotImplementedError
 
-    def forward(self, images, src_texts, src_attention_masks=None, tgt_texts=None, tgt_attention_masks=None, return_loss=True, num_beams=1, num_return_sequences=1, do_sample=False, image_mask_ratio=0.0):
+    def forward(self, images, src_texts, src_attention_masks=None, tgt_texts=None, tgt_attention_masks=None, return_loss=True, num_beams=1, num_return_sequences=1, do_sample=False, early_stopping=False):
         if self.args.float_type == 'bfloat16':
             dtype = torch.bfloat16 
         elif self.args.float_type == 'float16':
@@ -128,7 +133,7 @@ class MyModel(nn.Module):
 
         image_attention_mask = torch.ones(image_embeddings.shape[0], image_embeddings.shape[1], device=self.image_model.device)
         if self.args.phase == 'classify':
-            cls_attention_mask = torch.ones(image_embeddings.shape[0], 1, device=self.transformer.device)
+            cls_attention_mask = torch.ones(image_embeddings.shape[0], 1, device=image_embeddings.device)
             concat_attention_mask = torch.cat((cls_attention_mask, image_attention_mask, src_attention_masks), dim=1)
         else:
             concat_attention_mask = torch.cat((image_attention_mask, src_attention_masks), dim=1)
@@ -143,7 +148,7 @@ class MyModel(nn.Module):
                 preds = torch.argmax(logits, dim=1)
             else:
                 if tgt_attention_masks is None:
-                    tgt_attention_masks = torch.ones(tgt_texts.shape[0], tgt_texts.shape[1], device=self.transformer.device)
+                    tgt_attention_masks = torch.ones(tgt_texts.shape[0], tgt_texts.shape[1], device=tgt_texts.device)
                     tgt_attention_masks[tgt_texts == 0] = 0
                 with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
                     logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=tgt_attention_masks).logits
@@ -160,9 +165,11 @@ class MyModel(nn.Module):
                 with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
                     generated = self.transformer.generate(
                         inputs_embeds=concated_embeddings,
+                        attention_mask=concat_attention_mask,
                         num_beams=num_beams,
                         num_return_sequences=num_return_sequences,
                         do_sample=do_sample,
+                        early_stopping=early_stopping,
                         max_length=self.args.max_target_length,
                     )
             return generated

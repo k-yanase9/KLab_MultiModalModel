@@ -2,17 +2,12 @@ import argparse
 import logging
 import os
 import random
-import sys
 
 import numpy as np
 import torch
 import torch.distributed as dist
-from ex_module import ExModel, MyDataset
+from ex_module import ExModel, MyChainDataset, MyDataset
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data import ConcatDataset, DataLoader, distributed
-
-sys.path.append('../')
-from data.multi_task_dataloader import MultiTaskDataLoader
 
 
 # ユーザー関数定義
@@ -172,43 +167,61 @@ def train():
 
     # if args.num_epochs is None:
     #     args.num_epochs = int(args.num_steps / len(train_loader)) + 1
-    def get_dataset(path):
-        return MyDataset(path)
 
-    def get_data(dataset_name_dict):
-        dataset_dict = {
-            key: ConcatDataset([get_dataset(f"./dataset_{task_kind}.csv") for task_kind in dataset_name_dict[key]]) for key in dataset_name_dict.keys()
-        }
-        return dataset_dict
+    task_num = 3  # taskの数=datasetの数
+    batch_size_list = [5, 50, 10]  # 1 : 10 : 2
+    batch_size_list = [15, 50]
+    # 60,200
+    # 300,1000
+    # データの数は task1: 100,task2: 1100,task3: 300
+    # step当たりのbatch_sizeはgpu数は4で4xbatch_size[20,200,40]
+    # step=5で[100.1000,200]となりtask1のデータが終わる
 
-    dataset_name_dict = {"taskA": ["1", "4"], "taskB": ["2"], "taskC": ["3", "5"]}
-    batch_size_dict = {"taskA": 10, "taskB": 20, "taskC": 10}
-    max_batch_size = 40
-    # dataset_name_dict = {"taskA": ["1", "3"], "taskB": ["2"]}
-    # batch_size_dict = {"taskA": 15, "taskB": 50}
-    # max_batch_size = 65
-    assert max_batch_size == sum([batch_size_dict[key] for key in batch_size_dict.keys()]), "batch_size_dictの合計がmax_batch_sizeと一致しません"
-    dataset_dict = get_data(dataset_name_dict)
+    # データセット読み込み
+    datasets = [MyDataset(f"dataset_{i+1}.csv") for i in range(task_num)]
+    # dataset_1 = MyDataset("dataset_1.csv")
+    # dataset_2 = MyDataset("dataset_2.csv")
+    # dataset_3 = MyDataset("dataset_3.csv")
 
-    # def multi_task_collate_fn(sample):
-    #     # [[image_list],[in_text_list],[out_text_list]]が入力される
+    datasets = [MyChainDataset([datasets[0], datasets[2]]), datasets[1]]
+    seed = 0
 
-    #     image_list = sample[0]
-    #     in_text_list = sample[1]
-    #     out_text_list = sample[2]
-    #     return torch.stack(image_list), in_text_list, out_text_list
+    def seed_worker(worker_id):
+        worker_seed = torch.initial_seed() % 2**32
+        np.random.seed(worker_seed)
+        random.seed(worker_seed)
 
-    multi_dataloader = MultiTaskDataLoader(
-        dataset_dict, batch_size_dict, shuffle=True, loader_drop_last=True, sampler_drop_last=True, is_ddp=True, seed=0
-    )  # multi_task_collate_fn=multi_task_collate_fn)
-    min_step = len(multi_dataloader)
-    max_step = max(multi_dataloader.step_list)
+    g = torch.Generator()
+    g.manual_seed(seed)
+    distributed_samplers = [
+        torch.utils.data.distributed.DistributedSampler(
+            dataset, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=True, drop_last=True, seed=seed
+        )
+        for dataset in datasets
+    ]
+    # distributed_sampler_1 = torch.utils.data.distributed.DistributedSampler(dataset_1, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=False)
+    # distributed_sampler_2 = torch.utils.data.distributed.DistributedSampler(dataset_2, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=False)
+    # distributed_sampler_3 = torch.utils.data.distributed.DistributedSampler(dataset_3, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=False)
+    loaders = [
+        torch.utils.data.DataLoader(
+            dataset, batch_size=batch_size, sampler=distributed_sampler, num_workers=4, pin_memory=True, worker_init_fn=seed_worker, generator=g
+        )
+        for dataset, batch_size, distributed_sampler in zip(datasets, batch_size_list, distributed_samplers)
+    ]
+    min_step = min([len(loader) for loader in loaders])
+    max_step = max([len(loader) for loader in loaders])
 
+    # loader_1 = torch.utils.data.DataLoader(dataset, batch_size=10, sampler=distributed_sampler_1)
+    # loader_2 = torch.utils.data.DataLoader(dataset_2, batch_size=100, sampler=distributed_sampler_2)
+    # loader_3 = torch.utils.data.DataLoader(dataset_3, batch_size=20, sampler=distributed_sampler_3)
+
+    # steps = 0
+    # min_val_loss = 100
+    # loss_counter = LossCounter()
     prefix_text = f"rank:{rank} || "
     logger.info(f"{prefix_text}start training")
     logger.info(f"min_step: {min_step}, max_step: {max_step}")
     for epoch in range(1, args.num_epochs + 1):
-        multi_dataloader.set_epoch(epoch)
         # # 学習ループ
         # image_mask_ratio = 0.0
         # if args.image_model_train:
@@ -220,13 +233,29 @@ def train():
         # pbar = tqdm(total=int(np.ceil(min_step / args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(rank != 0))
 
         # すべてのiteratorを初期化する
-        for index, (image, in_text, out_text) in enumerate(multi_dataloader):
-            step = index + 1
+        iterators = [iter(loader) for loader in loaders]
+        for step in range(1, min_step + 1):
             prefix_text = f"epoch:{epoch} step:{step} rank:{rank} || "
 
-            image = image.to(device_id)
-            in_text = in_text.to(device_id)
-            out_text = out_text.to(device_id)
+            # # iteratorはrankごとに初期化することができる、他のrankのiteratorは初期化されない
+            # # rank=0のGPUでstep == 3の時にiteratorを初期化する
+            # if rank == 0 and epoch == 2 and step == 3:
+            #     iterator_index = 1
+            #     logger.info(f"{prefix_text} initialize rank:{rank} iterator {iterator_index}")
+            #     iterators[iterator_index] = iter(loaders[iterator_index])
+
+            # すべてのiteratorからデータを取得し結合する
+            image_list = []
+            in_text_list = []
+            out_text_list = []
+            for iterator in iterators:
+                image, in_text, out_text = next(iterator)
+                image_list.append(image)
+                in_text_list.append(in_text)
+                out_text_list.append(out_text)
+            image = torch.cat(image_list).to(device_id)
+            in_text = torch.cat(in_text_list).to(device_id)
+            out_text = torch.cat(out_text_list).to(device_id)
 
             # データをlogで確認
             sample_image_list = []
@@ -234,7 +263,7 @@ def train():
             sample_out_list = []
             sample_num = 2  # 1バッチの中から何個サンプルするか
             in_batch_index = 0  # バッチ中のindex
-            for batch_size in batch_size_dict.values():
+            for batch_size in batch_size_list:
                 sample_image_list.append(image[in_batch_index : in_batch_index + sample_num].flatten())
                 sample_in_list.append(in_text[in_batch_index : in_batch_index + sample_num].flatten())
                 sample_out_list.append(out_text[in_batch_index : in_batch_index + sample_num].flatten())
