@@ -9,7 +9,7 @@ class Objects365_categorization(DatasetLoader):
     """    
     def __init__(self,data_dir:str="/data01/objects365/",phase:str="train",is_tgt_id:bool=False):
         super().__init__()        
-        with open(os.path.join(data_dir,f"{phase}_40_cat.tsv")) as f:
+        with open(os.path.join(data_dir,f"{phase}_40_cat_fix.tsv")) as f:
             items = f.read()
 
         items = items.split("\n")
