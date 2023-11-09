@@ -40,7 +40,7 @@ def parse_arguments():
     parser.add_argument('--loss', type=str, default='CrossEntropy', choices=['CrossEntropy', 'FocalLoss'], help='損失関数')
     parser.add_argument('--lr', type=float, default=0.01, help='学習率')
     parser.add_argument('--optimizer', type=str, default='AdamW', choices=['Adam', 'AdamW'], help='Optimizer')
-    parser.add_argument('--lr_scheduler', type=str, default='', choices=['', 'LambdaLR', 'CosineAnnealingLR', 'ExponentialLR', 'StepLR', 'MultiStepLR', 'LinearWarmup', 'CosineWarmup'], help='学習率のスケジューラ')
+    parser.add_argument('--lr_scheduler', type=str, default='', choices=['', 'Lambda', 'Cosine', 'Exponential', 'Step', 'MultiStep', 'LinearWarmup', 'CosineWarmup'], help='学習率のスケジューラ')
     parser.add_argument('-b', '--batch_size', type=int, default=64, help='1GPUあたりのバッチサイズ')
     parser.add_argument('--accumulation_steps', type=int, default=1, help='勾配の蓄積回数')
     parser.add_argument('--start_epoch', type=int, default=1, help='初期エポック')
