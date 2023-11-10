@@ -13,7 +13,7 @@ class OpenImageDataset_Categorization(DatasetLoader):
         if phase=="val":
             phase = "validation"
 
-        with open(os.path.join(data_dir,"tsv",f"{phase}_40_cat.tsv")) as f:
+        with open(os.path.join(data_dir,"tsv_new",f"{phase}_40_cat.tsv")) as f:
             items = f.read().split("\n")
         items = [item.split("\t") for item in items]
         items = items[1:]
