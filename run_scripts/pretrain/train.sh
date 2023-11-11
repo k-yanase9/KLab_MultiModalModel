@@ -28,6 +28,7 @@ torchrun --nnodes=1 --nproc_per_node=8 train.py \
 
 # Cosine
 torchrun --nnodes=1 --nproc_per_node=8 train.py \
+        --id t2vu6fas \
         --transformer_num_layers $enc \
         --transformer_num_decoder_layers $dec \
         --phase pretrain \
