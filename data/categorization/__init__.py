@@ -1,2 +1,3 @@
 from .oidv7_categorization import OpenImageDataset_Categorization
 from .coco import COCO_Categorization
+from .objects365_categorization import Objects365_categorization
