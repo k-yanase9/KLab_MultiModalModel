@@ -3,21 +3,24 @@ dataset="openimage"
 
 epoch=50
 
+enc=2
 dec=0
-lr=1e-5
-for enc in 2 4; do
+lr=1e-4
+
+for model in "large" "xl" "xxl"; do
 torchrun --nnodes=1 --nproc_per_node=4 train.py \
-        --language_model_name google/flan-t5-xxl \
+        --language_model_name google/flan-t5-$model \
         --transformer_num_layers $enc \
         --transformer_num_decoder_layers $dec \
         --phase classify \
         --loss CrossEntropy \
         --lr $lr \
-        --lr_scheduler CosineAnnealingLR \
+        --lr_scheduler LinearWarmup \
         -b $batch_size \
-        --start_epoch 1 \
         --num_epochs $epoch \
-        --datasets $dataset \
+        --warmup_rate 0.001 \
         --root_dir /local/ \
-        --result_dir results/localization/$dataset/enc$enc\_dec$dec\_xxl/cos$epoch\_$lr/
+        --datasets $dataset \
+        --save_interval 10 \
+        --result_dir results/categorization/$dataset/enc$enc\_dec$dec\_$model/Linear$epoch\_$lr/
 done
