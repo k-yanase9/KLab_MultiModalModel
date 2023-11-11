@@ -17,9 +17,9 @@ class Visual7W_GVQA(DatasetLoader):
             item = item.rstrip()
             image_name, question, answer_name, answer_loc, dummy1_name, dummy1_loc, dummy2_name, dummy2_loc, dummy3_name, dummy3_loc = item.split('\t')
             self.images.append(os.path.join(data_dir, 'images', image_name))
-            self.locs.append([answer_loc, dummy1_loc, dummy2_loc, dummy3_loc])
+            self.locs.append([answer_name+answer_loc,dummy1_name+dummy1_loc, dummy2_name+dummy2_loc, dummy3_name+dummy3_loc])
             self.src_texts.append(question)
-            self.tgt_texts.append(f'{answer_name} {answer_loc}')
+            self.tgt_texts.append(answer_name+answer_loc)
 
     def __getitem__(self, idx):
         image, question, tgt_text, locs = self.images[idx], self.src_texts[idx], self.tgt_texts[idx], self.locs[idx]
