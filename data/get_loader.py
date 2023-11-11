@@ -1,13 +1,14 @@
 import os
 from torch.utils.data import DataLoader, distributed, ConcatDataset
-from .caption import *
-from .image_classify import *
-from .vqa import *
 from .pretrain import *
-from .relationship import *
 from .categorization import *
+from .caption import *
 from .detection import *
+from .image_classify import *
 from .localization import *
+from .relationship import *
+from .vqa import *
+from .gvqa import *
 
 def get_data(args, src_tokenizer=None, tgt_tokenizer=None):
     train_datasets, val_datasets = [], []
@@ -82,17 +83,19 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
         elif 'cc12m' == dataset_name:
             dataset = CC12M_Caption(data_dir, phase)
         elif 'vcr' == dataset_name:
-            dataset = Vcrdataset(data_dir, phase=phase)
+            dataset = Vcrdataset(data_dir, phase)
         elif 'vqa2' == dataset_name:
-            dataset = Vqa2dataset(data_dir, phase=phase)
+            dataset = Vqa2dataset(data_dir, phase)
         elif 'imsitu' == dataset_name:
-            dataset = imSituDataset(data_dir, phase=phase)
+            dataset = imSituDataset(data_dir, phase)
+        elif 'visual7w' == dataset_name:
+            dataset = Visual7W_GVQA(data_dir, phase)
         elif 'imagenet' == dataset_name:
-            dataset = ImageNet_Classify(data_dir, phase=phase)
+            dataset = ImageNet_Classify(data_dir, phase)
         elif 'imagenet21k' == dataset_name:
-            dataset = ImageNet21k_Classify(data_dir, phase=phase)
+            dataset = ImageNet21k_Classify(data_dir, phase)
         elif 'sun397' == dataset_name:
-            dataset = SUN397_Classify(data_dir, phase=phase)
+            dataset = SUN397_Classify(data_dir, phase)
         else:
             raise NotImplementedError
     return dataset
