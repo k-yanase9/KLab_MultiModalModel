@@ -32,3 +32,13 @@ job.sh
 # pipenv
 Pipfile
 Pipfile.lock
+
+.venv/
+
+.conda_env/
+
+core
+
+*.out
++.error
+*.stats
