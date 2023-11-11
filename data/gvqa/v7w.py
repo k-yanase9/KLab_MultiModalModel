@@ -24,7 +24,7 @@ class Visual7W_GVQA(DatasetLoader):
     def __getitem__(self, idx):
         image, question, tgt_text, locs = self.images[idx], self.src_texts[idx], self.tgt_texts[idx], self.locs[idx]
         image = Image.open(image).convert('RGB')
-        locs = random.shuffle(locs)
+        random.shuffle(locs)
         src_text = f'{question} choices: {",".join(locs)}'
         src_image = self.src_transforms(image)
         tgt_image = torch.zeros(1)
