@@ -108,6 +108,8 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             dataset = ImageNet21k_Classify(data_dir, phase)
         elif 'sun397' == dataset_name:
             dataset = SUN397_Classify(data_dir, phase)
+        elif 'places365' == dataset_name:
+            dataset = Places365_Classify(data_dir, phase)
         else:
             raise NotImplementedError
     return dataset
