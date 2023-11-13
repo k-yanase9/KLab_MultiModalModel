@@ -54,6 +54,12 @@ def draw_hist(score, title='', save_path='result.png'):
 for phase, dataset in datasets.items():
     logger.info(f"\nPhase: {phase} ({len(dataset)} samples)")
     
+    if 'gvqa' in target_dataset_name:
+        tmp = []
+        for que, loc in zip(dataset.src_texts, dataset.locs):
+            src = f'{que} choices: {",".join(loc)}'
+            tmp.append(src)
+        dataset.src_texts = tmp
     src_dataloader = np.array_split(dataset.src_texts, len(dataset.src_texts)//args.batch_size)
     tgt_dataloader = np.array_split(dataset.tgt_texts, len(dataset.tgt_texts)//args.batch_size)
     logger.info(f'example(src): {src_dataloader[0][0]}')

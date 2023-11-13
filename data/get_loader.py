@@ -135,10 +135,10 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             dataset = Tdiucdataset(data_dir, phase)
         elif 'visual7w' in dataset_name:
             data_dir = os.path.join(args.root_dir, 'visual7w')
-            if 'vqa' in dataset_name.lower():
-                dataset = Visual7W_VQA(data_dir, phase)
-            elif 'gvqa' in dataset_name.lower():
+            if 'gvqa' in dataset_name.lower():
                 dataset = Visual7W_GVQA(data_dir, phase)
+            elif 'vqa' in dataset_name.lower():
+                dataset = Visual7W_VQA(data_dir, phase)
             else:
                 raise NotImplementedError
         # classify
