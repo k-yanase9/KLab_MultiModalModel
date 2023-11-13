@@ -3,6 +3,7 @@ from PIL import Image, ImageFile
 from torchvision import transforms
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+CLASSIFY_SRC_TEXT = "What is in this image?"
 CAPTION_SRC_TEXT = "What does the image describe?"
 
 class DatasetLoader(torch.utils.data.Dataset):
