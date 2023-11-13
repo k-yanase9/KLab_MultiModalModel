@@ -20,7 +20,7 @@ class Objects365_Categorization(DatasetLoader):
         else:
             self.tgt_texts = [item[3] for item in items]
 
-        self.src_texts = [f"What is the category of the region {item[1]} ?" for item in items]
+        self.src_texts = [f"What is the category of the region {item[1]}?" for item in items]
         self.images = [os.path.join(data_dir,item[0]) for item in items]
 
         #dropimageidlistに含まれる画像と対応するテキストを除外する

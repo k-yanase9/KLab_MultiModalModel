@@ -20,7 +20,7 @@ class OpenImageDataset_Relation(DatasetLoader):
         items = [item.split("\t") for item in items]
         items = items[1:]
         self.tgt_texts = [f"{item[1]} {item[5]} {item[3]}" for item in items]
-        self.src_texts = [f"What is the relationship between {item[1]}{item[2]} and {item[3]}{item[4]} ?" for item in items]
+        self.src_texts = [f"What is the relationship between {item[1]}{item[2]} and {item[3]}{item[4]}?" for item in items]
         self.images = [os.path.join(data_dir,f"{phase}_256_png",f"{item[0]}.png") for item in items]
 
         #dropimageidlistに含まれる画像と対応するテキストを除外する
