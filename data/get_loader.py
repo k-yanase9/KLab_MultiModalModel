@@ -86,6 +86,7 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
         else:
             raise NotImplementedError
     else:
+        # caption
         if 'mscoco' == dataset_name:
             dataset = COCO_Caption(data_dir, phase)
         elif 'redcaps' == dataset_name:
@@ -94,14 +95,21 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             dataset = CC3M_Caption(data_dir, phase)
         elif 'cc12m' == dataset_name:
             dataset = CC12M_Caption(data_dir, phase)
+        # categorization
+        elif 'openimage' == dataset_name:
+            dataset = OpenImageDataset_Categorization(data_dir, phase)
+        # vqa
         elif 'vcr' == dataset_name:
             dataset = Vcrdataset(data_dir, phase)
         elif 'vqa2' == dataset_name:
             dataset = Vqa2dataset(data_dir, phase)
-        elif 'imsitu' == dataset_name:
+        elif 'imSitu' == dataset_name:
             dataset = imSituDataset(data_dir, phase)
+        elif 'tdiuc' == dataset_name:
+            dataset = Tdiucdataset(data_dir, phase)
         elif 'visual7w' == dataset_name:
-            dataset = Visual7W_GVQA(data_dir, phase)
+            dataset = Visual7W_VQA(data_dir, phase)
+        # classify
         elif 'imagenet' == dataset_name:
             dataset = ImageNet_Classify(data_dir, phase)
         elif 'imagenet21k' == dataset_name:
