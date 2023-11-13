@@ -1,2 +1,3 @@
 from .oidv7_localization import OpenImage_Localization
 from .objects365_localization import Objects365_Localization
+from .vg_localization import VisualGenome_Localization
