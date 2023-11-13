@@ -7,7 +7,7 @@ from ..dataset_loader import DatasetLoader
 class Visual7W_GVQA(DatasetLoader):
     """Visual7Wのデータセット
     """    
-    def __init__(self,data_dir:str="/data01/Visual7W",phase:str="train"):
+    def __init__(self,data_dir:str="/data01/visual7w",phase:str="train"):
         super().__init__()
         self.locs = []
 
