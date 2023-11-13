@@ -1,4 +1,4 @@
-from ..dataset_loader import DatasetLoader
+from ..dataset_loader import DatasetLoader, CLASSIFY_SRC_TEXT
 import os
 
 class Places365_Classify(DatasetLoader):
@@ -13,7 +13,7 @@ class Places365_Classify(DatasetLoader):
         for line in lines[1:]:
             img_name, class_name = line.removesuffix('\n').split('\t')
             img_path = os.path.join(data_dir, img_name)
-            self.src_texts.append("What does the image describe ?")
+            self.src_texts.append(CLASSIFY_SRC_TEXT)
             self.images.append(img_path)
             self.tgt_texts.append(class_name.strip())
 
@@ -23,6 +23,6 @@ class Places365_Classify(DatasetLoader):
         for line in lines[1:]:
             img_name, class_name = line.removesuffix('\n').split('\t')
             img_path = os.path.join(data_dir, img_name)
-            self.src_texts.append("What does the image describe ?")
+            self.src_texts.append(CLASSIFY_SRC_TEXT)
             self.images.append(img_path)
             self.tgt_texts.append(class_name.strip())

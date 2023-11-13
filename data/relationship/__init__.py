@@ -1,1 +1,1 @@
-from .oidv7_relation import OpenImageDataset_Relation
+from .oidv7_relation import OpenImage_Relation

@@ -1,5 +1,5 @@
 from pathlib import Path
-from ..dataset_loader import DatasetLoader
+from ..dataset_loader import DatasetLoader, CLASSIFY_SRC_TEXT
 
 class SUN397_Classify(DatasetLoader):
     def __init__(self, data_dir='/data01/sun397', phase='train', is_tgt_id=False):
@@ -17,7 +17,7 @@ class SUN397_Classify(DatasetLoader):
             label = '/' + '/'.join(img_path.split('/')[:-1])
             img_path = self.data_dir / img_path
             self.images.append(img_path)
-            self.src_texts.append('What does the image describe ?')
+            self.src_texts.append(CLASSIFY_SRC_TEXT)
             if is_tgt_id:
                 self.tgt_texts.append(self.classes.index(label))
             else:

@@ -1,5 +1,5 @@
 import os
-from ..dataset_loader import DatasetLoader
+from ..dataset_loader import DatasetLoader, CLASSIFY_SRC_TEXT
 
 class ImageNet21k_Classify(DatasetLoader):
     def __init__(self, data_dir='/data01/imagenet21k', phase='train'):
@@ -14,7 +14,7 @@ class ImageNet21k_Classify(DatasetLoader):
         data = [d.split('\t') for d in data]
 
         self.images = [os.path.join(data_dir, d[0]) for d in data]
-        self.src_texts = ["What does the image describe ?"]*len(data)
+        self.src_texts = [CLASSIFY_SRC_TEXT]*len(data)
         self.tgt_texts = [d[1] for d in data]
 
 

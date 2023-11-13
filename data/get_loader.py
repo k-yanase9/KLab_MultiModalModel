@@ -86,6 +86,7 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
         else:
             raise NotImplementedError
     else:
+        # caption
         if 'mscoco' == dataset_name:
             dataset = COCO_Caption(data_dir, phase)
         elif 'redcaps' == dataset_name:
@@ -94,20 +95,61 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             dataset = CC3M_Caption(data_dir, phase)
         elif 'cc12m' == dataset_name:
             dataset = CC12M_Caption(data_dir, phase)
+        elif 'grit20m' in dataset_name:
+            data_dir = os.path.join(args.root_dir, 'grit20m')
+            if 'rcap' in dataset_name.lower():
+                dataset = Grit20M_RegionCaption(data_dir, phase)
+            elif 'refexp' in dataset_name.lower():
+                dataset = Grit20M_RefExp(data_dir, phase)
+        # categorization&detection
+        elif 'openimage' in dataset_name:
+            data_dir = os.path.join(args.root_dir, 'openimage')
+            if 'cat' in dataset_name.lower():
+                dataset = OpenImage_Categorization(data_dir, phase)
+            elif 'det' in dataset_name.lower():
+                dataset = OpenImage_Detection(data_dir, phase)
+            elif 'loc' in dataset_name.lower():
+                dataset = OpenImage_Localization(data_dir, phase)
+            elif 'rel' in dataset_name.lower():
+                dataset = OpenImage_Relation(data_dir, phase)
+            else:
+                raise NotImplementedError
+        elif 'objects365' in dataset_name:
+            data_dir = os.path.join(args.root_dir, 'objects365')
+            if 'cat' in dataset_name.lower():
+                dataset = Objects365_Categorization(data_dir, phase)
+            elif 'det' in dataset_name.lower():
+                dataset = Objects365_Detection(data_dir, phase)
+            elif 'loc' in dataset_name.lower():
+                dataset = Objects365_Localization(data_dir, phase)
+            else:
+                raise NotImplementedError
+        # vqa & gvqa
         elif 'vcr' == dataset_name:
             dataset = Vcrdataset(data_dir, phase)
         elif 'vqa2' == dataset_name:
             dataset = Vqa2dataset(data_dir, phase)
-        elif 'imsitu' == dataset_name:
+        elif 'imSitu' == dataset_name:
             dataset = imSituDataset(data_dir, phase)
-        elif 'visual7w' == dataset_name:
-            dataset = Visual7W_GVQA(data_dir, phase)
+        elif 'tdiuc' == dataset_name:
+            dataset = Tdiucdataset(data_dir, phase)
+        elif 'visual7w' in dataset_name:
+            data_dir = os.path.join(args.root_dir, 'visual7w')
+            if 'gvqa' in dataset_name.lower():
+                dataset = Visual7W_GVQA(data_dir, phase)
+            elif 'vqa' in dataset_name.lower():
+                dataset = Visual7W_VQA(data_dir, phase)
+            else:
+                raise NotImplementedError
+        # classify
         elif 'imagenet' == dataset_name:
             dataset = ImageNet_Classify(data_dir, phase)
         elif 'imagenet21k' == dataset_name:
             dataset = ImageNet21k_Classify(data_dir, phase)
         elif 'sun397' == dataset_name:
             dataset = SUN397_Classify(data_dir, phase)
+        elif 'places365' == dataset_name:
+            dataset = Places365_Classify(data_dir, phase)
         else:
             raise NotImplementedError
     return dataset

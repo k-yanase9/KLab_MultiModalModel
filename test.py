@@ -1,8 +1,8 @@
 import os
 import random
 import pkgutil
-import numpy as np
 import torch
+import numpy as np
 from transformers import AutoTokenizer
 from tqdm import tqdm
 
@@ -17,7 +17,7 @@ if pkgutil.find_loader("wandb") is not None:
 
 def test():
     args = parse_arguments()
-    args.data_phase = 'train'
+    args.data_phase = 'val'
     if use_wandb: wandb_init(args)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = MyModel(args).to(device)
@@ -28,72 +28,81 @@ def test():
     dataset = get_dataset(args, dataset_name=args.datasets[0], phase=args.data_phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
     for checkpoints_name in checkpoints_names:
         epoch = checkpoints_name.split('_')[1].split('.')[0]
+        if int(epoch) < args.start_epoch:
+            continue
         print(f'loading {checkpoints_name}...', end='')
         model.load(result_name=checkpoints_name)
         print(f'done')
         
         dataloader = get_dataloader(args, dataset, num_workers=4, shuffle=False)
         random.seed(999)
-        np.random.seed(999)
         torch.manual_seed(999)
-        torch.cuda.manual_seed(999)
-        torch.backends.cudnn.benchmark = False
-        torch.backends.cudnn.deterministic = True
-        srcs = []
         preds = []
         gts = []
-        str_preds = []
-        str_gts = []
         for src_images, tgt_images, src_texts, tgt_texts in tqdm(dataloader, desc=f'{epoch}/{len(checkpoints_names)}'):
             with torch.no_grad():
                 src_images = src_images.to(device)
-                src_texts = src_texts.to(device)
-                src_attention_masks = torch.ones_like(src_texts, device=device)
-                src_attention_masks[src_texts==0] = 0
+                src_text_ids = src_texts.to(device)
+                src_attention_masks = torch.ones_like(src_text_ids, device=device)
+                src_attention_masks[src_text_ids==0] = 0
 
-                outputs = model(src_images, src_texts, src_attention_masks, return_loss=False, num_beams=4)
+                outputs = model(src_images, src_text_ids, src_attention_masks, return_loss=False, num_beams=4)
                 outputs = outputs[:,1:]
-                for src, gt, pred in zip(src_texts.cpu().numpy(), tgt_texts.numpy(), outputs.cpu().numpy()):
-                    # 5トークン目以降の<pad>と<eos>を除去
-                    if args.data_phase != 'train': srcs.append(src[src!=0])
-                    if 0 in gt[:4]:
-                        gts.append(gt[:4])
-                    else:
-                        gts.append(gt[gt!=0])
-                    pred2 = []
-                    for p in pred:
-                        pred2.append(p)
-                        if 1 in pred2:
-                            pred2 += [0] * max(4-len(pred2),0)
-                            break
-                    if args.data_phase != 'train': preds.append(pred2)
-                    # 文字列に変換
-                    str_pred = ' '.join(map(str, pred2))
-                    str_gt = ' '.join(map(str, gts[-1]))
-                    str_preds.append(str_pred)
-                    str_gts.append(str_gt)
-        result, results = evaluate_score(str_gts, str_preds)
+                for src, gt, pred in zip(src_texts.numpy(), tgt_texts.numpy(), outputs.cpu().numpy()):
+                    completed_sentence = []
+                    src = src[src!=0]
+                    for s in src:
+                        if s in src_tokenizer.additional_special_tokens_ids:
+                            for g in gt[gt!=0]:
+                                gt = np.delete(gt, 0)
+                                if g == s:
+                                    continue
+                                if g == s -1 or g == 1:
+                                    break
+                                completed_sentence.append(g)
+                        else:
+                            completed_sentence.append(s)
+                    gts.append(completed_sentence)
+
+                    completed_sentence = []
+                    for s in src:
+                        if s in src_tokenizer.additional_special_tokens_ids:
+                            for p in pred[pred!=0]:
+                                pred = np.delete(pred, 0)
+                                if p == s:
+                                    continue
+                                if p == s -1 or p == 1:
+                                    break
+                                completed_sentence.append(p)
+                        else:
+                            completed_sentence.append(s)
+                    preds.append(completed_sentence)
+
+        result, results = evaluate_score(gts, preds)
         if args.data_phase != 'train':
-            srcs = src_tokenizer.batch_decode(srcs)
             preds = tgt_tokenizer.batch_decode(preds)
             gts = tgt_tokenizer.batch_decode(gts)
         result['epoch'] = int(epoch)
         if use_wandb:
             if args.data_phase != 'train':
-                my_table = wandb.Table(columns=["id", "Input", "Ground Truth", "Prediction", "Ground Truth (num)", "Prediction (num)"]+list(results.keys()))
-                for id, contents in enumerate(zip(srcs, gts, preds, str_gts, str_preds, *results.values())):
+                my_table = wandb.Table(columns=["id", "Ground Truth", "Prediction"]+list(results.keys()))
+                for id, contents in enumerate(zip(gts, preds, *results.values())):
                     my_table.add_data(id+1, *contents)
                 wandb.log({"results_ep"+epoch: my_table})
             wandb.log(result)
     wandb.finish()
 
 def wandb_init(args):
-    wandb_id = wandb.util.generate_id()
+    if args.start_epoch > 1:
+        wandb_id = args.id
+    else:
+        wandb_id = wandb.util.generate_id()
     wandb.init(
-        id=f'test_{wandb_id}',
-        project=f"pretrain_test", 
+        id=f'test_all_sentence_{wandb_id}',
+        project=f"pretrain_test_all_sentence", 
         name=f"{args.datasets[0]}_{args.data_phase}_b{args.batch_size}",
         config=args,
+        resume=True if args.start_epoch > 1 else False
     )
     wandb.define_metric("epoch")
     wandb.define_metric("Bleu_*", step_metric="epoch")

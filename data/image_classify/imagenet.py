@@ -1,5 +1,5 @@
 import os
-from ..dataset_loader import DatasetLoader
+from ..dataset_loader import DatasetLoader, CLASSIFY_SRC_TEXT
 
 class ImageNet_Classify(DatasetLoader):
     def __init__(self, data_dir='/data01/imagenet', phase='train', is_tgt_id=False):
@@ -23,7 +23,7 @@ class ImageNet_Classify(DatasetLoader):
             for img in os.listdir(class_folder_path):
                 img_path = os.path.join(class_folder_path, img)
                 self.images.append(img_path)
-                self.src_texts.append('What does the image describe ?')
+                self.src_texts.append(CLASSIFY_SRC_TEXT)
                 if is_tgt_id:
                     self.tgt_texts.append(class_folder_to_id[class_folder])
                 else:
