@@ -6,7 +6,7 @@ from torchvision.transforms import ToTensor
 from ..dataset_loader import DatasetLoader
 
 
-class Grit20m_Caption(DatasetLoader):
+class Grit20M_RegionCaption(DatasetLoader):
     def __init__(self,data_dir="/data/dataset/grit20m",phase="train"):
         super().__init__()
         with open(os.path.join(data_dir,f"{phase}_region_caption.tsv")) as f:
