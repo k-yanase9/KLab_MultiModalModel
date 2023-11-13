@@ -22,7 +22,7 @@ class VisualGenome_RefExp(DatasetLoader):
                 continue
             image_id, caption, loc = item
             self.images.append(os.path.join(data_dir,"images_256",f"{image_id}.png"))
-            self.src_texts.append(f'Which regions does the text \“{caption}\" describe?')
+            self.src_texts.append(f'Which regions does the text \"{caption}\" describe?')
             self.tgt_texts.append(loc)
 
     
