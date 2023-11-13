@@ -95,13 +95,25 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             dataset = CC3M_Caption(data_dir, phase)
         elif 'cc12m' == dataset_name:
             dataset = CC12M_Caption(data_dir, phase)
-        # categorization
+        # categorization&detection
         elif 'openimage' in dataset_name:
             data_dir = os.path.join(args.root_dir, 'openimage')
             if 'cat' in dataset_name.lower():
                 dataset = OpenImage_Categorization(data_dir, phase)
             elif 'det' in dataset_name.lower():
                 dataset = OpenImage_Detection(data_dir, phase)
+            elif 'loc' in dataset_name.lower():
+                dataset = OpenImage_Localization(data_dir, phase)
+            else:
+                raise NotImplementedError
+        elif 'objects365' in dataset_name:
+            data_dir = os.path.join(args.root_dir, 'objects365')
+            if 'cat' in dataset_name.lower():
+                dataset = Objects365_Categorization(data_dir, phase)
+            elif 'det' in dataset_name.lower():
+                dataset = Objects365_Detection(data_dir, phase)
+            elif 'loc' in dataset_name.lower():
+                dataset = Objects365_Localization(data_dir, phase)
             else:
                 raise NotImplementedError
         # vqa
