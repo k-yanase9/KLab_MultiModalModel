@@ -95,6 +95,12 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             dataset = CC3M_Caption(data_dir, phase)
         elif 'cc12m' == dataset_name:
             dataset = CC12M_Caption(data_dir, phase)
+        elif 'grit20m' in dataset_name:
+            data_dir = os.path.join(args.root_dir, 'grit20m')
+            if 'rcap' in dataset_name.lower():
+                dataset = Grit20M_RegionCaption(data_dir, phase)
+            elif 'refexp' in dataset_name.lower():
+                dataset = Grit20M_RefExp(data_dir, phase)
         # categorization&detection
         elif 'openimage' in dataset_name:
             data_dir = os.path.join(args.root_dir, 'openimage')
