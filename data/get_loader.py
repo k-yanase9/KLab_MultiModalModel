@@ -124,6 +124,12 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
                 dataset = Objects365_Localization(data_dir, phase)
             else:
                 raise NotImplementedError
+        elif 'vg' in dataset_name:
+            data_dir = os.path.join(args.root_dir, 'visual_genome')
+            if 'cat' in dataset_name.lower():
+                dataset = VisualGenome_Categorization(data_dir, phase)
+            else:
+                raise NotImplementedError
         # vqa & gvqa
         elif 'vcr' == dataset_name:
             dataset = Vcrdataset(data_dir, phase)
