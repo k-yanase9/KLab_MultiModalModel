@@ -4,7 +4,7 @@ from ..dataset_loader import DatasetLoader
 #存在しない画像を除外するためのリスト
 dropimageidlist =['patch16_256/objects365_v2_00908726.png','patch6_256/objects365_v1_00320532.png','patch6_256/objects365_v1_00320534.png']
 
-class Objects365_detection(DatasetLoader):
+class Objects365_Detection(DatasetLoader):
     """openimageのdetectionデータセット
     """    
     def __init__(self,data_dir:str="/data01/objects365/",phase:str="train"):
