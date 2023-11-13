@@ -45,12 +45,12 @@ for phase, dataset in datasets.items():
     
     src_dataloader = np.array_split(dataset.src_texts, len(dataset.src_texts)//args.batch_size)
     tgt_dataloader = np.array_split(dataset.tgt_texts, len(dataset.tgt_texts)//args.batch_size)
-    print('example(src):')
-    print(src_dataloader[0][0])
-    print(src_tokenizer(src_dataloader[0][0], padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'])
-    print('example(tgt):')
-    print(tgt_dataloader[0][0])
-    print(tgt_tokenizer(tgt_dataloader[0][0], padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'])
+    print(f'example(src): {src_dataloader[0][0]}')
+    encoded = src_tokenizer(src_dataloader[0][0], padding="longest", max_length=args.max_source_length, return_tensors="pt")
+    print(src_tokenizer.batch_decode(encoded['input_ids'][0]))
+    print(f'example(tgt): {tgt_dataloader[0][0]}')
+    encoded = tgt_tokenizer(tgt_dataloader[0][0], padding="longest", max_length=args.max_target_length, return_tensors="pt")
+    print(tgt_tokenizer.batch_decode(encoded['input_ids'][0]))
 
     loop = tqdm(zip(src_dataloader, tgt_dataloader), total=len(src_dataloader), desc=f"{target_dataset_name} {phase}")
     src_counts = []
@@ -65,8 +65,16 @@ for phase, dataset in datasets.items():
         src_counts.extend(src_count.tolist())
         tgt_count = torch.sum(tgt_texts!=0, dim=1)
         tgt_counts.extend(tgt_count.tolist())
-    print('max src: ', max(src_counts))
-    print('max tgt: ', max(tgt_counts))
+    index = np.argmax(src_counts)
+    max_text = dataset.src_texts[index]
+    print(f'max(src): {max_text}')
+    encoded = src_tokenizer(max_text, padding="longest", max_length=args.max_source_length, return_tensors="pt")
+    print(src_tokenizer.batch_decode(encoded['input_ids'][0]))
+    index = np.argmax(tgt_counts)
+    max_text = dataset.tgt_texts[index]
+    print(f'max(tgt): {max_text}')
+    encoded = tgt_tokenizer(max_text, padding="longest", max_length=args.max_target_length, return_tensors="pt")
+    print(tgt_tokenizer.batch_decode(encoded['input_ids'][0]))
+    print(max(src_counts), max(tgt_counts))
     draw_hist(src_counts, f'{target_dataset_name} {phase} src', f'results/token/{target_dataset_name}/{phase}_src.png')
     draw_hist(tgt_counts, f'{target_dataset_name} {phase} tgt', f'results/token/{target_dataset_name}/{phase}_tgt.png')
-    print('histogram saved')
