@@ -5,7 +5,7 @@ import pandas as pd
 import torch
 from PIL import Image
 from torchvision.transforms import ToTensor
-from ..dataset_loader import DatasetLoader
+from ..dataset_loader import DatasetLoader, DETECTION_SRC_TEXT
 
 #存在しない画像を除外するためのリスト
 dropimageidlist =["7f1934f5884fad79","429019e83c1c2c94","4f818c006da84c9e","5b86e93f8654118a","673d74b7d39741c3","6dcd3ce37a17f2be","805baf9650a12710"
@@ -27,7 +27,7 @@ class OpenImage_Detection(DatasetLoader):
         items = items[1:]
         items = [item for item in items if len(item)==2]
         self.tgt_texts = [item[1] for item in items]
-        self.src_texts = ["What objects are in the image?"]*len(items)
+        self.src_texts = [DETECTION_SRC_TEXT]*len(items)
         self.images = [os.path.join(data_dir,f"{phase}_256_png",f"{item[0]}.png") for item in items]
 
         #dropimageidlistに含まれる画像と対応するテキストを除外する

@@ -5,6 +5,7 @@ from torchvision import transforms
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 CLASSIFY_SRC_TEXT = "What is in this image?"
 CAPTION_SRC_TEXT = "What does the image describe?"
+DETECTION_SRC_TEXT = "What objects are in the image?"
 
 class DatasetLoader(torch.utils.data.Dataset):
     def __init__(self, resize=256):
