@@ -136,6 +136,8 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
                 dataset = VisualGenome_Relation(data_dir, phase)
             elif 'vqa' in dataset_name.lower():
                 dataset = VisualGenome_VQA(data_dir, phase)
+            elif 'refexp' in dataset_name.lower():
+                dataset = VisualGenome_RefExp(data_dir, phase)
             else:
                 raise NotImplementedError
         # vqa & gvqa
