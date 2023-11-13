@@ -7,7 +7,7 @@ from PIL import Image
 from torchvision.transforms import ToTensor
 from ..dataset_loader import DatasetLoader
 
-class Grit20m_RefExp(DatasetLoader):
+class Grit20M_RefExp(DatasetLoader):
     """Grit20mのReferring Expressionデータセット
     """    
     def __init__(self,data_dir:str="/data/dataset/grit20m/",phase:str="train"):
