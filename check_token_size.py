@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 parser = argparse.ArgumentParser()
-parser.add_argument("target_dataset_name", type=str, choices=['redcaps', 'imagenet', 'imagenet21k', 'places365', 'inaturalist', 'cc3m', 'cc12m', 'sun397', 'mscoco', 'vcr', 'vqa2', 'imSitu', 'tdiuc', 'visual7w', 'imagenet', 'openimage_cat', 'openimage_det', 'openimage_loc', 'objects365_cat', 'objects365_det', 'objects365_loc'])
+parser.add_argument("target_dataset_name", type=str, choices=['redcaps', 'imagenet', 'imagenet21k', 'places365', 'inaturalist', 'cc3m', 'cc12m', 'sun397', 'mscoco', 'vcr', 'vqa2', 'imSitu', 'tdiuc', 'visual7w', 'imagenet', 'openimage_cat', 'openimage_det', 'openimage_loc', 'openimage_rel', 'objects365_cat', 'objects365_det', 'objects365_loc'])
 parser.add_argument("--language_model_name", type=str, default="google/flan-t5-large")
 parser.add_argument("--loc_vocab_size", type=int, default=1600)
 parser.add_argument("--additional_vocab_size", type=int, default=10000)

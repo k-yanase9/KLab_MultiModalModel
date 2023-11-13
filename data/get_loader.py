@@ -104,6 +104,8 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
                 dataset = OpenImage_Detection(data_dir, phase)
             elif 'loc' in dataset_name.lower():
                 dataset = OpenImage_Localization(data_dir, phase)
+            elif 'rel' in dataset_name.lower():
+                dataset = OpenImage_Relation(data_dir, phase)
             else:
                 raise NotImplementedError
         elif 'objects365' in dataset_name:

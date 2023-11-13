@@ -49,7 +49,7 @@ def parse_arguments():
     parser.add_argument('--num_steps', type=int, default=None, help='学習ステップ数')
     parser.add_argument('--warmup_rate', type=float, default=0.01, help='ウォームアップの割合')
     parser.add_argument('--save_interval', type=int, default=None, help='モデルの保存間隔')
-    parser.add_argument('--datasets', nargs='+', default=['imagenet', 'sun397'], choices=['redcaps', 'imagenet', 'imagenet21k', 'places365', 'inaturalist', 'cc3m', 'cc12m', 'sun397', 'mscoco', 'vcr', 'vqa2', 'imSitu', 'tdiuc', 'visual7w', 'imagenet', 'openimage_cat', 'openimage_det', 'openimage_loc', 'objects365_cat', 'objects365_det', 'objects365_loc'], help='使用データセットの名前')
+    parser.add_argument('--datasets', nargs='+', default=['imagenet', 'sun397'], choices=['redcaps', 'imagenet', 'imagenet21k', 'places365', 'inaturalist', 'cc3m', 'cc12m', 'sun397', 'mscoco', 'vcr', 'vqa2', 'imSitu', 'tdiuc', 'visual7w', 'imagenet', 'openimage_cat', 'openimage_det', 'openimage_loc', 'openimage_rel', 'objects365_cat', 'objects365_det', 'objects365_loc'], help='使用データセットの名前')
     # Dir setting
     parser.add_argument('--root_dir', type=str, default='/local/', help='データのディレクトリ')
     parser.add_argument('--result_dir', type=str, default='results/', help='結果を保存するディレクトリ')
