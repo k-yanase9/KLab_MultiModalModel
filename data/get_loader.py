@@ -96,8 +96,14 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
         elif 'cc12m' == dataset_name:
             dataset = CC12M_Caption(data_dir, phase)
         # categorization
-        elif 'openimage' == dataset_name:
-            dataset = OpenImageDataset_Categorization(data_dir, phase)
+        elif 'openimage' in dataset_name:
+            data_dir = os.path.join(args.root_dir, 'openimage')
+            if 'cat' in dataset_name.lower():
+                dataset = OpenImage_Categorization(data_dir, phase)
+            elif 'det' in dataset_name.lower():
+                dataset = OpenImage_Detection(data_dir, phase)
+            else:
+                raise NotImplementedError
         # vqa
         elif 'vcr' == dataset_name:
             dataset = Vcrdataset(data_dir, phase)
