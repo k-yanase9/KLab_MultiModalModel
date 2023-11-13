@@ -130,6 +130,8 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
                 dataset = VisualGenome_Categorization(data_dir, phase)
             elif 'det' in dataset_name.lower():
                 dataset = VisualGenome_Detection(data_dir, phase)
+            elif 'loc' in dataset_name.lower():
+                dataset = VisualGenome_Localization(data_dir, phase)
             else:
                 raise NotImplementedError
         # vqa & gvqa
