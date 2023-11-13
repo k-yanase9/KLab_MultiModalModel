@@ -118,7 +118,7 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
                 dataset = Objects365_Localization(data_dir, phase)
             else:
                 raise NotImplementedError
-        # vqa
+        # vqa & gvqa
         elif 'vcr' == dataset_name:
             dataset = Vcrdataset(data_dir, phase)
         elif 'vqa2' == dataset_name:
@@ -127,8 +127,14 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             dataset = imSituDataset(data_dir, phase)
         elif 'tdiuc' == dataset_name:
             dataset = Tdiucdataset(data_dir, phase)
-        elif 'visual7w' == dataset_name:
-            dataset = Visual7W_VQA(data_dir, phase)
+        elif 'visual7w' in dataset_name:
+            data_dir = os.path.join(args.root_dir, 'visual7w')
+            if 'vqa' in dataset_name.lower():
+                dataset = Visual7W_VQA(data_dir, phase)
+            elif 'gvqa' in dataset_name.lower():
+                dataset = Visual7W_GVQA(data_dir, phase)
+            else:
+                raise NotImplementedError
         # classify
         elif 'imagenet' == dataset_name:
             dataset = ImageNet_Classify(data_dir, phase)
