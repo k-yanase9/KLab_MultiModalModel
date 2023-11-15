@@ -15,11 +15,11 @@ class OpenImage_Detection(DatasetLoader):
     """openimageのdetectionデータセット
     """    
     def __init__(self,data_dir:str="/data/dataset/openimage/",phase:str="train"):
-        super().__init__()        
+        super().__init__()
         if phase=="val":
             phase = "validation"
 
-        with open(os.path.join(data_dir,"tsv",f"{phase}_40_dec.tsv")) as f:
+        with open(os.path.join(data_dir,"tsv_fix",f"{phase}_dec_cut_max_tokens.tsv")) as f:
             items = f.read()
 
         items = items.split("\n")
