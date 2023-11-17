@@ -13,7 +13,7 @@ class OpenImage_Localization(DatasetLoader):
         if phase=="val":
             phase = "validation"
 
-        with open(os.path.join(data_dir,"tsv",f"{phase}_40_loc.tsv")) as f:
+        with open(os.path.join(data_dir,"tsv_fix",f"{phase}_loc_cut_max_tokens.tsv")) as f:
             items = f.read()
 
         items = items.split("\n")
