@@ -13,10 +13,13 @@ from models.model import MyModel
 from modules import *
 
 use_wandb = False
+use_nvidia_smi = False
 if pkgutil.find_loader("wandb") is not None:
     import wandb
     use_wandb = True
-import nvidia_smi
+if pkgutil.find_loader("nvidia_smi") is not None:
+    import nvidia_smi
+    use_nvidia_smi = True
 
 def train():
     args = parse_arguments()
@@ -42,10 +45,11 @@ def train():
         os.makedirs(args.result_dir, exist_ok=True)
         if use_wandb:
             wandb_init(args)
-            nvidia_smi.nvmlInit()
-            handle = nvidia_smi.nvmlDeviceGetHandleByIndex(local_rank)
-            info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
-            wandb.log({f"MemTotal{local_rank}":info.total // (1024**2)})
+            if use_nvidia_smi:
+                nvidia_smi.nvmlInit()
+                handle = nvidia_smi.nvmlDeviceGetHandleByIndex(local_rank)
+                info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
+                wandb.log({f"MemTotal{local_rank}":info.total // (1024**2)})
 
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -109,9 +113,10 @@ def train():
             pbar.update(1)
             if world_rank == 0:
                 steps += 1
-                handle = nvidia_smi.nvmlDeviceGetHandleByIndex(local_rank)
-                info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
-                wandb.log({"train_step":steps, f"train/MemUsed{local_rank}":info.used // (1024**2)})
+                if use_nvidia_smi:
+                    handle = nvidia_smi.nvmlDeviceGetHandleByIndex(local_rank)
+                    info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
+                    wandb.log({"train_step":steps, f"train/MemUsed{local_rank}":info.used // (1024**2)})
             if args.num_steps is not None:
                 scheduler.step()
 
@@ -154,9 +159,10 @@ def train():
             pbar.update(1)
             if world_rank == 0:
                 steps += 1
-                handle = nvidia_smi.nvmlDeviceGetHandleByIndex(local_rank)
-                info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
-                wandb.log({"val_step":steps,f"val/MemUsed{local_rank}":info.used // (1024**2)})
+                if use_nvidia_smi:
+                    handle = nvidia_smi.nvmlDeviceGetHandleByIndex(local_rank)
+                    info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
+                    wandb.log({"val_step":steps,f"val/MemUsed{local_rank}":info.used // (1024**2)})
     pbar.close()
 
     # 他のノードから集める
