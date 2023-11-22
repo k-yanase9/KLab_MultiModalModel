@@ -14,8 +14,8 @@ from .gvqa import *
 def get_data(args, src_tokenizer=None, tgt_tokenizer=None):
     train_datasets, val_datasets = [], []
     for dataset_name in args.datasets:
-        train_dataset = get_dataset(args, dataset_name, phase="train", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
-        val_dataset = get_dataset(args, dataset_name, phase="val", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+        train_dataset = get_dataset(args.root_dir, dataset_name, args.stage, phase="train", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+        val_dataset = get_dataset(args.root_dir, dataset_name, args.stage, phase="val", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         train_datasets.append(train_dataset)
         val_datasets.append(val_dataset)
 
@@ -53,30 +53,30 @@ def get_dataloader(args, dataset, num_workers=4, shuffle=False):
     return dataloader
 
 
-def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_tokenizer=None):
-    data_dir = os.path.join(args.root_dir, dataset_name)
-    if args.phase == 'pretrain':  # 事前学習だったら
+def get_dataset(root_dir="/data01", dataset_name="cc3m", stage="pretrain", phase="train", src_tokenizer=None, tgt_tokenizer=None):
+    data_dir = os.path.join(root_dir, dataset_name)
+    if stage == 'pretrain':  # 事前学習だったら
         if src_tokenizer is None or tgt_tokenizer is None:
             raise NotImplementedError
         if 'redcaps' == dataset_name:
-            dataset = RedCaps_Pretrain(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+            dataset = RedCaps_Pretrain(data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'imagenet' == dataset_name:
-            dataset = ImageNet_Pretrain(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+            dataset = ImageNet_Pretrain(data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'imagenet21k' == dataset_name:
-            dataset = ImageNet21k_Pretrain(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+            dataset = ImageNet21k_Pretrain(data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'places365' == dataset_name:
-            dataset = Places365_Pretrain(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+            dataset = Places365_Pretrain(data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'sun397' == dataset_name:
-            dataset = SUN397_Pretrain(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+            dataset = SUN397_Pretrain(data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'inaturalist' == dataset_name:
-            dataset = INaturalist_Pretrain(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+            dataset = INaturalist_Pretrain(data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'cc3m' == dataset_name:
-            dataset = CC3M_Pretrain(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+            dataset = CC3M_Pretrain(data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         elif 'cc12m' == dataset_name:
-            dataset = CC12M_Pretrain(args, data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+            dataset = CC12M_Pretrain(data_dir, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
         else:
             raise NotImplementedError
-    elif args.phase == 'classify':
+    elif stage == 'classify':
         if 'sun397' == dataset_name:
             dataset = SUN397_Classify(data_dir, phase=phase, is_tgt_id=True)
         elif 'openimage' == dataset_name:
@@ -96,14 +96,14 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
         elif 'cc12m' == dataset_name:
             dataset = CC12M_Caption(data_dir, phase)
         elif 'grit20m' in dataset_name:
-            data_dir = os.path.join(args.root_dir, 'grit20m')
+            data_dir = os.path.join(root_dir, 'grit20m')
             if 'rcap' in dataset_name.lower():
                 dataset = Grit20M_RegionCaption(data_dir, phase)
             elif 'refexp' in dataset_name.lower():
                 dataset = Grit20M_RefExp(data_dir, phase)
         # categorization&detection
         elif 'openimage' in dataset_name:
-            data_dir = os.path.join(args.root_dir, 'openimage')
+            data_dir = os.path.join(root_dir, 'openimage')
             if 'cat' in dataset_name.lower():
                 dataset = OpenImage_Categorization(data_dir, phase)
             elif 'det' in dataset_name.lower():
@@ -115,7 +115,7 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             else:
                 raise NotImplementedError
         elif 'objects365' in dataset_name:
-            data_dir = os.path.join(args.root_dir, 'objects365')
+            data_dir = os.path.join(root_dir, 'objects365')
             if 'cat' in dataset_name.lower():
                 dataset = Objects365_Categorization(data_dir, phase)
             elif 'det' in dataset_name.lower():
@@ -125,7 +125,7 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
             else:
                 raise NotImplementedError
         elif 'vg' in dataset_name:
-            data_dir = os.path.join(args.root_dir, 'visual_genome')
+            data_dir = os.path.join(root_dir, 'visual_genome')
             if 'cat' in dataset_name.lower():
                 dataset = VisualGenome_Categorization(data_dir, phase)
             elif 'det' in dataset_name.lower():
@@ -152,7 +152,7 @@ def get_dataset(args, dataset_name, phase="train", src_tokenizer=None, tgt_token
         elif 'tdiuc' == dataset_name:
             dataset = Tdiucdataset(data_dir, phase)
         elif 'visual7w' in dataset_name:
-            data_dir = os.path.join(args.root_dir, 'visual7w')
+            data_dir = os.path.join(root_dir, 'visual7w')
             if 'gvqa' in dataset_name.lower():
                 dataset = Visual7W_GVQA(data_dir, phase)
             elif 'vqa' in dataset_name.lower():

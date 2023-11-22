@@ -6,10 +6,10 @@ from torch.nn.utils.rnn import pad_sequence
 from ..dataset_loader import DatasetLoader
 
 class PretrainDatasetLoader(DatasetLoader):
-    def __init__(self, args, resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
+    def __init__(self, resize=256, src_tokenizer=None, tgt_tokenizer=None, max_source_length=256, max_target_length=256, mask_probability=0.15):
         super().__init__(resize)
-        self.max_source_length = args.max_source_length
-        self.max_target_length = args.max_target_length 
+        self.max_source_length = max_source_length
+        self.max_target_length = max_target_length 
         self.src_tokenizer = src_tokenizer
         self.tgt_tokenizer = tgt_tokenizer
         self.mask_tokens = src_tokenizer.additional_special_tokens_ids
@@ -75,8 +75,8 @@ class PretrainDatasetLoader(DatasetLoader):
         return target_id
     
 class ClassifyPretrainDatasetLoader(PretrainDatasetLoader):
-    def __init__(self, args, resize=256, src_tokenizer=None, tgt_tokenizer=None, mask_probability=0.15):
-        super().__init__(args, resize, src_tokenizer, tgt_tokenizer, mask_probability)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def __getitem__(self, idx):
         image, text = self.images[idx], self.src_texts[idx]
