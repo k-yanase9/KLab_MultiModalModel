@@ -45,7 +45,9 @@ datasets['val'] = get_dataset(args, dataset_name=target_dataset_name, phase="val
 
 def draw_hist(score, title='', save_path='result.png'):
     max_score = max(score)
-    plt.hist(score, bins=max_score)
+    counts = np.bincount(score)[1:max_score+1]
+    plt.bar(range(1, max_score+1), counts)
+    # plt.xlim(250,260)
     plt.title(f'{title} (max:{str(max_score)})')
     plt.yscale('log')
     plt.savefig(save_path)
@@ -63,12 +65,12 @@ for phase, dataset in datasets.items():
         dataset.src_texts = tmp
     src_dataloader = np.array_split(dataset.src_texts, len(dataset.src_texts)//args.batch_size)
     tgt_dataloader = np.array_split(dataset.tgt_texts, len(dataset.tgt_texts)//args.batch_size)
-    logger.info(f'example(src): {src_dataloader[0][0]}')
-    encoded = src_tokenizer(src_dataloader[0][0], padding="longest", max_length=args.max_source_length, return_tensors="pt")
-    logger.info(src_tokenizer.batch_decode(encoded['input_ids'][0]))
-    logger.info(f'example(tgt): {tgt_dataloader[0][0]}')
-    encoded = tgt_tokenizer(tgt_dataloader[0][0], padding="longest", max_length=args.max_target_length, return_tensors="pt")
-    logger.info(tgt_tokenizer.batch_decode(encoded['input_ids'][0]))
+    # logger.info(f'example(src): {src_dataloader[0][0]}')
+    # encoded = src_tokenizer(src_dataloader[0][0], padding="longest", max_length=args.max_source_length, return_tensors="pt")
+    # logger.info(src_tokenizer.batch_decode(encoded['input_ids'][0]))
+    # logger.info(f'example(tgt): {tgt_dataloader[0][0]}')
+    # encoded = tgt_tokenizer(tgt_dataloader[0][0], padding="longest", max_length=args.max_target_length, return_tensors="pt")
+    # logger.info(tgt_tokenizer.batch_decode(encoded['input_ids'][0]))
 
     loop = tqdm(zip(src_dataloader, tgt_dataloader), total=len(src_dataloader), desc=f"{target_dataset_name} {phase}")
     src_counts = []
@@ -83,6 +85,16 @@ for phase, dataset in datasets.items():
         src_counts.extend(src_count.tolist())
         tgt_count = torch.sum(tgt_texts!=0, dim=1)
         tgt_counts.extend(tgt_count.tolist())
+    for index in np.where(np.array(src_counts) > 256)[0]:
+        text_256 = dataset.src_texts[index]
+        logger.info(f'src({index}): {text_256}')
+        encoded = src_tokenizer(text_256, padding="longest", max_length=args.max_target_length, return_tensors="pt")
+        logger.info(src_tokenizer.batch_decode(encoded['input_ids'][0]))
+        text_256 = dataset.tgt_texts[index]
+        logger.info(f'tgt({index}): {text_256}')
+        encoded = tgt_tokenizer(text_256, padding="longest", max_length=args.max_target_length, return_tensors="pt")
+        logger.info(tgt_tokenizer.batch_decode(encoded['input_ids'][0]))
+
     index = np.argmax(src_counts)
     max_text = dataset.src_texts[index]
     logger.info(f'max(src): {max_text}')

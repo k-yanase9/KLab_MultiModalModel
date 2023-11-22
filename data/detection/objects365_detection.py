@@ -8,8 +8,8 @@ class Objects365_Detection(DatasetLoader):
     """openimageのdetectionデータセット
     """    
     def __init__(self,data_dir:str="/data01/objects365/",phase:str="train"):
-        super().__init__()        
-        with open(os.path.join(data_dir,f"{phase}_40_dec.tsv")) as f:
+        super().__init__()
+        with open(os.path.join(data_dir,f"{phase}_dec_cut_max_tokens.tsv")) as f:
             items = f.read()
 
         items = items.split("\n")
