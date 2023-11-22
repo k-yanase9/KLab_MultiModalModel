@@ -9,7 +9,7 @@ class Objects365_Localization(DatasetLoader):
     """    
     def __init__(self,data_dir:str="/data01/objects365/",phase:str="train"):
         super().__init__()        
-        with open(os.path.join(data_dir,f"{phase}_40_loc.tsv")) as f:
+        with open(os.path.join(data_dir,f"{phase}_loc_cut_max_tokens.tsv")) as f:
             items = f.read()
 
         items = items.split("\n")
