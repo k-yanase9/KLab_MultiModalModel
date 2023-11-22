@@ -44,10 +44,10 @@ src_len=128
 tgt_len=128
 batch_size=96
 
-dataset="visual7w_gvqa"
-src_len=102
-tgt_len=13
-batch_size=238
+dataset="vcr"
+src_len=256
+tgt_len=103
+batch_size=86
 
 torchrun --nnodes=1 --nproc_per_node=2 train_dummy.py \
         --float_type float16 \
