@@ -48,3 +48,15 @@ dataset="vcr"
 src_len=256
 tgt_len=103
 batch_size=86
+
+torchrun --nnodes=1 --nproc_per_node=2 train_dummy.py \
+        --float_type float16 \
+        --max_source_length $src_len \
+        --max_target_length $tgt_len \
+        --stage train \
+        --lr_scheduler LinearWarmup \
+        -b $batch_size \
+        --num_epochs 1 \
+        --datasets $dataset \
+        --root_dir /data01/ \
+        --result_dir results/check_batch/$dataset/
