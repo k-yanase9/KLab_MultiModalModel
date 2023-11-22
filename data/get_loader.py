@@ -11,29 +11,35 @@ from .relationship import *
 from .vqa import *
 from .gvqa import *
 
-def get_data(args, src_tokenizer=None, tgt_tokenizer=None):
-    train_datasets, val_datasets = [], []
+def get_data(args, phase="train", src_tokenizer=None, tgt_tokenizer=None):
+    datasets = []
     for dataset_name in args.datasets:
-        train_dataset = get_dataset(args.root_dir, dataset_name, args.stage, phase="train", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
-        val_dataset = get_dataset(args.root_dir, dataset_name, args.stage, phase="val", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
-        train_datasets.append(train_dataset)
-        val_datasets.append(val_dataset)
+        dataset = get_dataset(args.root_dir, dataset_name, args.stage, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+        datasets.append(dataset)
 
-    train_dataset = ConcatDataset(train_datasets)
-    val_dataset = ConcatDataset(val_datasets)
+    dataset = ConcatDataset(datasets)
 
     if len(args.datasets) == 0:
         raise ValueError
 
-    return train_dataset, val_dataset
+    return dataset
 
+def get_task_data(args, dataset_name_dict, phase="train"):
+    datasets = {}
+    for task in dataset_name_dict.keys():
+        datasets[task] = []
+        for dataset_name in dataset_name_dict[task]:
+            dataset = get_dataset(args.root_dir, dataset_name, args.stage, phase, None, None)
+            datasets[task].append(dataset)
+        datasets[task] = ConcatDataset(datasets[task])
+    return datasets
 
-def get_distributed_dataloader(args, dataset, num_workers=4, shuffle=True):
+def get_distributed_dataloader(args, dataset, batch_size=64, num_workers=4, shuffle=True):
     sampler = distributed.DistributedSampler(dataset, drop_last=True, shuffle=shuffle)
-    if args.phase == 'pretrain':
+    if args.stage == 'pretrain':
         dataloader = DataLoader(
             dataset,
-            batch_size=args.batch_size,
+            batch_size=batch_size,
             collate_fn=dataset.datasets[0].collate_fn,
             num_workers=num_workers,
             pin_memory=True,
@@ -41,12 +47,19 @@ def get_distributed_dataloader(args, dataset, num_workers=4, shuffle=True):
             drop_last=True,
         )
     else:
-        dataloader = DataLoader(dataset, batch_size=args.batch_size, num_workers=num_workers, pin_memory=True, sampler=sampler, drop_last=True)
+        dataloader = DataLoader(
+            dataset, 
+            batch_size=batch_size, 
+            num_workers=num_workers, 
+            pin_memory=True, 
+            sampler=sampler, 
+            drop_last=True
+        )
     return dataloader
 
 
 def get_dataloader(args, dataset, num_workers=4, shuffle=False):
-    if args.phase == 'pretrain': 
+    if args.stage == 'pretrain': 
         dataloader = DataLoader(dataset, batch_size=args.batch_size, collate_fn=dataset.collate_fn, num_workers=num_workers, pin_memory=True, drop_last=True, shuffle=shuffle)
     else:
         dataloader = DataLoader(dataset, batch_size=args.batch_size, num_workers=num_workers, pin_memory=True, drop_last=True, shuffle=shuffle)

@@ -81,7 +81,8 @@ def train():
         src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=args.max_source_length, use_fast=True)
 
     # データの設定
-    train_dataset, val_dataset = get_data(args, src_tokenizer, tgt_tokenizer)
+    train_dataset = get_data(args, "train", src_tokenizer, tgt_tokenizer)
+    val_dataset = get_data(args, "val", src_tokenizer, tgt_tokenizer)
     if world_rank == 0:
         logger.info(f'Train Dataset : {len(train_dataset)}, Val Dataset : {len(val_dataset)}')
     train_loader = get_distributed_dataloader(args, train_dataset, shuffle=True)
