@@ -40,23 +40,11 @@ tgt_len=25
 batch_size=247
 
 dataset="visual7w_vqa"
-src_len=128
+src_len=125
 tgt_len=128
-batch_size=96
+batch_size=93
 
 dataset="vcr"
 src_len=256
 tgt_len=103
 batch_size=86
-
-torchrun --nnodes=1 --nproc_per_node=2 train_dummy.py \
-        --float_type float16 \
-        --max_source_length $src_len \
-        --max_target_length $tgt_len \
-        --phase train \
-        --lr_scheduler LinearWarmup \
-        -b $batch_size \
-        --num_epochs 1 \
-        --datasets $dataset \
-        --root_dir /data01/ \
-        --result_dir results/check_batch/$dataset/
