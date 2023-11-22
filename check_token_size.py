@@ -85,12 +85,16 @@ for phase, dataset in datasets.items():
         src_counts.extend(src_count.tolist())
         tgt_count = torch.sum(tgt_texts!=0, dim=1)
         tgt_counts.extend(tgt_count.tolist())
-    # for target in range(250, 460):
-    #     for index in np.where(np.array(tgt_counts) == target)[0]:
-    #         text_256 = dataset.tgt_texts[index]
-    #         logger.info(f'{target}(tgt): {text_256}')
-    #         encoded = tgt_tokenizer(text_256, padding="longest", max_length=args.max_target_length, return_tensors="pt")
-    #         logger.info(tgt_tokenizer.batch_decode(encoded['input_ids'][0]))
+    for index in np.where(np.array(src_counts) > 256)[0]:
+        text_256 = dataset.src_texts[index]
+        logger.info(f'src({index}): {text_256}')
+        encoded = src_tokenizer(text_256, padding="longest", max_length=args.max_target_length, return_tensors="pt")
+        logger.info(src_tokenizer.batch_decode(encoded['input_ids'][0]))
+        text_256 = dataset.tgt_texts[index]
+        logger.info(f'tgt({index}): {text_256}')
+        encoded = tgt_tokenizer(text_256, padding="longest", max_length=args.max_target_length, return_tensors="pt")
+        logger.info(tgt_tokenizer.batch_decode(encoded['input_ids'][0]))
+
     index = np.argmax(src_counts)
     max_text = dataset.src_texts[index]
     logger.info(f'max(src): {max_text}')
