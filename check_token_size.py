@@ -7,6 +7,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from multiprocessing import Pool
 
 parser = argparse.ArgumentParser()
 parser.add_argument("target_dataset_name", type=str, choices=[
@@ -25,6 +26,7 @@ parser.add_argument("--max_target_length", type=int, default=512)
 parser.add_argument("-b", "--batch_size", type=int, default=512)
 parser.add_argument("--stage", type=str, default="train")
 parser.add_argument("--root_dir", type=str, default="/data01/")
+parser.add_argument("--mode", type=str, default="batch", choices=["batch", "multi"])
 args = parser.parse_args()
 target_dataset_name = args.target_dataset_name
 args.result_dir = f'results/token/{target_dataset_name}'
@@ -63,37 +65,61 @@ for phase, dataset in datasets.items():
             src = f'{que} choices: {",".join(loc)}'
             tmp.append(src)
         dataset.src_texts = tmp
-    src_dataloader = np.array_split(dataset.src_texts, len(dataset.src_texts)//args.batch_size)
-    tgt_dataloader = np.array_split(dataset.tgt_texts, len(dataset.tgt_texts)//args.batch_size)
-    # logger.info(f'example(src): {src_dataloader[0][0]}')
-    # encoded = src_tokenizer(src_dataloader[0][0], padding="longest", max_length=args.max_source_length, return_tensors="pt")
-    # logger.info(src_tokenizer.batch_decode(encoded['input_ids'][0]))
-    # logger.info(f'example(tgt): {tgt_dataloader[0][0]}')
-    # encoded = tgt_tokenizer(tgt_dataloader[0][0], padding="longest", max_length=args.max_target_length, return_tensors="pt")
-    # logger.info(tgt_tokenizer.batch_decode(encoded['input_ids'][0]))
+    if args.mode == 'batch':
+        src_dataloader = np.array_split(dataset.src_texts, len(dataset.src_texts)//args.batch_size)
+        tgt_dataloader = np.array_split(dataset.tgt_texts, len(dataset.tgt_texts)//args.batch_size)
+        # logger.info(f'example(src): {src_dataloader[0][0]}')
+        # encoded = src_tokenizer(src_dataloader[0][0], padding="longest", max_length=args.max_source_length, return_tensors="pt")
+        # logger.info(src_tokenizer.batch_decode(encoded['input_ids'][0]))
+        # logger.info(f'example(tgt): {tgt_dataloader[0][0]}')
+        # encoded = tgt_tokenizer(tgt_dataloader[0][0], padding="longest", max_length=args.max_target_length, return_tensors="pt")
+        # logger.info(tgt_tokenizer.batch_decode(encoded['input_ids'][0]))
 
-    loop = tqdm(zip(src_dataloader, tgt_dataloader), total=len(src_dataloader), desc=f"{target_dataset_name} {phase}")
-    src_counts = []
-    tgt_counts = []
-    for src_texts, tgt_texts in loop:
-        src_inputs = src_tokenizer(src_texts.tolist(), padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
-        src_texts = src_inputs['input_ids']
-        tgt_inputs = tgt_tokenizer(tgt_texts.tolist(), padding="longest", max_length=args.max_target_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
-        tgt_texts = tgt_inputs['input_ids']
+        loop = tqdm(zip(src_dataloader, tgt_dataloader), total=len(src_dataloader), desc=f"{target_dataset_name} {phase}")
+        src_counts = []
+        tgt_counts = []
+        for src_texts, tgt_texts in loop:
+            src_inputs = src_tokenizer(src_texts.tolist(), padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+            src_texts = src_inputs['input_ids']
+            tgt_inputs = tgt_tokenizer(tgt_texts.tolist(), padding="longest", max_length=args.max_target_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+            tgt_texts = tgt_inputs['input_ids']
 
-        src_count = torch.sum(src_texts!=0, dim=1)
-        src_counts.extend(src_count.tolist())
-        tgt_count = torch.sum(tgt_texts!=0, dim=1)
-        tgt_counts.extend(tgt_count.tolist())
-    for index in np.where(np.array(src_counts) > 256)[0]:
-        text_256 = dataset.src_texts[index]
-        logger.info(f'src({index}): {text_256}')
-        encoded = src_tokenizer(text_256, padding="longest", max_length=args.max_target_length, return_tensors="pt")
-        logger.info(src_tokenizer.batch_decode(encoded['input_ids'][0]))
-        text_256 = dataset.tgt_texts[index]
-        logger.info(f'tgt({index}): {text_256}')
-        encoded = tgt_tokenizer(text_256, padding="longest", max_length=args.max_target_length, return_tensors="pt")
-        logger.info(tgt_tokenizer.batch_decode(encoded['input_ids'][0]))
+            src_count = torch.sum(src_texts!=0, dim=1)
+            src_counts.extend(src_count.tolist())
+            tgt_count = torch.sum(tgt_texts!=0, dim=1)
+            tgt_counts.extend(tgt_count.tolist())
+        for index in np.where(np.array(src_counts) > 256)[0]:
+            text_256 = dataset.src_texts[index]
+            logger.info(f'src({index}): {text_256}')
+            encoded = src_tokenizer(text_256, padding="longest", max_length=args.max_target_length, return_tensors="pt")
+            logger.info(src_tokenizer.batch_decode(encoded['input_ids'][0]))
+            text_256 = dataset.tgt_texts[index]
+            logger.info(f'tgt({index}): {text_256}')
+            encoded = tgt_tokenizer(text_256, padding="longest", max_length=args.max_target_length, return_tensors="pt")
+            logger.info(tgt_tokenizer.batch_decode(encoded['input_ids'][0]))
+    elif args.mode == 'multi':
+        def tokenize(data):
+            src_text, tgt_text = data
+            src_text = src_tokenizer(src_text, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids']
+            tgt_text = tgt_tokenizer(tgt_text, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids']
+            src_count = len(src_text[0])
+            tgt_count = len(tgt_text[0])
+            return src_count, tgt_count
+
+        src_counts = []
+        tgt_counts = []
+
+        pool = Pool(8)
+        with tqdm(total=len(dataset), desc=f"{target_dataset_name} {phase}") as t:
+            for src_count, tgt_count in pool.imap_unordered(tokenize, zip(dataset.src_texts, dataset.tgt_texts)):
+                src_counts.append(src_count)
+                tgt_counts.append(tgt_count)
+                t.update(1)
+
+        print(f'src count: {len(src_counts)}')
+        print(f'tgt count: {len(tgt_counts)}')
+    else:
+        raise NotImplementedError
 
     index = np.argmax(src_counts)
     max_text = dataset.src_texts[index]
