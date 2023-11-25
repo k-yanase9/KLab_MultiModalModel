@@ -39,7 +39,7 @@ class MyModel(nn.Module):
             # self.num_patches = (self.image_model.config.image_size // self.image_model.config.patch_size) ** 2
             self.num_patches = 16**2
 
-        if args.phase == 'classify':
+        if args.stage == 'classify':
             if False: # Original Transformer
                 transformer_config = TransformerConfig(vocab_size=vocab_size, d_model=args.transformer_d_model, num_heads=args.transformer_num_heads, d_ff=args.transformer_d_ff, num_layers=args.transformer_num_layers, max_length=args.max_target_length)
                 self.transformer = Transformer(transformer_config)
@@ -73,7 +73,7 @@ class MyModel(nn.Module):
             self.language_ffn = nn.Linear(self.language_model.config.d_model, self.transformer.config.d_model)
             self.image_ffn = nn.Linear(self.image_model.num_features, self.transformer.config.d_model)
 
-        if args.phase == 'classify':
+        if args.stage == 'classify':
             self.emb_cls_token = EmbClassToken(self.transformer.config.d_model)
             if 'imagenet' in args.datasets:
                 self.classifier = nn.Linear(self.transformer.config.d_model, 1000)
@@ -88,7 +88,7 @@ class MyModel(nn.Module):
             else:
                 raise NotImplementedError
         
-        if args.phase == 'classify':
+        if args.stage == 'classify':
             ignore_index = -100
         else:
             ignore_index = 0
@@ -128,18 +128,18 @@ class MyModel(nn.Module):
                 image_embeddings = self.image_ffn(image_embeddings)
 
         concated_embeddings = torch.cat((image_embeddings,language_embeddings), dim=1)
-        if self.args.phase == 'classify':
+        if self.args.stage == 'classify':
             concated_embeddings = self.emb_cls_token(concated_embeddings)
 
         image_attention_mask = torch.ones(image_embeddings.shape[0], image_embeddings.shape[1], device=self.image_model.device)
-        if self.args.phase == 'classify':
+        if self.args.stage == 'classify':
             cls_attention_mask = torch.ones(image_embeddings.shape[0], 1, device=image_embeddings.device)
             concat_attention_mask = torch.cat((cls_attention_mask, image_attention_mask, src_attention_masks), dim=1)
         else:
             concat_attention_mask = torch.cat((image_attention_mask, src_attention_masks), dim=1)
 
         if return_loss:
-            if self.args.phase == 'classify':
+            if self.args.stage == 'classify':
                 with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
                     outputs = self.transformer(inputs_embeds=concated_embeddings, attention_mask=concat_attention_mask)
                     sequence_output = outputs[0]
@@ -156,7 +156,7 @@ class MyModel(nn.Module):
                 preds = torch.argmax(logits, dim=2)
             return loss, preds
         else:
-            if self.args.phase == 'classify':
+            if self.args.stage == 'classify':
                 with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
                     outputs = self.transformer(inputs_embeds=concated_embeddings, attention_mask=concat_attention_mask)
                     sequence_output = outputs[0]
@@ -205,7 +205,7 @@ class MyModel(nn.Module):
         if self.args.ffn:
             checkpoints['language_ffn'] = self.language_ffn.state_dict()
             checkpoints['image_ffn'] = self.image_ffn.state_dict()
-        if self.args.phase == 'classify':
+        if self.args.stage == 'classify':
             checkpoints['emb_cls_token'] = self.emb_cls_token.state_dict()
             checkpoints['classifier'] = self.classifier.state_dict()
         torch.save(checkpoints, result_path)
@@ -219,7 +219,7 @@ class MyModel(nn.Module):
         if self.args.ffn:
             self.language_ffn.load_state_dict(checkpoints['language_ffn'])
             self.image_ffn.load_state_dict(checkpoints['image_ffn'])
-        if self.args.phase == 'classify':
+        if self.args.stage == 'classify':
             self.emb_cls_token.load_state_dict(checkpoints['emb_cls_token'])
             self.classifier.load_state_dict(checkpoints['classifier'])
 
