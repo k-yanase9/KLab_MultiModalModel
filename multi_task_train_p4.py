@@ -60,38 +60,6 @@ def get_natural_img(img: Tensor | Image.Image, mean: tuple[float, float, float],
         raise TypeError("Input type not supported")
 
 
-##----------------------------------------------------テスト用
-def get_dataset_dict(args, dataset_name_dict: dict[str, List[str]], phase, subset_size,src_tokenizer=None, tgt_tokenizer=None,):
-    dataset_dict = {
-        key: ConcatDataset(
-            [
-                Subset(
-                    get_dataset(
-                        args.root_dir,
-                        dataset_name,
-                        args.stage,
-                        phase=phase,
-                        src_tokenizer=src_tokenizer,
-                        tgt_tokenizer=tgt_tokenizer,
-                    ),
-                    indices=range(0, subset_size),
-                )
-                for dataset_name in dataset_name_dict[key]
-            ]
-        )
-        for key in dataset_name_dict.keys()
-    }
-    return dataset_dict
-def get_multi_task_data(args, train_dataset_name_dict, val_dataset_name_dict, src_tokenizer=None, tgt_tokenizer=None):
-    if len(train_dataset_name_dict) == 0:
-        raise ValueError
-    train_dataset_dict, val_dataset_dict = {}, {}
-    train_dataset_dict = get_dataset_dict(args, train_dataset_name_dict, phase="train",subset_size=80000, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
-    val_dataset_dict = get_dataset_dict(args, val_dataset_name_dict, phase="val", subset_size=10000,src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
-    return train_dataset_dict, val_dataset_dict
-##----------------------------------------------------テスト用
-
-
 use_wandb = False
 if pkgutil.find_loader("wandb") is not None:
     import wandb
@@ -161,23 +129,34 @@ def train():
 
     # データの設定
     # 引数の設定
-    world_size = dist.get_world_size()
-    train_dataset_name_dict = {"caption": ["cc3m"], "classify": ["imagenet", "sun397"]}
-    val_dataset_name_dict = {"caption": ["cc3m"], "classify": ["imagenet", "sun397"]}
-    one_gpu_batch_size_dict = {"caption": 16, "classify": 32} #1gpuのバッチサイズ
-    each_task_sample_num_dict = {"caption":4,"classify":2}#何回タスクごとにバッチを取得するか
-    max_data_num_dict = {"caption": 40000, "classify": 40000} #使用するデータ数の上限、subsetで上限最大値caption80000, classify160000
+    FULL_DATASET_NAME_DICT = {"caption": ["redcaps", "cc3m", "cc12m"], "vqa": ["vg_vqa", "vqa2", "tdiuc", "imSitu", "visual7w_vqa"], "classify": ["imagenet", "imagenet21k", "places365", "sun397"]}
+    train_dataset_name_dict = {}
+    for task, dataset_names in FULL_DATASET_NAME_DICT.items():
+        for dataset_name in dataset_names:
+            if dataset_name in args.datasets:
+                if task in train_dataset_name_dict.keys():
+                    train_dataset_name_dict[task].append(dataset_name)
+                else:
+                    train_dataset_name_dict[task] = [dataset_name]
+    val_dataset_name_dict = train_dataset_name_dict.copy()
+    one_gpu_batch_size_dict = {"caption": 54, "vqa": 81, "classify": 162} #1gpuのバッチサイズ
+    each_task_sample_num_dict = {"caption": 12, "vqa": 8, "classify": 4}#何回タスクごとにバッチを取得するか
+    max_data_num_dict = {"caption": 1658880, "vqa": 1658880, "classify": 1658880} #使用するデータ数の上限、subsetで上限最大値caption80000, classify160000
     
     args.accumulation_steps = sum(each_task_sample_num_dict.values()) #使用しない
-    data_num_counter = DataNumCounter(max_data_num_dict,one_gpu_batch_size_dict,each_task_sample_num_dict,world_size)#epoch中断用のデータ数カウンター
+    data_num_counter = DataNumCounter(max_data_num_dict,one_gpu_batch_size_dict,each_task_sample_num_dict,args.world_size)#epoch中断用のデータ数カウンター
     
     if world_rank == 0:
+        logger.info(f"target_DataSet:{train_dataset_name_dict}")
         logger.info(f"accumulation_steps:{args.accumulation_steps}")
         logger.info(f"one_gpu_max_data_num_dict:{data_num_counter.one_gpu_max_data_num_dict}")
         logger.info(f"one_gpu_data_num_per_step_dict:{data_num_counter.one_gpu_data_num_per_step_dict}")
         logger.info(f"max_steps:{data_num_counter.max_step_dict}")
     
     train_dataset_dict, val_dataset_dict = get_multi_task_data(args, train_dataset_name_dict, val_dataset_name_dict, src_tokenizer, tgt_tokenizer)
+    for task, dataset in train_dataset_dict.items():
+        if world_rank == 0:
+            logger.info(f"task:{task} train_dataset:{len(dataset)}")
     
     train_loader = MultiTaskDataLoader4(
         train_dataset_dict,
@@ -260,35 +239,12 @@ def train():
                 if world_rank == 0:
                     logger.info(f"stop step:{i+1} in {len(train_loader)}")            
                 break
-            
-            ##epoch毎の最初と最後のデータを出力
-            # if i == 0 or i+1 == min(data_num_counter.max_step_dict.values()):
-            #     save_image_folder = os.path.join(args.result_dir, f"rank{world_rank}/epoch{epoch}_step{i}")
-            #     save_text_path = os.path.join(args.result_dir, f"rank{world_rank}/epoch{epoch}_step{i}.txt")
-            #     os.makedirs(save_image_folder, exist_ok=True)
-            #     os.makedirs(os.path.dirname(save_text_path), exist_ok=True)
-            #     with open(save_text_path, "w") as f:
-            #         index = 0
-            #         for src_images,tgt_images,src_texts,tgt_texts in samples:
-            #             for src_image,src_text,tgt_text in zip(src_images, src_texts, tgt_texts):
-            #                 index += 1
-            #                 src_image = get_natural_img(src_image, DATASET_MEAN, DATASET_STD)
-            #                 #src_image = torchvision.transforms.functional.to_pil_image(src_image)
-            #                 src_image.save(os.path.join(save_image_folder, f"{index}.png"))
-            #                 #print(src_text)
-            #                 src_text = src_tokenizer.decode(src_text,skip_special_tokens=False)
-            #                 tgt_text = tgt_tokenizer.decode(tgt_text,skip_special_tokens=False)
-            #                 f.write(f"index:{index}\n{src_text}\n{tgt_text}\n")
-            ##----------------------------------------------------
-                    
+
             accumulation_sample_size = torch.tensor(0).long().to(local_rank)
             loss_per_step = 0
             #累積数分の使用するデータをモデルに通して、勾配累積
-            for src_images,tgt_images,src_texts,tgt_texts in samples:
+            for src_images, _, src_texts, tgt_texts in samples:
                 src_images = src_images.to(local_rank, non_blocking=True)
-                # if args.stage == 'pretrain':
-                #     tgt_images = tgt_images.to(local_rank)
-                #     tgt_texts, _ = model.module.image_to_z(tgt_images)
 
                 if args.stage == 'pretrain':
                     src_texts = src_texts.to(local_rank, non_blocking=True)
@@ -325,7 +281,7 @@ def train():
             
             #勾配更新の前準備
             dist.all_reduce(accumulation_sample_size, op=dist.ReduceOp.SUM)
-            grad_scale = world_size / accumulation_sample_size
+            grad_scale = args.world_size / accumulation_sample_size
             multiply_grad(optimizer, grad_scale)
             
             #記録準備

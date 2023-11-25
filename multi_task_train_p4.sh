@@ -2,7 +2,7 @@
 
 # Linear
 batch_size=32
-dataset="cc3m imagenet sun397"
+dataset="cc3m vg_vqa vqa2 imagenet sun397"
 
 epoch=20
 
@@ -23,7 +23,7 @@ torchrun --nnodes=1 --nproc_per_node=2 multi_task_train_p4.py \
         --datasets $dataset \
         --root_dir /data/group1/z40441a/ \
         --save_interval 1 \
-        --result_dir results/train/cc3m_imagenet_sun397/enc$enc\_dec$dec/Linear$epoch/
+        --result_dir results/train/cc3m_vg_vqa_vqa2_imagenet_sun397/enc$enc\_dec$dec/Linear$epoch/
 
 # # Cosine
 # torchrun --nnodes=1 --nproc_per_node=8 train.py \
