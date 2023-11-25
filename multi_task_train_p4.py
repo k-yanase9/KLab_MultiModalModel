@@ -138,25 +138,18 @@ def train():
                     train_dataset_name_dict[task].append(dataset_name)
                 else:
                     train_dataset_name_dict[task] = [dataset_name]
-    val_dataset_name_dict = train_dataset_name_dict.copy()
     one_gpu_batch_size_dict = {"caption": 54, "vqa": 81, "classify": 162} #1gpuのバッチサイズ
     each_task_sample_num_dict = {"caption": 12, "vqa": 8, "classify": 4}#何回タスクごとにバッチを取得するか
-    max_data_num_dict = {"caption": 1658880, "vqa": 1658880, "classify": 1658880} #使用するデータ数の上限、subsetで上限最大値caption80000, classify160000
-    
-    args.accumulation_steps = sum(each_task_sample_num_dict.values()) #使用しない
-    data_num_counter = DataNumCounter(max_data_num_dict,one_gpu_batch_size_dict,each_task_sample_num_dict,args.world_size)#epoch中断用のデータ数カウンター
+    num_steps_per_epoch = 2560 // args.world_size #使用するデータ数の上限、subsetで上限最大値caption80000, classify160000
     
     if world_rank == 0:
         logger.info(f"target_DataSet:{train_dataset_name_dict}")
-        logger.info(f"accumulation_steps:{args.accumulation_steps}")
-        logger.info(f"one_gpu_max_data_num_dict:{data_num_counter.one_gpu_max_data_num_dict}")
-        logger.info(f"one_gpu_data_num_per_step_dict:{data_num_counter.one_gpu_data_num_per_step_dict}")
-        logger.info(f"max_steps:{data_num_counter.max_step_dict}")
     
-    train_dataset_dict, val_dataset_dict = get_multi_task_data(args, train_dataset_name_dict, val_dataset_name_dict, src_tokenizer, tgt_tokenizer)
+    train_dataset_dict = get_multi_task_data(args, train_dataset_name_dict, "train", src_tokenizer, tgt_tokenizer)
     for task, dataset in train_dataset_dict.items():
         if world_rank == 0:
             logger.info(f"task:{task} train_dataset:{len(dataset)}")
+    val_dataset = get_data(args, "val", src_tokenizer, tgt_tokenizer)
     
     train_loader = MultiTaskDataLoader4(
         train_dataset_dict,
@@ -170,20 +163,7 @@ def train():
         shuffle=True,
         pin_memory=True,
     )
-    val_loader = MultiTaskDataLoader4(
-        val_dataset_dict,
-        batch_size_dict=one_gpu_batch_size_dict,
-        each_task_sample_num_dict=each_task_sample_num_dict,
-        is_ddp=True,
-        seed=args.seed,
-        loader_drop_last=True,
-        sampler_drop_last=True,
-        num_workers=4,
-        shuffle=False,
-        pin_memory=True,
-    )
-    ##--
-    
+    val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)
 
     if 'Warmup' in args.lr_scheduler and args.num_steps is None:
         args.num_steps = args.num_epochs * len(train_loader)
@@ -224,22 +204,11 @@ def train():
         if args.stage == 'classify':
             train_acc = torch.tensor(0.0).to(local_rank)
         train_count = torch.tensor(0).to(local_rank)
-        pbar = tqdm(total=len(train_loader), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
-        
-        data_num_counter.reset()
+        pbar = tqdm(total=num_steps_per_epoch, desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
         
         for i, samples in enumerate(train_loader):
-
-            data_num_counter.update()
-            if data_num_counter.sample_max_data_flag:
-                for k in data_num_counter.one_gpu_max_data_num_dict.keys():
-                    if data_num_counter.accumulate_data_num_dict[k] > data_num_counter.one_gpu_max_data_num_dict[k]:
-                        if world_rank == 0:
-                            logger.info(f"task:{k} one_gpu_max_data_num:{data_num_counter.one_gpu_max_data_num_dict[k]} accumulate_data_num:{data_num_counter.accumulate_data_num_dict[k]}")
-                if world_rank == 0:
-                    logger.info(f"stop step:{i+1} in {len(train_loader)}")            
+            if i >= num_steps_per_epoch:
                 break
-
             accumulation_sample_size = torch.tensor(0).long().to(local_rank)
             loss_per_step = 0
             #累積数分の使用するデータをモデルに通して、勾配累積
@@ -265,7 +234,6 @@ def train():
                 src_attention_masks[src_texts == 0] = 0
 
                 loss, preds,sample_size = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks)
-                #loss /= args.accumulation_steps
                 loss_per_step += loss.item()
                 accumulation_sample_size += sample_size
                 scaler.scale(loss).backward()
@@ -275,7 +243,6 @@ def train():
                     train_acc += torch.sum(preds == tgt_texts)
                 #train_count += src_images.shape[0]
 
-            #     # args.accumulation_steps回の勾配を蓄積してから、optimizer.step()を呼び出す
             # if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
             #sum_loss/num_tokens
             
@@ -342,12 +309,9 @@ def train():
         for samples in val_loop:
             #勾配更新の前準備
             accumulation_sample_size = torch.tensor(0).long().to(local_rank)
-            for src_images, tgt_images, src_texts, tgt_texts in samples:
+            for src_images, _, src_texts, tgt_texts in samples:
                 with torch.no_grad():
                     src_images = src_images.to(local_rank, non_blocking=True)
-                    # if args.stage == 'pretrain':
-                    #    tgt_images = tgt_images.to(local_rank)
-                    #    tgt_texts, _ = model.module.image_to_z(tgt_images)
                     if args.stage == 'pretrain':
                         src_texts = src_texts.to(local_rank, non_blocking=True)
                         tgt_texts = tgt_texts.to(local_rank, non_blocking=True)

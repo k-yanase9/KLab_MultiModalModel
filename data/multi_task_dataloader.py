@@ -122,13 +122,11 @@ def get_dataset_dict(args, dataset_name_dict: dict[str, List[str]], phase, src_t
     return dataset_dict
 
 
-def get_multi_task_data(args, train_dataset_name_dict, val_dataset_name_dict, src_tokenizer=None, tgt_tokenizer=None):
+def get_multi_task_data(args, train_dataset_name_dict, phase="train", src_tokenizer=None, tgt_tokenizer=None):
     if len(train_dataset_name_dict) == 0:
         raise ValueError
-    train_dataset_dict, val_dataset_dict = {}, {}
-    train_dataset_dict = get_dataset_dict(args, train_dataset_name_dict, phase="train", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
-    val_dataset_dict = get_dataset_dict(args, val_dataset_name_dict, phase="val", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
-    return train_dataset_dict, val_dataset_dict
+    dataset_dict = get_dataset_dict(args, train_dataset_name_dict, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+    return dataset_dict
 
 
 class CountingIterator(object):
