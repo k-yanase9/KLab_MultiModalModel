@@ -178,12 +178,12 @@ class MyModel(nn.Module):
                     tgt_attention_masks[tgt_texts == 0] = 0
                 with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
                     logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=tgt_attention_masks).logits
-                    if sekf.args.stage == 'train':
+                    if self.args.stage == 'train':
                         loss, sample_size = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
                     else:
                         loss = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
                 preds = torch.argmax(logits, dim=2)
-            if sekf.args.stage == 'train':
+            if self.args.stage == 'train':
                 return loss, preds, sample_size
             else:
                 return loss, preds
