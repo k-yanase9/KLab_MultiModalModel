@@ -26,16 +26,6 @@ def get_data(args, phase="train", src_tokenizer=None, tgt_tokenizer=None):
 
     return dataset
 
-def get_task_data(args, dataset_name_dict, phase="train"):
-    datasets = {}
-    for task in dataset_name_dict.keys():
-        datasets[task] = []
-        for dataset_name in dataset_name_dict[task]:
-            dataset = get_dataset(args.root_dir, dataset_name, args.stage, phase, None, None)
-            datasets[task].append(dataset)
-        datasets[task] = ConcatDataset(datasets[task])
-    return datasets
-
 def get_distributed_dataloader(args, dataset, batch_size=64, num_workers=4, shuffle=True):
     sampler = distributed.DistributedSampler(dataset, drop_last=True, shuffle=shuffle)
     if args.stage == 'pretrain':
@@ -184,5 +174,6 @@ def get_dataset(root_dir="/data01", dataset_name="cc3m", stage="pretrain", phase
         elif 'places365' == dataset_name:
             dataset = Places365_Classify(data_dir, phase)
         else:
+            print(dataset_name)
             raise NotImplementedError
     return dataset
