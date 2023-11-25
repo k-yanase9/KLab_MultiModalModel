@@ -116,7 +116,10 @@ class MyModel(nn.Module):
         else:
             ignore_index = 0
         if args.loss == 'CrossEntropy':
-            self.criterion = make_compute_loss_fn(ignore_index,reduction="sum")#nn.CrossEntropyLoss(ignore_index=ignore_index)
+            if args.stage == 'train':
+                self.criterion = make_compute_loss_fn(ignore_index,reduction="sum")
+            else:
+                self.criterion = nn.CrossEntropyLoss(ignore_index=ignore_index)
         elif args.loss == 'FocalLoss':
             self.criterion = FocalLoss(ignore_index=ignore_index)
         else:
