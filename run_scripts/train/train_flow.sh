@@ -2,7 +2,7 @@
 
 # Linear
 batch_size=64
-dataset="redcaps cc3m cc12m vg_vqa vqa2 tdiuc imagenet imagenet21k places365 sun397"
+dataset="all"
 
 epoch=20
 
@@ -23,4 +23,4 @@ dec=12
         --datasets $dataset \
         --root_dir /data/group1/z40441a/ \
         --save_interval 1 \
-        --result_dir results/train/redcaps_cc3m_cc12m_vg_vqa_vqa2_tdiuc_imagenet_imagenet21k_places365_sun397/enc$enc\_dec$dec/Linear$epoch/
+        --result_dir results/train/all/enc$enc\_dec$dec/Linear$epoch/

@@ -19,6 +19,19 @@ from data.multi_task_dataloader import DataNumCounter, MultiTaskDataLoader4, get
 from models.model import MyModel
 from modules import *
 
+FULL_DATASET_NAME_DICT = {
+    "caption": ["redcaps", "cc3m", "cc12m"], 
+    "relation":["vg_rel", "openimage_rel"], 
+    "rcap": ["grit20m_rcap", "vg_rcap"],
+    "refexp": ["grit20m_refexp", "vg_refexp"],
+    "det": ["vg_det", "openimage_det", "objects365_det"],
+    "cat": ["vg_cat", "openimage_cat", "objects365_cat"],
+    "loc": ["vg_loc", "openimage_loc", "objects365_loc"],
+    "vqa": ["vg_vqa", "vqa2", "tdiuc", "imSitu", "visual7w_vqa"], 
+    "gvqa": ["vcr", "visual7w_gvqa"],
+    "classify": ["imagenet", "imagenet21k", "places365", "sun397"]}
+ONE_GPUT_BATCH_DICT = {"caption": 54, "relation":216, "rcap":54, "refexp":81, "det":54, "cat":216, "loc":108, "vqa": 81, "gvqa":54, "classify": 162} #1gpuのバッチサイズ
+TASK_SAMPLE_NUM_DICT = {"caption": 12, "relation":3, "rcap":12, "refexp":8, "det":12, "cat":3, "loc":6, "vqa": 8, "gvqa":2, "classify": 4} #何回タスクごとにバッチを取得するか
 
 #勾配をスケールする関数
 def multiply_grad(optimizer, multiplier):
@@ -129,21 +142,25 @@ def train():
 
     # データの設定
     # 引数の設定
-    FULL_DATASET_NAME_DICT = {"caption": ["redcaps", "cc3m", "cc12m"], "vqa": ["vg_vqa", "vqa2", "tdiuc", "imSitu", "visual7w_vqa"], "classify": ["imagenet", "imagenet21k", "places365", "sun397"]}
-    train_dataset_name_dict = {}
-    for task, dataset_names in FULL_DATASET_NAME_DICT.items():
-        for dataset_name in dataset_names:
-            if dataset_name in args.datasets:
-                if task in train_dataset_name_dict.keys():
-                    train_dataset_name_dict[task].append(dataset_name)
-                else:
-                    train_dataset_name_dict[task] = [dataset_name]
-    one_gpu_batch_size_dict = {"caption": 54, "vqa": 81, "classify": 162} #1gpuのバッチサイズ
-    each_task_sample_num_dict = {"caption": 12, "vqa": 8, "classify": 4}#何回タスクごとにバッチを取得するか
+    if args.datasets[0] == 'all':
+        train_dataset_name_dict = FULL_DATASET_NAME_DICT
+        args.datasets = []
+        for v in train_dataset_name_dict.values():
+            args.datasets.extend(v)
+    else:
+        train_dataset_name_dict = {}
+        for task, dataset_names in FULL_DATASET_NAME_DICT.items():
+            for dataset_name in dataset_names:
+                if dataset_name in args.datasets:
+                    if task in train_dataset_name_dict.keys():
+                        train_dataset_name_dict[task].append(dataset_name)
+                    else:
+                        train_dataset_name_dict[task] = [dataset_name]
     num_steps_per_epoch = 2560 // args.world_size #使用するデータ数の上限、subsetで上限最大値caption80000, classify160000
     
     if world_rank == 0:
         logger.info(f"target_DataSet:{train_dataset_name_dict}")
+        logger.info(f"num_steps_per_epoch:{num_steps_per_epoch}")
     
     train_dataset_dict = get_multi_task_data(args, train_dataset_name_dict, "train", src_tokenizer, tgt_tokenizer)
     for task, dataset in train_dataset_dict.items():
@@ -153,8 +170,8 @@ def train():
     
     train_loader = MultiTaskDataLoader4(
         train_dataset_dict,
-        batch_size_dict=one_gpu_batch_size_dict,
-        each_task_sample_num_dict=each_task_sample_num_dict,
+        batch_size_dict=ONE_GPUT_BATCH_DICT,
+        each_task_sample_num_dict=TASK_SAMPLE_NUM_DICT,
         is_ddp=True,
         seed=args.seed,
         loader_drop_last=True,
@@ -229,7 +246,9 @@ def train():
                     else:
                         tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
                         tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
-                        tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True) 
+                        tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
+                if world_rank == 0:
+                    logger.info(f'b{src_images.shape[0]} src{src_texts.shape[1]} tgt{tgt_texts.shape[1]}')
                 src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
                 src_attention_masks[src_texts == 0] = 0
 
