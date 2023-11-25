@@ -38,7 +38,7 @@ pip install -r requirements.txt
 | parameter | 説明 | default |
 | - | - | - |
 | multinode | マルチノード学習を行うかどうか | False |
-| phase | 事前学習か学習か分類か | train |
+| stage | 事前学習か学習か分類か | train |
 | seed | 乱数シード | 999 |
 | loss | 損失関数 | CrossEntropy |
 | lr | 学習率 | 0.01 |

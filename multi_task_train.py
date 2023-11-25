@@ -1,53 +1,17 @@
 import os
 import pkgutil
 import random
-from typing import Any, Callable, Dict, List
 
 import numpy as np
 import torch
 import torch.distributed as dist
-import torch.nn.functional as F
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data import ConcatDataset, DataLoader, Subset
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
 from data import *
-from data.multi_task_dataloader import MultiTaskDataLoader, make_multi_task_collate_fn, get_multi_task_data
 from models.model import MyModel
 from modules import *
-
-
-# def get_dataset_dict(args, dataset_name_dict: dict[str, List[str]], phase, src_tokenizer=None, tgt_tokenizer=None):
-#     dataset_dict = {
-#         key: ConcatDataset(
-#             [
-#                 Subset(
-#                     get_dataset(
-#                         args,
-#                         dataset_name,
-#                         phase=phase,
-#                         src_tokenizer=src_tokenizer,
-#                         tgt_tokenizer=tgt_tokenizer,
-#                     ),
-#                     indices=range(0, 10000),
-#                 )
-#                 for dataset_name in dataset_name_dict[key]
-#             ]
-#         )
-#         for key in dataset_name_dict.keys()
-#     }
-#     return dataset_dict
-
-
-# def get_multi_task_data(args, train_dataset_name_dict, val_dataset_name_dict, src_tokenizer=None, tgt_tokenizer=None):
-#     if len(train_dataset_name_dict) == 0:
-#         raise ValueError
-#     train_dataset_dict, val_dataset_dict = {}, {}
-#     train_dataset_dict = get_dataset_dict(args, train_dataset_name_dict, phase="train", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
-#     val_dataset_dict = get_dataset_dict(args, val_dataset_name_dict, phase="val", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
-#     return train_dataset_dict, val_dataset_dict
-
 
 use_wandb = False
 if pkgutil.find_loader("wandb") is not None:
@@ -93,13 +57,13 @@ def train():
     # create model
     model = MyModel(args).to(local_rank)
     if args.start_epoch > 1:
-        model.load(result_name='best.pth')
-    model = DDP(model, device_ids=[local_rank])  # ,find_unused_parameters=True)
-
+        model.load(result_name=f'epoch_{args.start_epoch-1}.pth' if args.save_interval is not None else 'best.pth')
+    model = DDP(model, device_ids=[local_rank])#,find_unused_parameters=True)
+    
     scaler = torch.cuda.amp.GradScaler(enabled=True if args.float_type == 'float16' else False)
     optimizer = get_optimizer(model, args)
     if args.start_epoch > 1:
-        optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, 'best.optimizer')))
+        optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, f'epoch_{args.start_epoch-1}.optimizer' if args.save_interval is not None else 'best.optimizer')))
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
     tgt_tokenizer = AutoTokenizer.from_pretrained(
@@ -116,49 +80,27 @@ def train():
     else:
         src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=args.max_source_length, use_fast=True)
 
-    ## --  データの設定
-    # train_dataset, val_dataset = get_data(args, src_tokenizer, tgt_tokenizer)
-    # if world_rank == 0:
-    #     logger.info(f'Train Dataset : {len(train_dataset)}, Val Dataset : {len(val_dataset)}')
-    # train_loader = get_distributed_dataloader(args, train_dataset, shuffle=True)
-    # val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)
-
-    # 引数の設定
-    train_dataset_name_dict = {"caption": ["cc3m"], "classify": ["imagenet", "sun397"]}
-    val_dataset_name_dict = {"caption": ["cc3m"], "classify": ["imagenet", "sun397"]}
-    batch_size_dict = {"caption": 5, "classify": 10}
-
-    train_dataset_dict, val_dataset_dict = get_multi_task_data(args, train_dataset_name_dict, val_dataset_name_dict, src_tokenizer, tgt_tokenizer)
-    # each_task_collate_fn_dict = {key: dataset.datasets[0].dataset.collate_fn for key, dataset in train_dataset_dict.items()}
-    each_task_collate_fn_dict = {key: dataset.datasets[0].collate_fn for key, dataset in train_dataset_dict.items()}
-
-    train_loader = MultiTaskDataLoader(
-        train_dataset_dict,
-        batch_size_dict=batch_size_dict,
-        each_task_collate_fn_dict=each_task_collate_fn_dict,
-        multi_task_collate_fn=make_multi_task_collate_fn(src_tokenizer, tgt_tokenizer),
-        is_ddp=True,
-        seed=args.seed,
-        loader_drop_last=True,
-        sampler_drop_last=True,
-        num_workers=4,
-        shuffle=True,
-        pin_memory=True,
-    )
-    val_loader = MultiTaskDataLoader(
-        val_dataset_dict,
-        batch_size_dict=batch_size_dict,
-        each_task_collate_fn_dict=each_task_collate_fn_dict,
-        multi_task_collate_fn=make_multi_task_collate_fn(src_tokenizer, tgt_tokenizer),
-        is_ddp=True,
-        seed=args.seed,
-        loader_drop_last=True,
-        sampler_drop_last=True,
-        num_workers=4,
-        shuffle=False,
-        pin_memory=True,
-    )
-    ##--
+    # データの設定
+    full_dataset_dict = {"cat": ["vg_cat", "objects365_cat"], "loc": ["vg_loc", "objects365_loc"], "rcap": ["vg_rcap"], "refexp": ["vg_refexp"], "caption": ["redcaps", "cc3m"]}
+    dataset_name_dict = {}
+    for key, dataset_names in full_dataset_dict.items():
+        dataset_name_dict[key] = []
+        for dataset_name in dataset_names:
+            if dataset_name in args.datasets:
+                dataset_name_dict[key].append(dataset_name)
+    batch_dict = {"cat": 216, "loc": 108, "rcap" : 54, "refexp": 54, "caption": 54}
+    times_dict = {"cat": 3, "loc": 6, "rcap" : 12, "refexp": 12, "caption": 12}
+    num_iter = 2500
+    train_dataset = get_task_data(args, dataset_name_dict, "train")
+    val_dataset = get_data(args, src_tokenizer, tgt_tokenizer)
+    train_loader = {}
+    for task, dataset in train_dataset.items():
+        train_loader[task] = iter(get_distributed_dataloader(args, train_dataset, batch_dict[task], shuffle=True))
+        if world_rank == 0:
+            logger.info(f'Train Dataset ({key}) : {len(dataset)}')
+    val_loader = get_distributed_dataloader(args, val_dataset, args.batch_size, shuffle=False)
+    if world_rank == 0:
+        logger.info(f'Val Dataset : {len(val_dataset)}')
 
     if 'Warmup' in args.lr_scheduler and args.num_steps is None:
         args.num_steps = args.num_epochs * len(train_loader)
@@ -171,7 +113,10 @@ def train():
                 if 'Epoch' in line:
                     if 'Train' in line:
                         loss_counter.add("train", float(line.split(',')[1].split(':')[-1].strip()))
-                        steps = int(line.split(',')[3].split(':')[-1].strip())
+                        if args.stage == 'classify':
+                            steps = int(line.split(',')[3].split(':')[-1].strip())
+                        else:
+                            steps = int(line.split(',')[2].split(':')[-1].strip())
                     elif 'Val' in line:
                         loss_counter.add("val", float(line.split(',')[1].split(':')[-1].strip()))
         min_val_loss = min(loss_counter.losses['val'])
@@ -188,61 +133,50 @@ def train():
         min_val_loss = 100
     for epoch in range(args.start_epoch, args.num_epochs + 1):
         # 学習ループ
-        train_loader.set_epoch(epoch)
-        image_mask_ratio = 0.0
-        if args.language_model_train:
-            model.module.language_model.train()
-        if args.image_model_train:
-            model.module.image_model.train()
+        train_loader.sampler.set_epoch(epoch)
+        if args.language_model_train: model.module.language_model.train()
+        if args.image_model_train: model.module.image_model.train()
         model.module.transformer.train()
         train_loss = torch.tensor(0.0).to(local_rank)
-        if args.phase == 'classify':
+        if args.stage == 'classify':
             train_acc = torch.tensor(0.0).to(local_rank)
         train_count = torch.tensor(0).to(local_rank)
-        pbar = tqdm(total=int(np.ceil(len(train_loader) / args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
-        for i, (src_images, tgt_images, src_texts, tgt_texts) in enumerate(train_loader):
-            src_images = src_images.to(local_rank, non_blocking=True)
-            # if args.phase == 'pretrain':
-            #     tgt_images = tgt_images.to(local_rank)
-            #     tgt_texts, _ = model.module.image_to_z(tgt_images)
-            if args.phase == 'classify':
-                src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')  # ['pt', 'tf', 'np', 'jax']
-                src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                tgt_attention_masks = None
-            else:
-                src_texts = src_texts.to(local_rank, non_blocking=True)
-                tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
-                tgt_attention_masks[tgt_texts == 0] = 0
-            src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
-            src_attention_masks[src_texts == 0] = 0
+        pbar = tqdm(total=num_iter, desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
+        for i in range(num_iter):
+            for key, iterator in train_loader.items():
+                for _ in range(times_dict[key]):
+                    src_images, _, src_texts, tgt_texts = next(iterator)
+                    src_images = src_images.to(local_rank, non_blocking=True)
+                    src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                    src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
+                    tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                    tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
+                    tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True) 
+                    src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
+                    src_attention_masks[src_texts == 0] = 0
 
-            loss, preds = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks, image_mask_ratio=image_mask_ratio)
-            loss /= args.accumulation_steps
-            scaler.scale(loss).backward()
+                    loss, preds = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks)
+                    loss /= args.accumulation_steps
+                    scaler.scale(loss).backward()
 
-            train_loss += loss.item() * src_images.shape[0]
-            if args.phase == 'classify':
-                train_acc += torch.sum(preds == tgt_texts)
-            train_count += src_images.shape[0]
+                    train_loss += loss.item() * src_images.shape[0]
+                    train_count += src_images.shape[0]
 
-            # args.accumulation_steps回の勾配を蓄積してから、optimizer.step()を呼び出す
-            if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
-                scaler.step(optimizer)
-                scaler.update()
-                optimizer.zero_grad(set_to_none=True)
-                pbar.update(1)
-                if world_rank == 0:
-                    steps += 1
-                    if use_wandb:
-                        wandb.log({"iter": steps, "iter/loss": loss.item(), "iter/lr": optimizer.param_groups[0]["lr"]})
-                if args.num_steps is not None:
-                    scheduler.step()
+            # 勾配を蓄積してから、optimizer.step()を呼び出す
+            scaler.step(optimizer)
+            scaler.update()
+            optimizer.zero_grad(set_to_none=True)
+            pbar.update(1)
+            if world_rank == 0:
+                steps += 1
+                if use_wandb:
+                    wandb.log({"iter": steps, "iter/loss": loss.item(), "iter/lr": optimizer.param_groups[0]["lr"]})
+            if args.num_steps is not None:
+                scheduler.step()
 
         # 他のノードから集める
         dist.all_reduce(train_loss, op=dist.ReduceOp.SUM)
-        if args.phase == 'classify':
+        if args.stage == 'classify':
             dist.all_reduce(train_acc, op=dist.ReduceOp.SUM)
         dist.all_reduce(train_count, op=dist.ReduceOp.SUM)
         pbar.close()
@@ -250,7 +184,7 @@ def train():
         if world_rank == 0:
             train_loss /= train_count
             loss_counter.add("train", train_loss.cpu().numpy().copy())
-            if args.phase == 'classify':
+            if args.stage == 'classify':
                 train_acc /= train_count
                 logger.info(
                     f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Acc : {train_acc}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}'
@@ -272,48 +206,51 @@ def train():
             model.module.image_model.eval()
         model.module.transformer.eval()
         val_loss = torch.tensor(0.0).to(local_rank)
-        if args.phase == 'classify':
+        if args.stage == 'classify':
             val_acc = torch.tensor(0.0).to(local_rank)
         val_count = torch.tensor(0).to(local_rank)
         val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
         for src_images, tgt_images, src_texts, tgt_texts in val_loop:
             with torch.no_grad():
                 src_images = src_images.to(local_rank, non_blocking=True)
-                # if args.phase == 'pretrain':
+                # if args.stage == 'pretrain':
                 #    tgt_images = tgt_images.to(local_rank)
                 #    tgt_texts, _ = model.module.image_to_z(tgt_images)
-                if args.phase == 'classify':
-                    src_inputs = src_tokenizer(
-                        src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt'
-                    )  # ['pt', 'tf', 'np', 'jax']
-                    src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                    tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                    tgt_attention_masks = None
-                else:
+                if args.stage == 'pretrain':
                     src_texts = src_texts.to(local_rank, non_blocking=True)
                     tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
                     tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
                     tgt_attention_masks[tgt_texts == 0] = 0
+                else:
+                    src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                    src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
+                    if args.stage == 'classify':
+                        tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
+                        tgt_attention_masks = None
+                    else:
+                        tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                        tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
+                        tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
                 src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
                 src_attention_masks[src_texts == 0] = 0
 
                 loss, preds = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
 
                 val_loss += loss.item() * src_images.shape[0]
-                if args.phase == 'classify':
+                if args.stage == 'classify':
                     val_acc += torch.sum(preds == tgt_texts)
                 val_count += src_images.shape[0]
 
         # 他のノードから集める
         dist.all_reduce(val_loss, op=dist.ReduceOp.SUM)
-        if args.phase == 'classify':
+        if args.stage == 'classify':
             dist.all_reduce(val_acc, op=dist.ReduceOp.SUM)
         dist.all_reduce(val_count, op=dist.ReduceOp.SUM)
 
         if world_rank == 0:
             val_loss /= val_count
             loss_counter.add("val", val_loss.cpu().numpy().copy())
-            if args.phase == 'classify':
+            if args.stage == 'classify':
                 val_acc /= val_count
                 logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}, Acc : {val_acc}')
                 if use_wandb:
@@ -337,14 +274,31 @@ def train():
                     torch.save(optimizer.state_dict(), os.path.join(args.result_dir, f'epoch_{epoch}.optimizer'))
                     print(f'Model and Optimizer {epoch} saved')
 
-    if world_rank == 0:
+        if epoch == args.stop_epoch:
+            if world_rank == 0: 
+                logger.info(f'Train stoped at {epoch} epoch')
+            break
+            
+    if world_rank == 0: 
         loss_counter.plot_loss(args.result_dir)
         if use_wandb:
             wandb.finish()
 
 
 def wandb_init(args):
-    wandb.init(project=f"{args.phase}_" + "_".join(args.datasets), name=args.lr_scheduler if args.lr_scheduler != '' else 'wo_scheduler', config=args)
+    if args.stage == 'classify':
+        name = f'enc{args.transformer_num_layers}_{args.language_model_name.split("/")[-1]}'
+    else:
+        name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
+    if args.id is None:
+        args.id = wandb.util.generate_id()
+    wandb.init(
+        id=args.id,
+        project=f"{args.stage}_"+"_".join(args.datasets), 
+        name=name,
+        config=args,
+        resume=True if args.start_epoch > 1 else False
+    )
     wandb.define_metric("epoch")
     wandb.define_metric("iter")
     wandb.define_metric("iter/*", step_metric="iter")
