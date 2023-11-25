@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 import torch
-from torch import nn
+from torch import Tensor, nn
 from transformers import ResNetModel, Swinv2Model, T5Config, T5EncoderModel, T5ForConditionalGeneration, logging
 
 # from models.transformer import Transformer, TransformerConfig
@@ -11,6 +11,29 @@ from modules.losses import FocalLoss
 
 logging.set_verbosity_error()
 
+def make_compute_loss_fn(ignore_index,reduction="sum"):
+    def compute_crossentopy_loss(logits: Tensor, tgt_ids: Tensor,weight: Tensor | None = None) -> list[Tensor,Tensor]:
+        # logits = logits[..., :-1, :].reshape(-1, logits.shape[-1])
+        # tgt_ids = tgt_ids[..., 1:].reshape(-1).long()
+        
+        if reduction == "sum":
+            if weight is not None:
+                weight = weight.to(tgt_ids.device)
+                sample_mask = (tgt_ids.detach().clone() != ignore_index).to(tgt_ids.device)
+                sample_vocab_index = tgt_ids[sample_mask]
+                sample_size = weight[sample_vocab_index].sum()
+                
+            else:
+                sample_size = (tgt_ids.detach().clone() != ignore_index).sum().to(tgt_ids.device)
+        elif reduction == "mean":
+            sample_size = None
+        else:
+            raise NotImplementedError
+        
+        sum_loss = torch.nn.functional.cross_entropy(logits, tgt_ids, ignore_index=ignore_index, reduction=reduction, weight=weight)
+        return sum_loss, sample_size
+    
+    return compute_crossentopy_loss
 
 # モデルの定義
 class MyModel(nn.Module):
@@ -93,7 +116,10 @@ class MyModel(nn.Module):
         else:
             ignore_index = 0
         if args.loss == 'CrossEntropy':
-            self.criterion = nn.CrossEntropyLoss(ignore_index=ignore_index)
+            if args.stage == 'train':
+                self.criterion = make_compute_loss_fn(ignore_index,reduction="sum")
+            else:
+                self.criterion = nn.CrossEntropyLoss(ignore_index=ignore_index)
         elif args.loss == 'FocalLoss':
             self.criterion = FocalLoss(ignore_index=ignore_index)
         else:
@@ -152,9 +178,15 @@ class MyModel(nn.Module):
                     tgt_attention_masks[tgt_texts == 0] = 0
                 with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
                     logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=tgt_attention_masks).logits
-                    loss = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
+                    if sekf.args.stage == 'train':
+                        loss, sample_size = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
+                    else:
+                        loss = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
                 preds = torch.argmax(logits, dim=2)
-            return loss, preds
+            if sekf.args.stage == 'train':
+                return loss, preds, sample_size
+            else:
+                return loss, preds
         else:
             if self.args.stage == 'classify':
                 with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):

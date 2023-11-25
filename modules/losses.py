@@ -1,7 +1,9 @@
 import os
+
+import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
-import matplotlib.pyplot as plt
+
 
 class LossCounter():
     def __init__(self):
@@ -34,4 +36,7 @@ class FocalLoss(torch.nn.Module):
         ce_loss = F.cross_entropy(input, target, reduction='none', ignore_index=self.ignore_index)
         pt = torch.exp(-ce_loss)
         focal_loss = ((1 - pt) ** self.gamma * ce_loss).mean()
-        return focal_loss
+        
+        #To Do: FocalLossのサンプル数を計算
+        sample_size = None
+        return focal_loss,sample_size

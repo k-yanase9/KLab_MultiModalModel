@@ -1,5 +1,6 @@
 import os
-from ..dataset_loader import DatasetLoader, DETECTION_SRC_TEXT
+
+from ..dataset_loader import DETECTION_SRC_TEXT, DatasetLoader
 
 #存在しない画像を除外するためのリスト
 dropimageidlist =['patch16_256/objects365_v2_00908726.png','patch6_256/objects365_v1_00320532.png','patch6_256/objects365_v1_00320534.png']

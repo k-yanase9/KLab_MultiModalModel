@@ -1,5 +1,7 @@
 import os
-from ..dataset_loader import DatasetLoader, CLASSIFY_SRC_TEXT
+
+from ..dataset_loader import CLASSIFY_SRC_TEXT, DatasetLoader
+
 
 class ImageNet_Classify(DatasetLoader):
     def __init__(self, data_dir='/data01/imagenet', phase='train', is_tgt_id=False):

@@ -5,7 +5,8 @@ import pandas as pd
 import torch
 from PIL import Image
 from torchvision.transforms import ToTensor
-from ..dataset_loader import DatasetLoader, DETECTION_SRC_TEXT
+
+from ..dataset_loader import DETECTION_SRC_TEXT, DatasetLoader
 
 #存在しない画像を除外するためのリスト
 dropimageidlist =["7f1934f5884fad79","429019e83c1c2c94","4f818c006da84c9e","5b86e93f8654118a","673d74b7d39741c3","6dcd3ce37a17f2be","805baf9650a12710"

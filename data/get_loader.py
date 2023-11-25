@@ -1,15 +1,17 @@
 import os
+
 from torch.utils.data import ConcatDataset, DataLoader, distributed
-from .pretrain import *
 
 from .caption import *
 from .categorization import *
 from .detection import *
+from .gvqa import *
 from .image_classify import *
 from .localization import *
+from .pretrain import *
 from .relationship import *
 from .vqa import *
-from .gvqa import *
+
 
 def get_data(args, phase="train", src_tokenizer=None, tgt_tokenizer=None):
     datasets = []

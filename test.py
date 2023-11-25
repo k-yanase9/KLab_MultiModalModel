@@ -1,14 +1,15 @@
 import os
-import random
 import pkgutil
-import torch
+import random
+
 import numpy as np
-from transformers import AutoTokenizer
+import torch
 from tqdm import tqdm
+from transformers import AutoTokenizer
 
 from data import *
-from modules import *
 from models.model import MyModel
+from modules import *
 
 use_wandb = False
 if pkgutil.find_loader("wandb") is not None:
