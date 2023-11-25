@@ -1,15 +1,14 @@
 import os
-import pkgutil
 import random
-
-import numpy as np
+import pkgutil
 import torch
-from tqdm import tqdm
+import numpy as np
 from transformers import AutoTokenizer
+from tqdm import tqdm
 
 from data import *
-from models.model import MyModel
 from modules import *
+from models.model import MyModel
 
 use_wandb = False
 if pkgutil.find_loader("wandb") is not None:
@@ -29,8 +28,6 @@ def test():
     dataset = get_dataset(args, dataset_name=args.datasets[0], phase=args.data_phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
     for checkpoints_name in checkpoints_names:
         epoch = checkpoints_name.split('_')[1].split('.')[0]
-        if int(epoch) < args.start_epoch:
-            continue
         print(f'loading {checkpoints_name}...', end='')
         model.load(result_name=checkpoints_name)
         print(f'done')
@@ -94,16 +91,10 @@ def test():
     wandb.finish()
 
 def wandb_init(args):
-    if args.start_epoch > 1:
-        wandb_id = args.id
-    else:
-        wandb_id = wandb.util.generate_id()
     wandb.init(
-        id=f'test_all_sentence_{wandb_id}',
         project=f"pretrain_test_all_sentence", 
         name=f"{args.datasets[0]}_{args.data_phase}_b{args.batch_size}",
         config=args,
-        resume=True if args.start_epoch > 1 else False
     )
     wandb.define_metric("epoch")
     wandb.define_metric("Bleu_*", step_metric="epoch")

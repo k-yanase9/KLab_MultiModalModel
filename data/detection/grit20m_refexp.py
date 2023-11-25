@@ -5,7 +5,9 @@ import pandas as pd
 import torch
 from PIL import Image
 from torchvision.transforms import ToTensor
+
 from ..dataset_loader import DatasetLoader
+
 
 class Grit20M_RefExp(DatasetLoader):
     """Grit20mのReferring Expressionデータセット

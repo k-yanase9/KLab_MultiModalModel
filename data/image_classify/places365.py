@@ -1,5 +1,7 @@
-from ..dataset_loader import DatasetLoader, CLASSIFY_SRC_TEXT
 import os
+
+from ..dataset_loader import CLASSIFY_SRC_TEXT, DatasetLoader
+
 
 class Places365_Classify(DatasetLoader):
     def __init__(self,data_dir='/data01/places365', phase='train'):

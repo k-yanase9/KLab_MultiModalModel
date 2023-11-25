@@ -8,7 +8,7 @@ epoch=5
 enc=2
 dec=6
 
-torchrun --nnodes=1 --nproc_per_node=1 multi_task_train.py \
+torchrun --nnodes=1 --nproc_per_node=1 multi_task_train_p1.py \
         --transformer_num_layers $enc \
         --transformer_num_decoder_layers $dec \
         --phase pretrain \

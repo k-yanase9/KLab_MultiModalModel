@@ -1,5 +1,7 @@
 from pathlib import Path
-from ..dataset_loader import DatasetLoader, CLASSIFY_SRC_TEXT
+
+from ..dataset_loader import CLASSIFY_SRC_TEXT, DatasetLoader
+
 
 class SUN397_Classify(DatasetLoader):
     def __init__(self, data_dir='/data01/sun397', phase='train', is_tgt_id=False):
