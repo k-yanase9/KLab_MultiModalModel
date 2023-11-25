@@ -12,47 +12,18 @@ from torch.utils.data.distributed import DistributedSampler
 from .get_loader import get_dataset
 
 
-def default_each_task_collate_fn1(batch):
-    # list[image,in_text,out_text]が入力される
-    # print(batch)
-    sample_list = [[] for _ in range(len(batch[0]))]
-    for data in batch:
-        for i, sample in enumerate(data):
-            sample_list[i].append(sample)
-    return sample_list
-
-
-def default_multi_task_collate_fn(sample_per_task_list):
-    if type(sample_per_task_list[0]) == list:
-        next_sample = [[] for _ in range(len(sample_per_task_list[0]))]
-        for sample_list in sample_per_task_list:
-            for i, sample in enumerate(sample_list):
-                next_sample[i].extend(sample) #[imageA,imageB,imageC],[in_textA,in_textB,in_textC],[out_textA,out_textB,out_textC]]
-    else:
-        raise NotImplementedError
-    next_sample = [torch.stack(sample) for sample in next_sample]
-    return next_sample
-
-
 class MultiTaskDataIterator1:
-    def __init__(self, dataloader_list, min_step, multi_data_collate_fn=None) -> None:
+    def __init__(self, dataloader_list, min_step) -> None:
         self.iter_list = [iter(dataloader) for dataloader in dataloader_list]
         self.min_step = min(min_step)
         self.step = 0
-        self.multi_task_collate_fn = multi_data_collate_fn
 
     def __next__(self):
         if self.step == self.min_step:
             raise StopIteration
 
-        next_sample_list = [next(iter) for iter in self.iter_list]  # [taskA,taskB,taskC]
+        next_sample = [next(iter) for iter in self.iter_list]  # [taskA,taskB,taskC]
 
-        if self.multi_task_collate_fn is None:
-            next_sample = default_multi_task_collate_fn(
-                next_sample_list
-            )  # [imageA,imageB,imageC],[in_textA,in_textB,in_textC],[out_textA,out_textB,out_textC]]
-        else:
-            next_sample = self.multi_task_collate_fn(next_sample_list)  # [taskA,taskB,taskC]
         self.step += 1
         return next_sample
 
@@ -65,8 +36,6 @@ class MultiTaskDataLoader1:
         self,
         dataset_dict: dict[str, DataLoader],
         batch_size_dict: dict[str, int],
-        each_task_collate_fn_dict: dict[str, Callable] = None,
-        multi_task_collate_fn=None,
         is_ddp=False,
         seed=0,
         loader_drop_last=False,
@@ -99,9 +68,6 @@ class MultiTaskDataLoader1:
         else:
             self.distributed_sampler_dict = {key: None for key in dataset_dict_keys}
 
-        if each_task_collate_fn_dict is None:
-            each_task_collate_fn_dict = {key: default_each_task_collate_fn1 for key in dataset_dict_keys}
-
         def seed_worker(worker_id):
             worker_seed = torch.initial_seed() % 2**32
             np.random.seed(worker_seed)
@@ -114,7 +80,6 @@ class MultiTaskDataLoader1:
             DataLoader(
                 dataset_dict[key],
                 batch_size_dict[key],
-                collate_fn=each_task_collate_fn_dict[key],
                 sampler=self.distributed_sampler_dict[key],
                 worker_init_fn=seed_worker,
                 generator=g,
@@ -125,10 +90,9 @@ class MultiTaskDataLoader1:
         ]
         self.step_list = [len(dataloader) for dataloader in self.dataloader_list]
         self.min_step = min(self.step_list)
-        self.multi_task_collate_fn = multi_task_collate_fn
 
     def __iter__(self):
-        return MultiTaskDataIterator1(self.dataloader_list, self.step_list, self.multi_task_collate_fn)
+        return MultiTaskDataIterator1(self.dataloader_list, self.step_list)
 
     def __len__(self):
         return self.min_step
@@ -143,8 +107,9 @@ def get_dataset_dict(args, dataset_name_dict: dict[str, List[str]], phase, src_t
         key: ConcatDataset(
             [
                 get_dataset(
-                    args,
+                    args.root_dir,
                     dataset_name,
+                    args.stage,
                     phase=phase,
                     src_tokenizer=src_tokenizer,
                     tgt_tokenizer=tgt_tokenizer,
@@ -164,37 +129,6 @@ def get_multi_task_data(args, train_dataset_name_dict, val_dataset_name_dict, sr
     train_dataset_dict = get_dataset_dict(args, train_dataset_name_dict, phase="train", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
     val_dataset_dict = get_dataset_dict(args, val_dataset_name_dict, phase="val", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
     return train_dataset_dict, val_dataset_dict
-
-
-def make_multi_task_collate_fn(src_tokenizer, tgt_tokenizer):
-    src_pad_token_id = src_tokenizer.pad_token_id
-    tgt_pad_token_id = tgt_tokenizer.pad_token_id
-
-    def multi_task_collate_fn(sample_per_task_list):
-        src_images_tensor_list = []
-        tgt_images_tensor_list = []
-        src_texts_tensor_list = []
-        tgt_texts_tensor_list = []
-        for sample in sample_per_task_list:
-            src_images_tensor_list.append(sample[0])
-            tgt_images_tensor_list.append(sample[1])
-            src_texts_tensor_list.append(sample[2])
-            tgt_texts_tensor_list.append(sample[3])
-
-        src_images = torch.vstack(src_images_tensor_list)
-        tgt_images = torch.vstack(tgt_images_tensor_list)
-        src_max_length = max([src_texts_tensor.shape[-1] for src_texts_tensor in src_texts_tensor_list])
-        tgt_max_length = max([tgt_texts_tensor.shape[-1] for tgt_texts_tensor in tgt_texts_tensor_list])
-        src_texts = torch.vstack(
-            [F.pad(src_texts_tensor, (0, src_max_length - src_texts_tensor.shape[-1]), value=src_pad_token_id) for src_texts_tensor in src_texts_tensor_list]
-        )
-        tgt_texts = torch.vstack(
-            [F.pad(tgt_texts_tensor, (0, tgt_max_length - tgt_texts_tensor.shape[-1]), value=tgt_pad_token_id) for tgt_texts_tensor in tgt_texts_tensor_list]
-        )
-        return src_images, tgt_images, src_texts, tgt_texts
-
-    return multi_task_collate_fn
-
 
 
 class CountingIterator(object):
@@ -303,27 +237,7 @@ def _chunk_iterator(itr, chunk_size, skip_remainder_batch=False):
     if not skip_remainder_batch and len(chunk) > 0:
         yield chunk
         
-# def default_each_task_collate_fn4(batch):
-#     # list[image,in_text,out_text]が入力される
-#     sample_list = [[] for _ in range(len(batch[0]))]
-#     for data in batch:
-#         for i, sample in enumerate(data):
-#             sample_list[i].append(sample)
-#     return sample_list
-
-
-def default_multi_task_collate_fn(sample_per_task_list):
-    if type(sample_per_task_list[0]) == list:
-        next_sample = [[] for _ in range(len(sample_per_task_list[0]))]
-        for sample_list in sample_per_task_list:
-            for i, sample in enumerate(sample_list):
-                next_sample[i].extend(sample) #[imageA,imageB,imageC],[in_textA,in_textB,in_textC],[out_textA,out_textB,out_textC]]
-    else:
-        raise NotImplementedError
-    next_sample = [torch.stack(sample) for sample in next_sample]
-    return next_sample
-
-
+        
 class MultiTaskDataIterator4:
     def __init__(self, dataloader_list, step_list, sample_num_list) -> None:
         self.dataloader_list = dataloader_list
@@ -351,7 +265,6 @@ class MultiTaskDataLoader4:
         self,
         dataset_dict: dict[str, DataLoader],
         batch_size_dict: dict[str, int],
-        each_task_collate_fn_dict: dict[str, Callable] = None,
         each_task_sample_num_dict: dict[str, int] = None,
         is_ddp=False,
         seed=0,
@@ -385,9 +298,6 @@ class MultiTaskDataLoader4:
         else:
             self.distributed_sampler_dict = {key: None for key in dataset_dict_keys}
 
-        if each_task_collate_fn_dict is None:
-            each_task_collate_fn_dict = {key: None for key in dataset_dict_keys}
-
         def seed_worker(worker_id):
             worker_seed = torch.initial_seed() % 2**32
             np.random.seed(worker_seed)
@@ -400,7 +310,6 @@ class MultiTaskDataLoader4:
             DataLoader(
                 dataset_dict[key],
                 batch_size_dict[key],
-                collate_fn=each_task_collate_fn_dict[key],
                 sampler=self.distributed_sampler_dict[key],
                 worker_init_fn=seed_worker,
                 generator=g,
@@ -413,7 +322,6 @@ class MultiTaskDataLoader4:
         self.sample_num_list = [each_task_sample_num_dict[key] for key in dataset_dict_keys]
         self.step_list = [int(math.floor(len(dataloader) / float(sample_num))) for sample_num,dataloader in zip(self.sample_num_list,self.dataloader_list)]
         self.min_step = min(self.step_list)
-        #self.multi_task_collate_fn = multi_task_collate_fn
 
     def __iter__(self):
         return MultiTaskDataIterator4(self.dataloader_list, self.step_list, self.sample_num_list)
