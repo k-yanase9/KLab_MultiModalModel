@@ -181,8 +181,6 @@ def train():
         if args.image_model_train: model.module.image_model.train()
         model.module.transformer.train()
         train_loss = torch.tensor(0.0).to(local_rank)
-        if args.stage == 'classify':
-            train_acc = torch.tensor(0.0).to(local_rank)
         train_count = torch.tensor(0).to(local_rank)
         pbar = tqdm(total=num_steps_per_epoch, desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
         
@@ -203,13 +201,9 @@ def train():
                 else:
                     src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
                     src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                    if args.stage == 'classify':
-                        tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                        tgt_attention_masks = None
-                    else:
-                        tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
-                        tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
-                        tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
+                    tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                    tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
+                    tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
                 if world_rank == 0:
                     logger.info(f'b{src_images.shape[0]} src{src_texts.shape[1]} tgt{tgt_texts.shape[1]}')
                 src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
@@ -254,25 +248,15 @@ def train():
 
         # 他のノードから集める
         dist.all_reduce(train_loss, op=dist.ReduceOp.SUM)
-        if args.stage == 'classify':
-            dist.all_reduce(train_acc, op=dist.ReduceOp.SUM)
         # dist.all_reduce(train_count, op=dist.ReduceOp.SUM)
         pbar.close()
 
         if world_rank == 0:
             train_loss /= train_count
             loss_counter.add("train", train_loss.cpu().numpy().copy())
-            if args.stage == 'classify':
-                train_acc /= train_count
-                logger.info(
-                    f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Acc : {train_acc}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}'
-                )
-                if use_wandb:
-                    wandb.log({"epoch": epoch, "train/loss": train_loss, "train/acc": train_acc, "train/lr": optimizer.param_groups[0]["lr"]})
-            else:
-                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
-                if use_wandb:
-                    wandb.log({"epoch": epoch, "train/loss": train_loss, "train/lr": optimizer.param_groups[0]["lr"]})
+            logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
+            if use_wandb:
+                wandb.log({"epoch": epoch, "train/loss": train_loss, "train/lr": optimizer.param_groups[0]["lr"]})
 
         if args.lr_scheduler != '' and args.num_steps is None:
             scheduler.step()
@@ -284,63 +268,45 @@ def train():
             model.module.image_model.eval()
         model.module.transformer.eval()
         val_loss = torch.tensor(0.0).to(local_rank)
-        if args.stage == 'classify':
-            val_acc = torch.tensor(0.0).to(local_rank)
         val_count = torch.tensor(0).to(local_rank)
         val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
-        for samples in val_loop:
+        for src_images, _, src_texts, tgt_texts in val_loop:
             #勾配更新の前準備
             accumulation_sample_size = torch.tensor(0).long().to(local_rank)
-            for src_images, _, src_texts, tgt_texts in samples:
-                with torch.no_grad():
-                    src_images = src_images.to(local_rank, non_blocking=True)
-                    if args.stage == 'pretrain':
-                        src_texts = src_texts.to(local_rank, non_blocking=True)
-                        tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                        tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
-                        tgt_attention_masks[tgt_texts == 0] = 0
-                    else:
-                        src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
-                        src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                        if args.stage == 'classify':
-                            tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                            tgt_attention_masks = None
-                        else:
-                            tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
-                            tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
-                            tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
-                    src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
-                    src_attention_masks[src_texts == 0] = 0
+            with torch.no_grad():
+                src_images = src_images.to(local_rank, non_blocking=True)
+                if args.stage == 'pretrain':
+                    src_texts = src_texts.to(local_rank, non_blocking=True)
+                    tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
+                    tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
+                    tgt_attention_masks[tgt_texts == 0] = 0
+                else:
+                    src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                    src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
+                    tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                    tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
+                    tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
+                src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
+                src_attention_masks[src_texts == 0] = 0
 
-                    loss, preds,sample_size = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
+                loss, preds,sample_size = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
 
-                    val_loss += loss.item()#loss.item() * src_images.shape[0]
-                    accumulation_sample_size += sample_size
-                    if args.stage == 'classify':
-                        val_acc += torch.sum(preds == tgt_texts)
-                    #val_count += src_images.shape[0]
+                val_loss += loss.item()#loss.item() * src_images.shape[0]
+                val_count = sample_size
+                #val_count += src_images.shape[0]
                     
             dist.all_reduce(accumulation_sample_size, op=dist.ReduceOp.SUM)
-            val_count += accumulation_sample_size
 
         # 他のノードから集める
         dist.all_reduce(val_loss, op=dist.ReduceOp.SUM)
-        if args.stage == 'classify':
-            dist.all_reduce(val_acc, op=dist.ReduceOp.SUM)
         #dist.all_reduce(val_count, op=dist.ReduceOp.SUM)
 
         if world_rank == 0:
             val_loss /= val_count
             loss_counter.add("val", val_loss.cpu().numpy().copy())
-            if args.stage == 'classify':
-                val_acc /= val_count
-                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}, Acc : {val_acc}')
-                if use_wandb:
-                    wandb.log({"epoch": epoch, "val/loss": val_loss, "val/acc": val_acc})
-            else:
-                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}')
-                if use_wandb:
-                    wandb.log({"epoch": epoch, "val/loss": val_loss})
+            logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}')
+            if use_wandb:
+                wandb.log({"epoch": epoch, "val/loss": val_loss})
 
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
@@ -368,10 +334,7 @@ def train():
 
 
 def wandb_init(args):
-    if args.stage == 'classify':
-        name = f'enc{args.transformer_num_layers}_{args.language_model_name.split("/")[-1]}'
-    else:
-        name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
+    name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
     if args.id is None:
         args.id = wandb.util.generate_id()
     wandb.init(
