@@ -1,21 +1,16 @@
 import os
 import pkgutil
 import random
-from typing import List
 
 import numpy as np
 import torch
 import torch.distributed as dist
-import torchvision
-from PIL import Image
-from torch import Tensor
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data import ConcatDataset, Subset
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
 from data import *
-from data.multi_task_dataloader import DataNumCounter, MultiTaskDataLoader4, get_multi_task_data
+from data.multi_task_dataloader import MultiTaskDataLoader4, get_multi_task_data
 from models.model import MyModel
 from modules import *
 
@@ -40,38 +35,6 @@ def multiply_grad(optimizer, multiplier):
             if param.grad is not None:
                 param.grad.data.mul_(multiplier)
                 
-DATASET_MEAN=[0.485, 0.456, 0.406]
-DATASET_STD=[0.229, 0.224, 0.225]
-##----------------------------------------------------
-# 画像とキャプションの表示するための関数
-# def initialize_get_natural_img
-def get_natural_img(img: Tensor | Image.Image, mean: tuple[float, float, float], std: tuple[float, float, float]) -> Image.Image:
-    """tensor型のimgを表示する
-        https://dev.classmethod.jp/articles/check_image_variable_type/#toc-5
-        https://teratail.com/questions/232436
-
-    Args:
-        tensor_img (Tensor): _description_
-        mean (tuple[float,float,float]): _description_
-        std (tuple[float,float,float]): _description_
-    """
-
-    if isinstance(img, Tensor):
-        tensor_img = img
-        # 平均と分散の(3,1,1)の行列を作成=画像のRGBに対応
-        mean_tensor: Tensor = torch.tensor(mean).view(3, 1, 1).to(img.device)
-        std_tensor: Tensor = torch.tensor(std).view(3, 1, 1).to(img.device)
-
-        natural_img =  torchvision.transforms.functional.to_pil_image(tensor_img.clone().detach().mul(std_tensor).add(mean_tensor).to("cpu"), mode="RGB")
-
-        return natural_img
-    elif isinstance(img, Image.Image):
-        # tensor_img = img_transforms.functional.to_tensor(img)
-
-        return img
-    else:
-        raise TypeError("Input type not supported")
-
 
 use_wandb = False
 if pkgutil.find_loader("wandb") is not None:
