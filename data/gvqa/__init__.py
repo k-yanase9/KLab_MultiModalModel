@@ -1,1 +1,1 @@
-from .v7w import Visual7W_GVQA
+from .v7w_gvqa import Visual7W_GVQA
