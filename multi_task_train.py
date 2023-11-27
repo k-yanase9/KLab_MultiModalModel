@@ -81,6 +81,10 @@ def train():
     model = MyModel(args).to(local_rank)
     if args.start_epoch > 1:
         model.load(result_name=f'epoch_{args.start_epoch-1}.pth' if args.save_interval is not None else 'best.pth')
+    elif args.stage == 'train':
+        model.load(result_name=f'pretrain.pth', result_path='.')
+        if world_rank == 0:
+            logger.info('Pretrained model loaded')
     model = DDP(model, device_ids=[local_rank])#,find_unused_parameters=True)
     
     scaler = torch.cuda.amp.GradScaler(enabled=True if args.float_type == 'float16' else False)

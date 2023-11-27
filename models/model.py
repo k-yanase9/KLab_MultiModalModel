@@ -242,8 +242,11 @@ class MyModel(nn.Module):
             checkpoints['classifier'] = self.classifier.state_dict()
         torch.save(checkpoints, result_path)
 
-    def load(self, result_name="best.pth"):
-        result_path = os.path.join(self.args.result_dir, result_name)
+    def load(self, result_name="best.pth", result_path=None):
+        if result_path is None:
+            result_path = os.path.join(self.args.result_dir, result_name)
+        else:
+            result_path = os.path.join(result_path, result_name)
         checkpoints = torch.load(result_path)
         self.transformer.load_state_dict(checkpoints['transformer'])
         if self.args.image_model_train:
