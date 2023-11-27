@@ -25,8 +25,9 @@ FULL_DATASET_NAME_DICT = {
     "vqa": ["vg_vqa", "vqa2", "tdiuc", "imSitu", "visual7w_vqa"], 
     "gvqa": ["vcr", "visual7w_gvqa"],
     "classify": ["imagenet", "imagenet21k", "places365", "sun397"]}
-ONE_GPUT_BATCH_DICT = {"caption": 54, "relation":216, "rcap":54, "refexp":81, "det":54, "cat":216, "loc":108, "vqa": 81, "gvqa":54, "classify": 162} #1gpuのバッチサイズ
+ONE_GPUT_BATCH_DICT = {"caption": 48, "relation":192, "rcap":48, "refexp":72, "det":48, "cat":192, "loc":96, "vqa": 72, "gvqa":48, "classify": 144} #1gpuのバッチサイズ
 TASK_SAMPLE_NUM_DICT = {"caption": 12, "relation":3, "rcap":12, "refexp":8, "det":12, "cat":3, "loc":6, "vqa": 8, "gvqa":2, "classify": 4} #何回タスクごとにバッチを取得するか
+TASK_SAMPLE_NUM_SUM = sum(TASK_SAMPLE_NUM_DICT.values())
 
 #勾配をスケールする関数
 def multiply_grad(optimizer, multiplier):
@@ -132,8 +133,10 @@ def train():
     train_dataset_dict = get_multi_task_data(args, train_dataset_name_dict, "train", src_tokenizer, tgt_tokenizer)
     for task, dataset in train_dataset_dict.items():
         if world_rank == 0:
-            logger.info(f"task:{task} train_dataset:{len(dataset)}")
+            logger.info(f"train_dataset ({task}):{len(dataset)}")
     val_dataset = get_data(args, "val", src_tokenizer, tgt_tokenizer)
+    if world_rank == 0:
+        logger.info(f"val_dataset:{len(val_dataset)}")
     
     train_loader = MultiTaskDataLoader4(
         train_dataset_dict,
@@ -186,13 +189,13 @@ def train():
         model.module.transformer.train()
         train_loss = torch.tensor(0.0).to(local_rank)
         train_count = torch.tensor(0).to(local_rank)
-        pbar = tqdm(total=num_steps_per_epoch, desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
         
         for i, samples in enumerate(train_loader):
             if i >= num_steps_per_epoch:
                 break
             accumulation_sample_size = torch.tensor(0).long().to(local_rank)
             loss_per_step = 0
+            pbar = tqdm(total=TASK_SAMPLE_NUM_SUM, desc=f'Train Ep:{epoch} ({i+1}/{num_steps_per_epoch})', disable=(world_rank != 0))
             #累積数分の使用するデータをモデルに通して、勾配累積
             for src_images, _, src_texts, tgt_texts in samples:
                 src_images = src_images.to(local_rank, non_blocking=True)
@@ -208,8 +211,6 @@ def train():
                     tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
                     tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
                     tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
-                if world_rank == 0:
-                    logger.info(f'b{src_images.shape[0]} src{src_texts.shape[1]} tgt{tgt_texts.shape[1]}')
                 src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
                 src_attention_masks[src_texts == 0] = 0
 
@@ -222,6 +223,7 @@ def train():
                 if args.stage == 'classify':
                     train_acc += torch.sum(preds == tgt_texts)
                 #train_count += src_images.shape[0]
+                pbar.update(1)
 
             # if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
             #sum_loss/num_tokens
@@ -242,7 +244,7 @@ def train():
             optimizer.zero_grad(set_to_none=True)
             
             #記録
-            pbar.update(1)
+            pbar.close()
             if world_rank == 0:
                 steps += 1
                 if use_wandb:
@@ -253,7 +255,6 @@ def train():
         # 他のノードから集める
         dist.all_reduce(train_loss, op=dist.ReduceOp.SUM)
         # dist.all_reduce(train_count, op=dist.ReduceOp.SUM)
-        pbar.close()
 
         if world_rank == 0:
             train_loss /= train_count
@@ -274,7 +275,7 @@ def train():
         val_loss = torch.tensor(0.0).to(local_rank)
         val_count = torch.tensor(0).to(local_rank)
         val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
-        for src_images, _, src_texts, tgt_texts in val_loop:
+        for i, (src_images, _, src_texts, tgt_texts) in enumerate(val_loop):
             #勾配更新の前準備
             accumulation_sample_size = torch.tensor(0).long().to(local_rank)
             with torch.no_grad():
