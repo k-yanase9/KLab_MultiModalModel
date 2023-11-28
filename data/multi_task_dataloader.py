@@ -10,7 +10,7 @@ from torch.utils.data import ConcatDataset, DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
 from .get_loader import get_dataset
-
+from multiprocessing import Pool
 
 class MultiTaskDataIterator1:
     def __init__(self, dataloader_list, min_step) -> None:
@@ -101,24 +101,29 @@ class MultiTaskDataLoader1:
         for sampler in self.distributed_sampler_dict.values():
             sampler.set_epoch(epoch)
 
+def get_dataset_proc(item):
+    (key, dataset_names), args, phase = item
+    datasets = ConcatDataset(
+        [
+            get_dataset(
+                args.root_dir,
+                dataset_name,
+                args.stage,
+                phase=phase,
+            )
+            for dataset_name in dataset_names
+        ]
+    )
+    return key, datasets
 
 def get_dataset_dict(args, dataset_name_dict: dict[str, List[str]], phase, src_tokenizer=None, tgt_tokenizer=None):
-    dataset_dict = {
-        key: ConcatDataset(
-            [
-                get_dataset(
-                    args.root_dir,
-                    dataset_name,
-                    args.stage,
-                    phase=phase,
-                    src_tokenizer=src_tokenizer,
-                    tgt_tokenizer=tgt_tokenizer,
-                )
-                for dataset_name in dataset_name_dict[key]
-            ]
-        )
-        for key in dataset_name_dict.keys()
-    }
+    dataset_dict = {}
+    for key in dataset_name_dict.keys():
+        dataset_dict[key] = []
+
+    with Pool(8) as p:
+        for key, datasets in p.imap_unordered(get_dataset_proc, zip(dataset_name_dict.items(), itertools.repeat(args), itertools.repeat(phase))):
+            dataset_dict[key] = datasets
     return dataset_dict
 
 

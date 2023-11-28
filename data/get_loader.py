@@ -1,6 +1,8 @@
+import itertools
 import os
 
 from torch.utils.data import ConcatDataset, DataLoader, distributed
+from multiprocessing import Pool
 
 from .caption import *
 from .categorization import *
@@ -12,12 +14,16 @@ from .pretrain import *
 from .relationship import *
 from .vqa import *
 
+def get_dataset_process(item):
+    dataset_name, args, phase, src_tokenizer, tgt_tokenizer = item
+    dataset = get_dataset(args.root_dir, dataset_name, args.stage, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+    return dataset
 
 def get_data(args, phase="train", src_tokenizer=None, tgt_tokenizer=None):
     datasets = []
-    for dataset_name in args.datasets:
-        dataset = get_dataset(args.root_dir, dataset_name, args.stage, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
-        datasets.append(dataset)
+    with Pool(8) as p:
+        for dataset in p.imap(get_dataset_process, zip(args.datasets, itertools.repeat(args), itertools.repeat(phase), itertools.repeat(src_tokenizer), itertools.repeat(tgt_tokenizer))):
+            datasets.append(dataset)
 
     dataset = ConcatDataset(datasets)
 

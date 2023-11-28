@@ -25,9 +25,13 @@ FULL_DATASET_NAME_DICT = {
     "vqa": ["vg_vqa", "vqa2", "tdiuc", "imSitu", "visual7w_vqa"], 
     "gvqa": ["vcr", "visual7w_gvqa"],
     "classify": ["imagenet", "imagenet21k", "places365", "sun397"]}
-ONE_GPUT_BATCH_DICT = {"caption": 48, "relation":192, "rcap":48, "refexp":72, "det":48, "cat":192, "loc":96, "vqa": 72, "gvqa":48, "classify": 144} #1gpuのバッチサイズ
+# Flow
+ONE_GPUT_BATCH_DICT = {"caption": 50, "relation":200, "rcap":50, "refexp":75, "det":50, "cat":200, "loc":100, "vqa": 75, "gvqa":58, "classify": 150} #1gpuのバッチサイズ
+NUM_STEP_PER_EPOCH_MAX = 2560
+# H100
+ONE_GPUT_BATCH_DICT = {"caption": 180, "relation":720, "rcap":180, "refexp":270, "det":180, "cat":720, "loc":360, "vqa": 270, "gvqa":190, "classify": 540} #1gpuのバッチサイズ
 TASK_SAMPLE_NUM_DICT = {"caption": 12, "relation":3, "rcap":12, "refexp":8, "det":12, "cat":3, "loc":6, "vqa": 8, "gvqa":2, "classify": 4} #何回タスクごとにバッチを取得するか
-TASK_SAMPLE_NUM_SUM = sum(TASK_SAMPLE_NUM_DICT.values())
+NUM_STEP_PER_EPOCH_MAX = 800
 
 #勾配をスケールする関数
 def multiply_grad(optimizer, multiplier):
@@ -112,11 +116,13 @@ def train():
     # 引数の設定
     if args.datasets[0] == 'all':
         train_dataset_name_dict = FULL_DATASET_NAME_DICT
+        train_task_sample_num_dict = TASK_SAMPLE_NUM_DICT
         args.datasets = []
         for v in train_dataset_name_dict.values():
             args.datasets.extend(v)
     else:
         train_dataset_name_dict = {}
+        train_task_sample_num_dict = {}
         for task, dataset_names in FULL_DATASET_NAME_DICT.items():
             for dataset_name in dataset_names:
                 if dataset_name in args.datasets:
@@ -124,7 +130,9 @@ def train():
                         train_dataset_name_dict[task].append(dataset_name)
                     else:
                         train_dataset_name_dict[task] = [dataset_name]
-    num_steps_per_epoch = 2560 // args.world_size #使用するデータ数の上限、subsetで上限最大値caption80000, classify160000
+                        train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
+    sum_task_sample_num = sum(train_task_sample_num_dict.values())
+    num_steps_per_epoch = NUM_STEP_PER_EPOCH_MAX // args.world_size
     
     if world_rank == 0:
         logger.info(f"target_DataSet:{train_dataset_name_dict}")
@@ -195,34 +203,25 @@ def train():
                 break
             accumulation_sample_size = torch.tensor(0).long().to(local_rank)
             loss_per_step = 0
-            pbar = tqdm(total=TASK_SAMPLE_NUM_SUM, desc=f'Train Ep:{epoch} ({i+1}/{num_steps_per_epoch})', disable=(world_rank != 0))
+            pbar = tqdm(total=sum_task_sample_num, desc=f'Train Ep:{epoch} ({i+1}/{num_steps_per_epoch})', disable=(world_rank != 0))
             #累積数分の使用するデータをモデルに通して、勾配累積
             for src_images, _, src_texts, tgt_texts in samples:
                 src_images = src_images.to(local_rank, non_blocking=True)
 
-                if args.stage == 'pretrain':
-                    src_texts = src_texts.to(local_rank, non_blocking=True)
-                    tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                    tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
-                    tgt_attention_masks[tgt_texts == 0] = 0
-                else:
-                    src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
-                    src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                    tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
-                    tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
-                    tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
+                src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
+                tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
+                tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
                 src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
                 src_attention_masks[src_texts == 0] = 0
 
-                loss, preds,sample_size = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks)
+                loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks)
                 loss_per_step += loss.item()
                 accumulation_sample_size += sample_size
                 scaler.scale(loss).backward()
 
                 train_loss += loss.item() #loss.item() * src_images.shape[0]
-                if args.stage == 'classify':
-                    train_acc += torch.sum(preds == tgt_texts)
-                #train_count += src_images.shape[0]
                 pbar.update(1)
 
             # if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
@@ -277,34 +276,24 @@ def train():
         val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
         for i, (src_images, _, src_texts, tgt_texts) in enumerate(val_loop):
             #勾配更新の前準備
-            accumulation_sample_size = torch.tensor(0).long().to(local_rank)
             with torch.no_grad():
                 src_images = src_images.to(local_rank, non_blocking=True)
-                if args.stage == 'pretrain':
-                    src_texts = src_texts.to(local_rank, non_blocking=True)
-                    tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                    tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
-                    tgt_attention_masks[tgt_texts == 0] = 0
-                else:
-                    src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
-                    src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                    tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
-                    tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
-                    tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
+                src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
+                tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
+                tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
                 src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
                 src_attention_masks[src_texts == 0] = 0
 
-                loss, preds,sample_size = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
+                loss, preds, sample_size = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
 
-                val_loss += loss.item()#loss.item() * src_images.shape[0]
-                val_count = sample_size
-                #val_count += src_images.shape[0]
-                    
-            dist.all_reduce(accumulation_sample_size, op=dist.ReduceOp.SUM)
+                val_loss += loss.item()
+                val_count += sample_size
 
         # 他のノードから集める
         dist.all_reduce(val_loss, op=dist.ReduceOp.SUM)
-        #dist.all_reduce(val_count, op=dist.ReduceOp.SUM)
+        dist.all_reduce(val_count, op=dist.ReduceOp.SUM)
 
         if world_rank == 0:
             val_loss /= val_count
