@@ -14,7 +14,10 @@ class Grit20M_RefExp(DatasetLoader):
     """    
     def __init__(self,data_dir:str="/data/dataset/grit20m/",phase:str="train"):
         super().__init__()
-        tsv_path = os.path.join(data_dir,  f"{phase}_ref_exp.tsv")
+        if phase == 'train':
+            tsv_path = os.path.join(data_dir,  f"{phase}_ref_exp_cut.tsv")
+        else:
+            tsv_path = os.path.join(data_dir,  f"{phase}_ref_exp.tsv")
             
         with open(tsv_path) as f:
             items = f.read()
