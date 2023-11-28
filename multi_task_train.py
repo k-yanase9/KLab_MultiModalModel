@@ -27,7 +27,6 @@ FULL_DATASET_NAME_DICT = {
     "classify": ["imagenet", "imagenet21k", "places365", "sun397"]}
 ONE_GPUT_BATCH_DICT = {"caption": 48, "relation":192, "rcap":48, "refexp":72, "det":48, "cat":192, "loc":96, "vqa": 72, "gvqa":48, "classify": 144} #1gpuのバッチサイズ
 TASK_SAMPLE_NUM_DICT = {"caption": 12, "relation":3, "rcap":12, "refexp":8, "det":12, "cat":3, "loc":6, "vqa": 8, "gvqa":2, "classify": 4} #何回タスクごとにバッチを取得するか
-TASK_SAMPLE_NUM_SUM = sum(TASK_SAMPLE_NUM_DICT.values())
 
 #勾配をスケールする関数
 def multiply_grad(optimizer, multiplier):
@@ -117,6 +116,7 @@ def train():
             args.datasets.extend(v)
     else:
         train_dataset_name_dict = {}
+        train_task_sample_num_dict = {}
         for task, dataset_names in FULL_DATASET_NAME_DICT.items():
             for dataset_name in dataset_names:
                 if dataset_name in args.datasets:
@@ -124,6 +124,8 @@ def train():
                         train_dataset_name_dict[task].append(dataset_name)
                     else:
                         train_dataset_name_dict[task] = [dataset_name]
+                        train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
+    sum_task_sample_num = sum(train_task_sample_num_dict.values())
     num_steps_per_epoch = 2560 // args.world_size #使用するデータ数の上限、subsetで上限最大値caption80000, classify160000
     
     if world_rank == 0:
@@ -195,7 +197,7 @@ def train():
                 break
             accumulation_sample_size = torch.tensor(0).long().to(local_rank)
             loss_per_step = 0
-            pbar = tqdm(total=TASK_SAMPLE_NUM_SUM, desc=f'Train Ep:{epoch} ({i+1}/{num_steps_per_epoch})', disable=(world_rank != 0))
+            pbar = tqdm(total=sum_task_sample_num, desc=f'Train Ep:{epoch} ({i+1}/{num_steps_per_epoch})', disable=(world_rank != 0))
             #累積数分の使用するデータをモデルに通して、勾配累積
             for src_images, _, src_texts, tgt_texts in samples:
                 src_images = src_images.to(local_rank, non_blocking=True)
