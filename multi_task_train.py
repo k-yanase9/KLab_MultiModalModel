@@ -116,6 +116,7 @@ def train():
     # 引数の設定
     if args.datasets[0] == 'all':
         train_dataset_name_dict = FULL_DATASET_NAME_DICT
+        train_task_sample_num_dict = TASK_SAMPLE_NUM_DICT
         args.datasets = []
         for v in train_dataset_name_dict.values():
             args.datasets.extend(v)
