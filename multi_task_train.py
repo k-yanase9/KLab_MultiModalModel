@@ -289,7 +289,7 @@ def train():
                 loss, preds, sample_size = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
 
                 val_loss += loss.item()
-                val_count = sample_size
+                val_count += sample_size
 
         # 他のノードから集める
         dist.all_reduce(val_loss, op=dist.ReduceOp.SUM)
