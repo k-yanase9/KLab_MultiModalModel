@@ -24,11 +24,6 @@ src_len=20
 tgt_len=256
 batch_size=55
 
-dataset="vg_refexp"
-src_len=256
-tgt_len=120
-batch_size=79
-
 dataset="vg_cat"
 src_len=22
 tgt_len=17
@@ -48,6 +43,11 @@ dataset="vcr"
 src_len=256
 tgt_len=103
 batch_size=86
+
+dataset="vg_refexp"
+src_len=184
+tgt_len=120
+batch_size=87
 
 torchrun --nnodes=1 --nproc_per_node=2 train_dummy.py \
         --float_type float16 \

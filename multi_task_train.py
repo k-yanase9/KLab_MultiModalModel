@@ -10,8 +10,32 @@ from tqdm import tqdm
 from transformers import AutoTokenizer
 
 from data import *
+from data.multi_task_dataloader import MultiTaskDataLoader4, get_multi_task_data
 from models.model import MyModel
 from modules import *
+
+FULL_DATASET_NAME_DICT = {
+    "caption": ["redcaps", "cc3m", "cc12m"], 
+    "relation":["vg_rel", "openimage_rel"], 
+    "rcap": ["grit20m_rcap", "vg_rcap"],
+    "refexp": ["grit20m_refexp", "vg_refexp"],
+    "det": ["vg_det", "openimage_det", "objects365_det"],
+    "cat": ["vg_cat", "openimage_cat", "objects365_cat"],
+    "loc": ["vg_loc", "openimage_loc", "objects365_loc"],
+    "vqa": ["vg_vqa", "vqa2", "tdiuc", "imSitu", "visual7w_vqa"], 
+    "gvqa": ["vcr", "visual7w_gvqa"],
+    "classify": ["imagenet", "imagenet21k", "places365", "sun397"]}
+ONE_GPUT_BATCH_DICT = {"caption": 48, "relation":192, "rcap":48, "refexp":72, "det":48, "cat":192, "loc":96, "vqa": 72, "gvqa":48, "classify": 144} #1gpuのバッチサイズ
+TASK_SAMPLE_NUM_DICT = {"caption": 12, "relation":3, "rcap":12, "refexp":8, "det":12, "cat":3, "loc":6, "vqa": 8, "gvqa":2, "classify": 4} #何回タスクごとにバッチを取得するか
+TASK_SAMPLE_NUM_SUM = sum(TASK_SAMPLE_NUM_DICT.values())
+
+#勾配をスケールする関数
+def multiply_grad(optimizer, multiplier):
+    for group in optimizer.param_groups:
+        for param in group['params']:
+            if param.grad is not None:
+                param.grad.data.mul_(multiplier)
+                
 
 use_wandb = False
 if pkgutil.find_loader("wandb") is not None:
@@ -58,6 +82,10 @@ def train():
     model = MyModel(args).to(local_rank)
     if args.start_epoch > 1:
         model.load(result_name=f'epoch_{args.start_epoch-1}.pth' if args.save_interval is not None else 'best.pth')
+    elif args.stage == 'train':
+        model.load(result_name=f'pretrain.pth', result_path='.')
+        if world_rank == 0:
+            logger.info('Pretrained model loaded')
     model = DDP(model, device_ids=[local_rank])#,find_unused_parameters=True)
     
     scaler = torch.cuda.amp.GradScaler(enabled=True if args.float_type == 'float16' else False)
@@ -81,26 +109,48 @@ def train():
         src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=args.max_source_length, use_fast=True)
 
     # データの設定
-    full_dataset_dict = {"cat": ["vg_cat", "objects365_cat"], "loc": ["vg_loc", "objects365_loc"], "rcap": ["vg_rcap"], "refexp": ["vg_refexp"], "caption": ["redcaps", "cc3m"]}
-    dataset_name_dict = {}
-    for key, dataset_names in full_dataset_dict.items():
-        dataset_name_dict[key] = []
-        for dataset_name in dataset_names:
-            if dataset_name in args.datasets:
-                dataset_name_dict[key].append(dataset_name)
-    batch_dict = {"cat": 216, "loc": 108, "rcap" : 54, "refexp": 54, "caption": 54}
-    times_dict = {"cat": 3, "loc": 6, "rcap" : 12, "refexp": 12, "caption": 12}
-    num_iter = 2500
-    train_dataset = get_task_data(args, dataset_name_dict, "train")
-    val_dataset = get_data(args, src_tokenizer, tgt_tokenizer)
-    train_loader = {}
-    for task, dataset in train_dataset.items():
-        train_loader[task] = iter(get_distributed_dataloader(args, train_dataset, batch_dict[task], shuffle=True))
-        if world_rank == 0:
-            logger.info(f'Train Dataset ({key}) : {len(dataset)}')
-    val_loader = get_distributed_dataloader(args, val_dataset, args.batch_size, shuffle=False)
+    # 引数の設定
+    if args.datasets[0] == 'all':
+        train_dataset_name_dict = FULL_DATASET_NAME_DICT
+        args.datasets = []
+        for v in train_dataset_name_dict.values():
+            args.datasets.extend(v)
+    else:
+        train_dataset_name_dict = {}
+        for task, dataset_names in FULL_DATASET_NAME_DICT.items():
+            for dataset_name in dataset_names:
+                if dataset_name in args.datasets:
+                    if task in train_dataset_name_dict.keys():
+                        train_dataset_name_dict[task].append(dataset_name)
+                    else:
+                        train_dataset_name_dict[task] = [dataset_name]
+    num_steps_per_epoch = 2560 // args.world_size #使用するデータ数の上限、subsetで上限最大値caption80000, classify160000
+    
     if world_rank == 0:
-        logger.info(f'Val Dataset : {len(val_dataset)}')
+        logger.info(f"target_DataSet:{train_dataset_name_dict}")
+        logger.info(f"num_steps_per_epoch:{num_steps_per_epoch}")
+    
+    train_dataset_dict = get_multi_task_data(args, train_dataset_name_dict, "train", src_tokenizer, tgt_tokenizer)
+    for task, dataset in train_dataset_dict.items():
+        if world_rank == 0:
+            logger.info(f"train_dataset ({task}):{len(dataset)}")
+    val_dataset = get_data(args, "val", src_tokenizer, tgt_tokenizer)
+    if world_rank == 0:
+        logger.info(f"val_dataset:{len(val_dataset)}")
+    
+    train_loader = MultiTaskDataLoader4(
+        train_dataset_dict,
+        batch_size_dict=ONE_GPUT_BATCH_DICT,
+        each_task_sample_num_dict=TASK_SAMPLE_NUM_DICT,
+        is_ddp=True,
+        seed=args.seed,
+        loader_drop_last=True,
+        sampler_drop_last=True,
+        num_workers=4,
+        shuffle=True,
+        pin_memory=True,
+    )
+    val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)
 
     if 'Warmup' in args.lr_scheduler and args.num_steps is None:
         args.num_steps = args.num_epochs * len(train_loader)
@@ -133,68 +183,85 @@ def train():
         min_val_loss = 100
     for epoch in range(args.start_epoch, args.num_epochs + 1):
         # 学習ループ
-        train_loader.sampler.set_epoch(epoch)
+        train_loader.set_epoch(epoch)
         if args.language_model_train: model.module.language_model.train()
         if args.image_model_train: model.module.image_model.train()
         model.module.transformer.train()
         train_loss = torch.tensor(0.0).to(local_rank)
-        if args.stage == 'classify':
-            train_acc = torch.tensor(0.0).to(local_rank)
         train_count = torch.tensor(0).to(local_rank)
-        pbar = tqdm(total=num_iter, desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
-        for i in range(num_iter):
-            for key, iterator in train_loader.items():
-                for _ in range(times_dict[key]):
-                    src_images, _, src_texts, tgt_texts = next(iterator)
-                    src_images = src_images.to(local_rank, non_blocking=True)
+        
+        for i, samples in enumerate(train_loader):
+            if i >= num_steps_per_epoch:
+                break
+            accumulation_sample_size = torch.tensor(0).long().to(local_rank)
+            loss_per_step = 0
+            pbar = tqdm(total=TASK_SAMPLE_NUM_SUM, desc=f'Train Ep:{epoch} ({i+1}/{num_steps_per_epoch})', disable=(world_rank != 0))
+            #累積数分の使用するデータをモデルに通して、勾配累積
+            for src_images, _, src_texts, tgt_texts in samples:
+                src_images = src_images.to(local_rank, non_blocking=True)
+
+                if args.stage == 'pretrain':
+                    src_texts = src_texts.to(local_rank, non_blocking=True)
+                    tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
+                    tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
+                    tgt_attention_masks[tgt_texts == 0] = 0
+                else:
                     src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
                     src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
                     tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
                     tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
-                    tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True) 
-                    src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
-                    src_attention_masks[src_texts == 0] = 0
+                    tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
+                src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
+                src_attention_masks[src_texts == 0] = 0
 
-                    loss, preds = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks)
-                    loss /= args.accumulation_steps
-                    scaler.scale(loss).backward()
+                loss, preds,sample_size = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks)
+                loss_per_step += loss.item()
+                accumulation_sample_size += sample_size
+                scaler.scale(loss).backward()
 
-                    train_loss += loss.item() * src_images.shape[0]
-                    train_count += src_images.shape[0]
+                train_loss += loss.item() #loss.item() * src_images.shape[0]
+                if args.stage == 'classify':
+                    train_acc += torch.sum(preds == tgt_texts)
+                #train_count += src_images.shape[0]
+                pbar.update(1)
 
-            # 勾配を蓄積してから、optimizer.step()を呼び出す
+            # if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
+            #sum_loss/num_tokens
+            
+            #勾配更新の前準備
+            dist.all_reduce(accumulation_sample_size, op=dist.ReduceOp.SUM)
+            grad_scale = args.world_size / accumulation_sample_size
+            multiply_grad(optimizer, grad_scale)
+            
+            #記録準備
+            loss_per_step = torch.tensor(loss_per_step).to(local_rank)
+            dist.all_reduce(loss_per_step, op=dist.ReduceOp.SUM)
+            train_count += accumulation_sample_size
+            
+            #勾配更新
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad(set_to_none=True)
-            pbar.update(1)
+            
+            #記録
+            pbar.close()
             if world_rank == 0:
                 steps += 1
                 if use_wandb:
-                    wandb.log({"iter": steps, "iter/loss": loss.item(), "iter/lr": optimizer.param_groups[0]["lr"]})
+                    wandb.log({"iter": steps, "iter/loss": loss_per_step.item()/accumulation_sample_size.item(), "iter/lr": optimizer.param_groups[0]["lr"]})
             if args.num_steps is not None:
                 scheduler.step()
 
         # 他のノードから集める
         dist.all_reduce(train_loss, op=dist.ReduceOp.SUM)
-        if args.stage == 'classify':
-            dist.all_reduce(train_acc, op=dist.ReduceOp.SUM)
-        dist.all_reduce(train_count, op=dist.ReduceOp.SUM)
-        pbar.close()
+        # dist.all_reduce(train_count, op=dist.ReduceOp.SUM)
 
         if world_rank == 0:
             train_loss /= train_count
             loss_counter.add("train", train_loss.cpu().numpy().copy())
-            if args.stage == 'classify':
-                train_acc /= train_count
-                logger.info(
-                    f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Acc : {train_acc}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}'
-                )
-                if use_wandb:
-                    wandb.log({"epoch": epoch, "train/loss": train_loss, "train/acc": train_acc, "train/lr": optimizer.param_groups[0]["lr"]})
-            else:
-                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
-                if use_wandb:
-                    wandb.log({"epoch": epoch, "train/loss": train_loss, "train/lr": optimizer.param_groups[0]["lr"]})
+            logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
+            if use_wandb:
+                wandb.log({"epoch": epoch, "train/loss": train_loss, "train/lr": optimizer.param_groups[0]["lr"]})
 
         if args.lr_scheduler != '' and args.num_steps is None:
             scheduler.step()
@@ -206,16 +273,13 @@ def train():
             model.module.image_model.eval()
         model.module.transformer.eval()
         val_loss = torch.tensor(0.0).to(local_rank)
-        if args.stage == 'classify':
-            val_acc = torch.tensor(0.0).to(local_rank)
         val_count = torch.tensor(0).to(local_rank)
         val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
-        for src_images, tgt_images, src_texts, tgt_texts in val_loop:
+        for i, (src_images, _, src_texts, tgt_texts) in enumerate(val_loop):
+            #勾配更新の前準備
+            accumulation_sample_size = torch.tensor(0).long().to(local_rank)
             with torch.no_grad():
                 src_images = src_images.to(local_rank, non_blocking=True)
-                # if args.stage == 'pretrain':
-                #    tgt_images = tgt_images.to(local_rank)
-                #    tgt_texts, _ = model.module.image_to_z(tgt_images)
                 if args.stage == 'pretrain':
                     src_texts = src_texts.to(local_rank, non_blocking=True)
                     tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
@@ -224,41 +288,30 @@ def train():
                 else:
                     src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
                     src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                    if args.stage == 'classify':
-                        tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                        tgt_attention_masks = None
-                    else:
-                        tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
-                        tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
-                        tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
+                    tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                    tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
+                    tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
                 src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
                 src_attention_masks[src_texts == 0] = 0
 
-                loss, preds = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
+                loss, preds,sample_size = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
 
-                val_loss += loss.item() * src_images.shape[0]
-                if args.stage == 'classify':
-                    val_acc += torch.sum(preds == tgt_texts)
-                val_count += src_images.shape[0]
+                val_loss += loss.item()#loss.item() * src_images.shape[0]
+                val_count = sample_size
+                #val_count += src_images.shape[0]
+                    
+            dist.all_reduce(accumulation_sample_size, op=dist.ReduceOp.SUM)
 
         # 他のノードから集める
         dist.all_reduce(val_loss, op=dist.ReduceOp.SUM)
-        if args.stage == 'classify':
-            dist.all_reduce(val_acc, op=dist.ReduceOp.SUM)
-        dist.all_reduce(val_count, op=dist.ReduceOp.SUM)
+        #dist.all_reduce(val_count, op=dist.ReduceOp.SUM)
 
         if world_rank == 0:
             val_loss /= val_count
             loss_counter.add("val", val_loss.cpu().numpy().copy())
-            if args.stage == 'classify':
-                val_acc /= val_count
-                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}, Acc : {val_acc}')
-                if use_wandb:
-                    wandb.log({"epoch": epoch, "val/loss": val_loss, "val/acc": val_acc})
-            else:
-                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}')
-                if use_wandb:
-                    wandb.log({"epoch": epoch, "val/loss": val_loss})
+            logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}')
+            if use_wandb:
+                wandb.log({"epoch": epoch, "val/loss": val_loss})
 
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
@@ -286,10 +339,7 @@ def train():
 
 
 def wandb_init(args):
-    if args.stage == 'classify':
-        name = f'enc{args.transformer_num_layers}_{args.language_model_name.split("/")[-1]}'
-    else:
-        name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
+    name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
     if args.id is None:
         args.id = wandb.util.generate_id()
     wandb.init(

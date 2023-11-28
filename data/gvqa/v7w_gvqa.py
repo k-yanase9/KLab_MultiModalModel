@@ -11,7 +11,8 @@ class Visual7W_GVQA(DatasetLoader):
         super().__init__()
         self.locs = []
 
-        with open(os.path.join(data_dir, f'{phase}_gvqa_loc40.tsv')) as f:
+        tsv_path = os.path.join(data_dir, f'{phase}_gvqa_loc40.tsv')
+        with open(tsv_path) as f:
             items = f.readlines()
         for item in items[1:]:
             item = item.rstrip()

@@ -55,7 +55,8 @@ def parse_arguments():
         'vcr', 'vqa2', 'imSitu', 'tdiuc', 'visual7w_vqa', 'visual7w_gvqa', 
         'openimage_cat', 'openimage_det', 'openimage_loc', 'openimage_rel', 
         'objects365_cat', 'objects365_det', 'objects365_loc', 
-        'vg_cat', 'vg_det', 'vg_loc', 'vg_rel', 'vg_vqa', 'vg_rcap', 'vg_refexp'
+        'vg_cat', 'vg_det', 'vg_loc', 'vg_rel', 'vg_vqa', 'vg_rcap', 'vg_refexp', 
+        'all'
         ], help='使用データセットの名前')
     # Dir setting
     parser.add_argument('--root_dir', type=str, default='/local/', help='データのディレクトリ')
