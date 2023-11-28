@@ -202,29 +202,20 @@ def train():
             for src_images, _, src_texts, tgt_texts in samples:
                 src_images = src_images.to(local_rank, non_blocking=True)
 
-                if args.stage == 'pretrain':
-                    src_texts = src_texts.to(local_rank, non_blocking=True)
-                    tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                    tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
-                    tgt_attention_masks[tgt_texts == 0] = 0
-                else:
-                    src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
-                    src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                    tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
-                    tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
-                    tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
+                src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
+                tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
+                tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
                 src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
                 src_attention_masks[src_texts == 0] = 0
 
-                loss, preds,sample_size = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks)
+                loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks)
                 loss_per_step += loss.item()
                 accumulation_sample_size += sample_size
                 scaler.scale(loss).backward()
 
                 train_loss += loss.item() #loss.item() * src_images.shape[0]
-                if args.stage == 'classify':
-                    train_acc += torch.sum(preds == tgt_texts)
-                #train_count += src_images.shape[0]
                 pbar.update(1)
 
             # if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
@@ -282,21 +273,15 @@ def train():
             accumulation_sample_size = torch.tensor(0).long().to(local_rank)
             with torch.no_grad():
                 src_images = src_images.to(local_rank, non_blocking=True)
-                if args.stage == 'pretrain':
-                    src_texts = src_texts.to(local_rank, non_blocking=True)
-                    tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                    tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
-                    tgt_attention_masks[tgt_texts == 0] = 0
-                else:
-                    src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
-                    src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                    tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
-                    tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
-                    tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
+                src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
+                src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
+                tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
+                tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
+                tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
                 src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
                 src_attention_masks[src_texts == 0] = 0
 
-                loss, preds,sample_size = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
+                loss, preds, sample_size = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
 
                 val_loss += loss.item()#loss.item() * src_images.shape[0]
                 val_count = sample_size
