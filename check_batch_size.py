@@ -130,7 +130,7 @@ def train():
             tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
             src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
 
-            loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks)
+            loss, preds, sample_size = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
             loss_per_step += loss.item()
             accumulation_sample_size += sample_size
             scaler.scale(loss).backward()

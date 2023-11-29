@@ -175,10 +175,7 @@ def train():
                 if 'Epoch' in line:
                     if 'Train' in line:
                         loss_counter.add("train", float(line.split(',')[1].split(':')[-1].strip()))
-                        if args.stage == 'classify':
-                            steps = int(line.split(',')[3].split(':')[-1].strip())
-                        else:
-                            steps = int(line.split(',')[2].split(':')[-1].strip())
+                        steps = int(line.split(',')[2].split(':')[-1].strip())
                     elif 'Val' in line:
                         loss_counter.add("val", float(line.split(',')[1].split(':')[-1].strip()))
         min_val_loss = min(loss_counter.losses['val'])
@@ -217,8 +214,6 @@ def train():
                 tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
                 tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
                 tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
-                src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
-                src_attention_masks[src_texts == 0] = 0
 
                 loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks)
                 loss_per_step += loss.item()
@@ -287,10 +282,8 @@ def train():
                 tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
                 tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
                 tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
-                src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
-                src_attention_masks[src_texts == 0] = 0
 
-                loss, preds, sample_size = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
+                loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks)
 
                 val_loss += loss.item()
                 val_count += sample_size
