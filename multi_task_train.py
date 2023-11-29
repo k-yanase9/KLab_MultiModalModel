@@ -118,12 +118,14 @@ def train():
     if args.datasets[0] == 'all':
         train_dataset_name_dict = FULL_DATASET_NAME_DICT
         train_task_sample_num_dict = TASK_SAMPLE_NUM_DICT
+        train_one_gpu_batch_dict = ONE_GPU_BATCH_DICT
         args.datasets = []
         for v in train_dataset_name_dict.values():
             args.datasets.extend(v)
     else:
         train_dataset_name_dict = {}
         train_task_sample_num_dict = {}
+        train_one_gpu_batch_dict = {}
         for task, dataset_names in FULL_DATASET_NAME_DICT.items():
             for dataset_name in dataset_names:
                 if dataset_name in args.datasets:
@@ -132,6 +134,7 @@ def train():
                     else:
                         train_dataset_name_dict[task] = [dataset_name]
                         train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
+                        train_one_gpu_batch_dict[task] = ONE_GPU_BATCH_DICT[task]
     sum_task_sample_num = sum(train_task_sample_num_dict.values())
     num_steps_per_epoch = NUM_STEP_PER_EPOCH_MAX // args.world_size
     
@@ -149,8 +152,8 @@ def train():
     
     train_loader = MultiTaskDataLoader4(
         train_dataset_dict,
-        batch_size_dict=ONE_GPU_BATCH_DICT,
-        each_task_sample_num_dict=TASK_SAMPLE_NUM_DICT,
+        batch_size_dict=train_one_gpu_batch_dict,
+        each_task_sample_num_dict=train_task_sample_num_dict,
         is_ddp=True,
         seed=args.seed,
         loader_drop_last=True,
