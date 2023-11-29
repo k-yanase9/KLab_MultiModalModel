@@ -209,13 +209,10 @@ def train():
             for src_images, _, src_texts, tgt_texts in samples:
                 src_images = src_images.to(local_rank, non_blocking=True)
 
-                src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
-                src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
-                tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
-                tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
+                src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
+                tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
 
-                loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks)
+                loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, None)
                 loss_per_step += loss.item()
                 accumulation_sample_size += sample_size
                 scaler.scale(loss).backward()
@@ -277,13 +274,10 @@ def train():
             #勾配更新の前準備
             with torch.no_grad():
                 src_images = src_images.to(local_rank, non_blocking=True)
-                src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
-                src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
-                tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
-                tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
-                tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
+                src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
+                tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
 
-                loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks)
+                loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, None)
 
                 val_loss += loss.item()
                 val_count += sample_size

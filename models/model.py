@@ -134,7 +134,7 @@ class MyModel(nn.Module):
             dtype = torch.float32
 
         if src_attention_masks is None:
-            src_attention_masks = torch.ones_like(src_texts, device=self.language_model.device)
+            src_attention_masks = torch.ones_like(src_texts, device=self.language_model.device, dtype=torch.bool)
             src_attention_masks[src_texts == 0] = 0
 
         with torch.autocast(device_type='cuda', dtype=dtype, enabled=True if self.args.float_type == 'bfloat16' else False):
@@ -174,7 +174,7 @@ class MyModel(nn.Module):
                 preds = torch.argmax(logits, dim=1)
             else:
                 if tgt_attention_masks is None:
-                    tgt_attention_masks = torch.ones(tgt_texts.shape[0], tgt_texts.shape[1], device=tgt_texts.device)
+                    tgt_attention_masks = torch.ones_like(tgt_texts, device=tgt_texts.device, dtype=torch.bool)
                     tgt_attention_masks[tgt_texts == 0] = 0
                 with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
                     logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=tgt_attention_masks).logits
