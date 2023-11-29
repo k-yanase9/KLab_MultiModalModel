@@ -5,9 +5,6 @@ import random
 import numpy as np
 import torch
 import torch.distributed as dist
-import torchvision
-from PIL import Image
-from torch import Tensor
 from torch.nn.parallel import DistributedDataParallel as DDP
 from tqdm import tqdm
 
@@ -15,19 +12,8 @@ from data import *
 from models.model import MyModel
 from modules import *
 
-FULL_DATASET_NAME_DICT = {
-    "caption": ["redcaps", "cc3m", "cc12m"], 
-    "relation":["vg_rel", "openimage_rel"], 
-    "rcap": ["grit20m_rcap", "vg_rcap"],
-    "refexp": ["grit20m_refexp", "vg_refexp"],
-    "det": ["vg_det", "openimage_det", "objects365_det"],
-    "cat": ["vg_cat", "openimage_cat", "objects365_cat"],
-    "loc": ["vg_loc", "openimage_loc", "objects365_loc"],
-    "vqa": ["vg_vqa", "vqa2", "tdiuc", "imSitu", "visual7w_vqa"], 
-    "gvqa": ["vcr", "visual7w_gvqa"],
-    "classify": ["imagenet", "imagenet21k", "places365", "sun397"]}
-ONE_GPUT_BATCH_DICT = {"caption": 48, "relation":192, "rcap":48, "refexp":72, "det":48, "cat":192, "loc":96, "vqa": 72, "gvqa":48, "classify": 144} #1gpuのバッチサイズ
-TASK_SAMPLE_NUM_DICT = {"caption": 12, "relation":3, "rcap":12, "refexp":8, "det":12, "cat":3, "loc":6, "vqa": 8, "gvqa":2, "classify": 4} #何回タスクごとにバッチを取得するか
+ONE_GPUT_BATCH_DICT = {"caption": 128, "relation":512, "rcap":128, "refexp":192, "det":128, "cat":512, "loc":256, "vqa": 192, "gvqa":210, "classify": 384} #1gpuのバッチサイズ
+TASK_SAMPLE_NUM_DICT = {"caption": 20, "relation":20, "rcap":20, "refexp":20, "det":20, "cat":20, "loc":20, "vqa": 20, "gvqa":20, "classify": 20} #何回タスクごとにバッチを取得するか
 SRC_LEN_DICT = {"caption": 7, "relation":50, "rcap":20, "refexp":184, "det":8, "cat":22, "loc":25, "vqa": 125, "gvqa":256, "classify": 7}
 TGT_LEN_DICT = {"caption": 256, "relation":25, "rcap":256, "refexp":120, "det":256, "cat":17, "loc":126, "vqa": 128, "gvqa":103, "classify": 74}
 
@@ -86,11 +72,6 @@ def train():
     scaler = torch.cuda.amp.GradScaler(enabled=True if args.float_type == 'float16' else False)
     optimizer = get_optimizer(model, args)
 
-    # データの設定
-    # 引数の設定
-    if world_rank == 0:
-        logger.info(f"target_DataSet:{FULL_DATASET_NAME_DICT}")
-    
     image_size = 256
     src_vocab_size = 32128
     tgt_vocab_size = 32128 + args.loc_vocab_size + args.additional_vocab_size
@@ -133,7 +114,7 @@ def train():
     train_loss = torch.tensor(0.0).to(local_rank)
     train_count = torch.tensor(0).to(local_rank)
     
-    for task in FULL_DATASET_NAME_DICT.keys():
+    for task in ONE_GPUT_BATCH_DICT.keys():
         accumulation_sample_size = torch.tensor(0).long().to(local_rank)
         loss_per_step = 0
         #累積数分の使用するデータをモデルに通して、勾配累積
@@ -185,24 +166,14 @@ def train():
 
     # 他のノードから集める
     dist.all_reduce(train_loss, op=dist.ReduceOp.SUM)
-    if args.stage == 'classify':
-        dist.all_reduce(train_acc, op=dist.ReduceOp.SUM)
     # dist.all_reduce(train_count, op=dist.ReduceOp.SUM)
 
     if world_rank == 0:
         train_loss /= train_count
         loss_counter.add("train", train_loss.cpu().numpy().copy())
-        if args.stage == 'classify':
-            train_acc /= train_count
-            logger.info(
-                f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Acc : {train_acc}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}'
-            )
-            if use_wandb:
-                wandb.log({"epoch": epoch, "train/loss": train_loss, "train/acc": train_acc, "train/lr": optimizer.param_groups[0]["lr"]})
-        else:
-            logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
-            if use_wandb:
-                wandb.log({"epoch": epoch, "train/loss": train_loss, "train/lr": optimizer.param_groups[0]["lr"]})
+        logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Train] Loss : {train_loss}, Steps : {steps}, LR : {optimizer.param_groups[0]["lr"]}')
+        if use_wandb:
+            wandb.log({"epoch": epoch, "train/loss": train_loss, "train/lr": optimizer.param_groups[0]["lr"]})
 
     if args.lr_scheduler != '' and args.num_steps is None:
         scheduler.step()
@@ -228,28 +199,19 @@ def train():
 
             loss, preds, sample_size = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
 
-            val_loss += loss.item()#loss.item() * src_images.shape[0]
-            val_count = sample_size
-            #val_count = src_images.shape[0]
-                
-        dist.all_reduce(accumulation_sample_size, op=dist.ReduceOp.SUM)
+            val_loss += loss.item()
+            val_count += sample_size
 
     # 他のノードから集める
     dist.all_reduce(val_loss, op=dist.ReduceOp.SUM)
-    #dist.all_reduce(val_count, op=dist.ReduceOp.SUM)
+    dist.all_reduce(val_count, op=dist.ReduceOp.SUM)
 
     if world_rank == 0:
         val_loss /= val_count
         loss_counter.add("val", val_loss.cpu().numpy().copy())
-        if args.stage == 'classify':
-            val_acc /= val_count
-            logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}, Acc : {val_acc}')
-            if use_wandb:
-                wandb.log({"epoch": epoch, "val/loss": val_loss, "val/acc": val_acc})
-        else:
-            logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}')
-            if use_wandb:
-                wandb.log({"epoch": epoch, "val/loss": val_loss})
+        logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}')
+        if use_wandb:
+            wandb.log({"epoch": epoch, "val/loss": val_loss})
 
         if val_loss < min_val_loss:
             min_val_loss = val_loss

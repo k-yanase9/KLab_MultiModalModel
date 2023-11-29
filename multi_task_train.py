@@ -26,7 +26,7 @@ FULL_DATASET_NAME_DICT = {
     "gvqa": ["vcr", "visual7w_gvqa"],
     "classify": ["imagenet", "imagenet21k", "places365", "sun397"]}
 # Flow
-ONE_GPUT_BATCH_DICT = {"caption": 50, "relation":200, "rcap":50, "refexp":75, "det":50, "cat":200, "loc":100, "vqa": 75, "gvqa":58, "classify": 150} #1gpuのバッチサイズ
+ONE_GPUT_BATCH_DICT = {"caption": 48, "relation":192, "rcap":48, "refexp":72, "det":48, "cat":192, "loc":96, "vqa": 72, "gvqa":48, "classify": 144} #1gpuのバッチサイズ
 NUM_STEP_PER_EPOCH_MAX = 2560
 # H100
 ONE_GPUT_BATCH_DICT = {"caption": 180, "relation":720, "rcap":180, "refexp":270, "det":180, "cat":720, "loc":360, "vqa": 270, "gvqa":190, "classify": 540} #1gpuのバッチサイズ
