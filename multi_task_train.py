@@ -33,6 +33,9 @@ NUM_STEP_PER_EPOCH_MAX = 2560
 ONE_GPU_BATCH_DICT = {"caption": 120, "relation":480, "rcap":120, "refexp":180, "det":120, "cat":480, "loc":240, "vqa": 180, "gvqa":210, "classify": 360} #1gpuのバッチサイズ
 TASK_SAMPLE_NUM_DICT = {"caption": 12, "relation":3, "rcap":12, "refexp":8, "det":12, "cat":3, "loc":6, "vqa": 8, "gvqa":1, "classify": 4} #何回タスクごとにバッチを取得するか
 NUM_STEP_PER_EPOCH_MAX = 1200
+# General
+SRC_LEN_DICT = {"caption": 7, "relation":50, "rcap":20, "refexp":184, "det":8, "cat":22, "loc":25, "vqa": 125, "gvqa":256, "classify": 7}
+TGT_LEN_DICT = {"caption": 256, "relation":25, "rcap":256, "refexp":120, "det":256, "cat":17, "loc":126, "vqa": 128, "gvqa":103, "classify": 74}
 
 #勾配をスケールする関数
 def multiply_grad(optimizer, multiplier):
@@ -137,6 +140,12 @@ def train():
                         train_one_gpu_batch_dict[task] = ONE_GPU_BATCH_DICT[task]
     sum_task_sample_num = sum(train_task_sample_num_dict.values())
     num_steps_per_epoch = NUM_STEP_PER_EPOCH_MAX // args.world_size
+
+    src_len_list = []
+    tgt_len_list = []
+    for task, sample in train_task_sample_num_dict.items():
+        src_len_list.extend([SRC_LEN_DICT[task]] * sample)
+        tgt_len_list.extend([TGT_LEN_DICT[task]] * sample)
     
     if world_rank == 0:
         logger.info(f"target_DataSet:{train_dataset_name_dict}")
@@ -206,11 +215,11 @@ def train():
             loss_per_step = 0
             pbar = tqdm(total=sum_task_sample_num, desc=f'Train Ep:{epoch} ({i+1}/{num_steps_per_epoch})', disable=(world_rank != 0))
             #累積数分の使用するデータをモデルに通して、勾配累積
-            for src_images, _, src_texts, tgt_texts in samples:
+            for j, (src_images, _, src_texts, tgt_texts) in enumerate(samples):
                 src_images = src_images.to(local_rank, non_blocking=True)
 
-                src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
-                tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
+                src_texts = src_tokenizer(src_texts, padding="max_length", max_length=src_len_list[j], return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
+                tgt_texts = tgt_tokenizer(tgt_texts, padding="max_length", max_length=tgt_len_list[j], return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
 
                 loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, None)
                 loss_per_step += loss.item()
@@ -274,8 +283,8 @@ def train():
             #勾配更新の前準備
             with torch.no_grad():
                 src_images = src_images.to(local_rank, non_blocking=True)
-                src_texts = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
-                tgt_texts = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
+                src_texts = src_tokenizer(src_texts, padding="max_length", max_length=max(src_len_list), return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
+                tgt_texts = tgt_tokenizer(tgt_texts, padding="max_length", max_length=max(tgt_len_list), return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
 
                 loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, None)
 
