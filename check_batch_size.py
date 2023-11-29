@@ -12,7 +12,7 @@ from data import *
 from models.model import MyModel
 from modules import *
 
-ONE_GPUT_BATCH_DICT = {"caption": 128, "relation":512, "rcap":128, "refexp":192, "det":128, "cat":512, "loc":256, "vqa": 192, "gvqa":210, "classify": 384} #1gpuのバッチサイズ
+ONE_GPU_BATCH_DICT = {"caption": 120, "relation":480, "rcap":120, "refexp":180, "det":120, "cat":480, "loc":240, "vqa": 180, "gvqa":210, "classify": 360} #1gpuのバッチサイズ
 TASK_SAMPLE_NUM_DICT = {"caption": 20, "relation":20, "rcap":20, "refexp":20, "det":20, "cat":20, "loc":20, "vqa": 20, "gvqa":20, "classify": 20} #何回タスクごとにバッチを取得するか
 SRC_LEN_DICT = {"caption": 7, "relation":50, "rcap":20, "refexp":184, "det":8, "cat":22, "loc":25, "vqa": 125, "gvqa":256, "classify": 7}
 TGT_LEN_DICT = {"caption": 256, "relation":25, "rcap":256, "refexp":120, "det":256, "cat":17, "loc":126, "vqa": 128, "gvqa":103, "classify": 74}
@@ -114,11 +114,11 @@ def train():
     train_loss = torch.tensor(0.0).to(local_rank)
     train_count = torch.tensor(0).to(local_rank)
     
-    for task in ONE_GPUT_BATCH_DICT.keys():
+    for task in ONE_GPU_BATCH_DICT.keys():
         accumulation_sample_size = torch.tensor(0).long().to(local_rank)
         loss_per_step = 0
         #累積数分の使用するデータをモデルに通して、勾配累積
-        batch_size = ONE_GPUT_BATCH_DICT[task]
+        batch_size = ONE_GPU_BATCH_DICT[task]
         max_src_len = SRC_LEN_DICT[task]
         max_tgt_len = TGT_LEN_DICT[task]
         train_loop = tqdm(range(1, TASK_SAMPLE_NUM_DICT[task]+1), desc=f'Train ({task})', disable=(world_rank != 0))

@@ -26,12 +26,12 @@ FULL_DATASET_NAME_DICT = {
     "gvqa": ["vcr", "visual7w_gvqa"],
     "classify": ["imagenet", "imagenet21k", "places365", "sun397"]}
 # Flow
-ONE_GPUT_BATCH_DICT = {"caption": 48, "relation":192, "rcap":48, "refexp":72, "det":48, "cat":192, "loc":96, "vqa": 72, "gvqa":48, "classify": 144} #1gpuのバッチサイズ
+ONE_GPU_BATCH_DICT = {"caption": 48, "relation":192, "rcap":48, "refexp":72, "det":48, "cat":192, "loc":96, "vqa": 72, "gvqa":48, "classify": 144} #1gpuのバッチサイズ
 NUM_STEP_PER_EPOCH_MAX = 2560
 # H100
-ONE_GPUT_BATCH_DICT = {"caption": 180, "relation":720, "rcap":180, "refexp":270, "det":180, "cat":720, "loc":360, "vqa": 270, "gvqa":190, "classify": 540} #1gpuのバッチサイズ
-TASK_SAMPLE_NUM_DICT = {"caption": 12, "relation":3, "rcap":12, "refexp":8, "det":12, "cat":3, "loc":6, "vqa": 8, "gvqa":2, "classify": 4} #何回タスクごとにバッチを取得するか
-NUM_STEP_PER_EPOCH_MAX = 800
+ONE_GPU_BATCH_DICT = {"caption": 120, "relation":480, "rcap":120, "refexp":180, "det":120, "cat":480, "loc":240, "vqa": 180, "gvqa":210, "classify": 360} #1gpuのバッチサイズ
+TASK_SAMPLE_NUM_DICT = {"caption": 12, "relation":3, "rcap":12, "refexp":8, "det":12, "cat":3, "loc":6, "vqa": 8, "gvqa":1, "classify": 4} #何回タスクごとにバッチを取得するか
+NUM_STEP_PER_EPOCH_MAX = 1200
 
 #勾配をスケールする関数
 def multiply_grad(optimizer, multiplier):
@@ -148,7 +148,7 @@ def train():
     
     train_loader = MultiTaskDataLoader4(
         train_dataset_dict,
-        batch_size_dict=ONE_GPUT_BATCH_DICT,
+        batch_size_dict=ONE_GPU_BATCH_DICT,
         each_task_sample_num_dict=TASK_SAMPLE_NUM_DICT,
         is_ddp=True,
         seed=args.seed,
