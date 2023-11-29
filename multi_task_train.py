@@ -242,7 +242,7 @@ def train():
             loss_per_step /= accumulation_sample_size
 
             train_loss += loss_per_step.cpu().numpy().copy()
-            train_count += accumulation_sample_size.cpu().numpy().copy()
+            train_count += 1
             
             #勾配更新
             scaler.step(optimizer)
