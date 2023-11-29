@@ -226,7 +226,6 @@ def train():
                 accumulation_sample_size += sample_size.item()
                 scaler.scale(loss).backward()
 
-                train_loss += loss.item() #loss.item() * src_images.shape[0]
                 pbar.update(1)
 
             # if (i + 1) % args.accumulation_steps == 0 or i + 1 == len(train_loader):
