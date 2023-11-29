@@ -26,13 +26,13 @@ FULL_DATASET_NAME_DICT = {
     "gvqa": ["vcr", "visual7w_gvqa"],
     "classify": ["imagenet", "imagenet21k", "places365", "sun397"]}
 # Flow
-ONE_GPU_BATCH_DICT = {"caption": 48, "relation":192, "rcap":48, "refexp":72, "det":48, "cat":192, "loc":96, "vqa": 72, "gvqa":48, "classify": 144} #1gpuのバッチサイズ
-TASK_SAMPLE_NUM_DICT = {"caption": 12, "relation":3, "rcap":12, "refexp":8, "det":12, "cat":3, "loc":6, "vqa": 8, "gvqa":2, "classify": 4} #何回タスクごとにバッチを取得するか
-NUM_STEP_PER_EPOCH_MAX = 2560
+ONE_GPU_BATCH_DICT = {"caption": 48, "relation":144, "rcap":48, "refexp":72, "det":48, "cat":72, "loc":96, "vqa": 72, "gvqa":48, "classify": 144} #1gpuのバッチサイズ
+TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
+NUM_STEP_PER_EPOCH_MAX = 5120
 # H100
-ONE_GPU_BATCH_DICT = {"caption": 120, "relation":360, "rcap":120, "refexp":180, "det":120, "cat":360, "loc":240, "vqa": 180, "gvqa":210, "classify": 360} #1gpuのバッチサイズ
-TASK_SAMPLE_NUM_DICT = {"caption": 12, "relation":4, "rcap":12, "refexp":8, "det":12, "cat":4, "loc":6, "vqa": 8, "gvqa":1, "classify": 4} #何回タスクごとにバッチを取得するか
-NUM_STEP_PER_EPOCH_MAX = 1200
+ONE_GPU_BATCH_DICT = {"caption": 120, "relation":360, "rcap":90, "refexp":180, "det":120, "cat":360, "loc":240, "vqa": 180, "gvqa":125, "classify": 360} #1gpuのバッチサイズ
+TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
+NUM_STEP_PER_EPOCH_MAX = 2400
 # General
 SRC_LEN_DICT = {"caption": 7, "relation":50, "rcap":20, "refexp":184, "det":8, "cat":22, "loc":25, "vqa": 125, "gvqa":256, "classify": 7}
 TGT_LEN_DICT = {"caption": 256, "relation":25, "rcap":256, "refexp":120, "det":256, "cat":17, "loc":126, "vqa": 128, "gvqa":103, "classify": 74}
