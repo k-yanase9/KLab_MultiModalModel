@@ -4,7 +4,7 @@
 batch_size=64
 dataset="all"
 
-epoch=20
+epoch=100
 
 enc=2
 dec=12
@@ -18,7 +18,9 @@ dec=12
         --lr 1e-4 \
         --lr_scheduler LinearWarmup \
         -b $batch_size \
+        --start_epoch 1 \
         --num_epochs $epoch \
+        --stop_epoch 1 \
         --warmup_rate 0.001 \
         --datasets $dataset \
         --root_dir /data/group1/z40441a/ \

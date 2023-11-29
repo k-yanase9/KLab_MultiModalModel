@@ -1,19 +1,20 @@
 # 多ノード多GPU
 
-batch_size=32
-dataset="cc3m cc12m imagenet imagenet21k places365 redcaps sun397"
+# Linear
+batch_size=64
+dataset="all"
 
-epoch=20
+epoch=100
 
 enc=2
 dec=12
 
-/opt/conda/envs/mmm/bin/python train.py \
+/opt/conda/envs/mmm/bin/python multi_task_train.py \
         --multinode \
         --float_type float16 \
         --transformer_num_layers $enc \
         --transformer_num_decoder_layers $dec \
-        --stage pretrain \
+        --stage train \
         --loss CrossEntropy \
         --lr 1e-4 \
         --lr_scheduler LinearWarmup \
@@ -25,4 +26,4 @@ dec=12
         --datasets $dataset \
         --root_dir /data/group1/z40441a/ \
         --save_interval 1 \
-        --result_dir results/pretrain_multi/cc3m_cc12m_imagenet_imagenet21k_places365_redcaps_sun397/enc$enc\_dec$dec/Linear$epoch/
+        --result_dir results/train_multi/all/enc$enc\_dec$dec/Linear$epoch/
