@@ -27,6 +27,7 @@ FULL_DATASET_NAME_DICT = {
     "classify": ["imagenet", "imagenet21k", "places365", "sun397"]}
 # Flow
 ONE_GPU_BATCH_DICT = {"caption": 48, "relation":192, "rcap":48, "refexp":72, "det":48, "cat":192, "loc":96, "vqa": 72, "gvqa":48, "classify": 144} #1gpuのバッチサイズ
+TASK_SAMPLE_NUM_DICT = {"caption": 12, "relation":3, "rcap":12, "refexp":8, "det":12, "cat":3, "loc":6, "vqa": 8, "gvqa":2, "classify": 4} #何回タスクごとにバッチを取得するか
 NUM_STEP_PER_EPOCH_MAX = 2560
 # H100
 ONE_GPU_BATCH_DICT = {"caption": 120, "relation":480, "rcap":120, "refexp":180, "det":120, "cat":480, "loc":240, "vqa": 180, "gvqa":210, "classify": 360} #1gpuのバッチサイズ
