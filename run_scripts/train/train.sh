@@ -1,21 +1,26 @@
+# 1ノード8GPU
+
+# Linear
 batch_size=128
-dataset="sun397"
+dataset="all"
 
 epoch=50
 
 enc=2
-dec=2
-lr=1e-5
-torchrun --nnodes=1 --nproc_per_node=1 train.py \
+dec=12
+lr=1e-4
+
+torchrun --nnodes=1 --nproc_per_node=8 multi_task_train.py \
         --transformer_num_layers $enc \
         --transformer_num_decoder_layers $dec \
-        --phase train \
+        --stage train \
         --loss CrossEntropy \
         --lr $lr \
-        --lr_scheduler LambdaLR \
+        --lr_scheduler LinearWarmup \
         -b $batch_size \
         --start_epoch 1 \
         --num_epochs $epoch \
+        --warmup_rate 0.001 \
         --datasets $dataset \
         --root_dir /local/ \
-        --result_dir results/train/$dataset/enc$enc\_dec$dec/Lambda$epoch\_$lr/
+        --result_dir results/train/all/enc$enc\_dec$dec/Linear$epoch\_$lr/
