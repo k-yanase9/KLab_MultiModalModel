@@ -100,6 +100,7 @@ def train():
     optimizer = get_optimizer(model, args)
     if args.start_epoch > 1:
         optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, f'epoch_{args.start_epoch-1}.optimizer' if args.save_interval is not None else 'best.optimizer')))
+    torch.cuda.empty_cache()
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
     tgt_tokenizer = AutoTokenizer.from_pretrained(
