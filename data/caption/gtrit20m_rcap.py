@@ -7,8 +7,8 @@ from ..dataset_loader import DatasetLoader
 
 
 class Grit20M_RegionCaption(DatasetLoader):
-    def __init__(self,data_dir="/data/dataset/grit20m",phase="train"):
-        super().__init__()
+    def __init__(self,data_dir="/data/dataset/grit20m",phase="train", **kwargs):
+        super().__init__(**kwargs)
         with open(os.path.join(data_dir,f"{phase}_region_caption.tsv")) as f:
             items = f.read()
         

@@ -102,7 +102,7 @@ class MultiTaskDataLoader1:
             sampler.set_epoch(epoch)
 
 def get_dataset_proc(item):
-    (key, dataset_names), args, phase = item
+    (key, dataset_names), args, phase, src_tokenizer, tgt_tokenizer, src_len, tgt_len = item
     datasets = ConcatDataset(
         [
             get_dataset(
@@ -110,27 +110,31 @@ def get_dataset_proc(item):
                 dataset_name,
                 args.stage,
                 phase=phase,
+                src_tokenizer=src_tokenizer,
+                tgt_tokenizer=tgt_tokenizer,
+                src_len=src_len,
+                tgt_len=tgt_len,
             )
             for dataset_name in dataset_names
         ]
     )
     return key, datasets
 
-def get_dataset_dict(args, dataset_name_dict: dict[str, List[str]], phase, src_tokenizer=None, tgt_tokenizer=None):
+def get_dataset_dict(args, dataset_name_dict: dict[str, List[str]], phase, src_tokenizer=None, tgt_tokenizer=None, src_len_dict=None, tgt_len_dict=None):
     dataset_dict = {}
     for key in dataset_name_dict.keys():
         dataset_dict[key] = []
 
     with Pool(8) as p:
-        for key, datasets in p.imap_unordered(get_dataset_proc, zip(dataset_name_dict.items(), itertools.repeat(args), itertools.repeat(phase))):
+        for key, datasets in p.imap_unordered(get_dataset_proc, zip(dataset_name_dict.items(), itertools.repeat(args), itertools.repeat(phase), itertools.repeat(src_tokenizer), itertools.repeat(tgt_tokenizer), src_len_dict.values(), tgt_len_dict.values())):
             dataset_dict[key] = datasets
     return dataset_dict
 
 
-def get_multi_task_data(args, train_dataset_name_dict, phase="train", src_tokenizer=None, tgt_tokenizer=None):
+def get_multi_task_data(args, train_dataset_name_dict, phase="train", src_tokenizer=None, tgt_tokenizer=None, src_len_dict=None, tgt_len_dict=None):
     if len(train_dataset_name_dict) == 0:
         raise ValueError
-    dataset_dict = get_dataset_dict(args, train_dataset_name_dict, phase=phase, src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer)
+    dataset_dict = get_dataset_dict(args, train_dataset_name_dict, phase, src_tokenizer, tgt_tokenizer, src_len_dict, tgt_len_dict)
     return dataset_dict
 
 

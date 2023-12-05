@@ -2,8 +2,8 @@ import os
 from ..dataset_loader import DatasetLoader, CAPTION_SRC_TEXT
 
 class RedCaps_Caption(DatasetLoader):
-    def __init__(self, data_dir='/data01/redcaps', phase='train', resize=256):
-        super().__init__(resize)
+    def __init__(self, data_dir='/data01/redcaps', phase='train', **kwargs):
+        super().__init__(**kwargs)
         
         with open(os.path.join(data_dir, f'{phase}.tsv'), 'r') as f:
             items = f.read().split('\n')

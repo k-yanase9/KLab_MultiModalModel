@@ -4,8 +4,8 @@ from ..dataset_loader import CLASSIFY_SRC_TEXT, DatasetLoader
 
 
 class ImageNet_Classify(DatasetLoader):
-    def __init__(self, data_dir='/data01/imagenet', phase='train', is_tgt_id=False):
-        super().__init__()
+    def __init__(self, data_dir='/data01/imagenet', phase='train', is_tgt_id=False, **kwargs):
+        super().__init__(**kwargs)
         img_folder_path = os.path.join(data_dir, f'{phase}_256')
 
         # Load class names

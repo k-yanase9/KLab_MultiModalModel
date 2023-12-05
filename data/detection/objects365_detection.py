@@ -8,8 +8,8 @@ dropimageidlist =['patch16_256/objects365_v2_00908726.png','patch6_256/objects36
 class Objects365_Detection(DatasetLoader):
     """openimageのdetectionデータセット
     """    
-    def __init__(self,data_dir:str="/data01/objects365/",phase:str="train"):
-        super().__init__()
+    def __init__(self,data_dir:str="/data01/objects365/",phase:str="train", **kwargs):
+        super().__init__(**kwargs)
         with open(os.path.join(data_dir,f"{phase}_dec_cut_max_tokens.tsv")) as f:
             items = f.read()
 

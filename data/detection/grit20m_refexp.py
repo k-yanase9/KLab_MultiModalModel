@@ -12,8 +12,8 @@ from ..dataset_loader import DatasetLoader
 class Grit20M_RefExp(DatasetLoader):
     """Grit20mのReferring Expressionデータセット
     """    
-    def __init__(self,data_dir:str="/data/dataset/grit20m/",phase:str="train"):
-        super().__init__()
+    def __init__(self,data_dir:str="/data/dataset/grit20m/",phase:str="train", **kwargs):
+        super().__init__(**kwargs)
         if phase == 'train':
             tsv_path = os.path.join(data_dir,  f"{phase}_ref_exp_cut.tsv")
         else:

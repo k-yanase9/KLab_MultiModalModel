@@ -4,8 +4,8 @@ from ..dataset_loader import CLASSIFY_SRC_TEXT, DatasetLoader
 
 
 class SUN397_Classify(DatasetLoader):
-    def __init__(self, data_dir='/data01/sun397', phase='train', is_tgt_id=False):
-        super().__init__()
+    def __init__(self, data_dir='/data01/sun397', phase='train', is_tgt_id=False, **kwargs):
+        super().__init__(**kwargs)
         self.data_dir = Path(data_dir) / "SUN397_256"
 
         with open(self.data_dir / "ClassName.txt") as f:

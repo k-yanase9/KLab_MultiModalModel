@@ -123,6 +123,8 @@ def train():
         train_dataset_name_dict = FULL_DATASET_NAME_DICT
         train_task_sample_num_dict = TASK_SAMPLE_NUM_DICT
         train_one_gpu_batch_dict = ONE_GPU_BATCH_DICT
+        train_src_len_dict = SRC_LEN_DICT
+        train_tgt_len_dict = TGT_LEN_DICT
         args.datasets = []
         for v in train_dataset_name_dict.values():
             args.datasets.extend(v)
@@ -130,6 +132,8 @@ def train():
         train_dataset_name_dict = {}
         train_task_sample_num_dict = {}
         train_one_gpu_batch_dict = {}
+        train_src_len_dict = {}
+        train_tgt_len_dict = {}
         for task, dataset_names in FULL_DATASET_NAME_DICT.items():
             for dataset_name in dataset_names:
                 if dataset_name in args.datasets:
@@ -139,24 +143,26 @@ def train():
                         train_dataset_name_dict[task] = [dataset_name]
                         train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
                         train_one_gpu_batch_dict[task] = ONE_GPU_BATCH_DICT[task]
+                        train_src_len_dict[task] = SRC_LEN_DICT[task]
+                        train_tgt_len_dict[task] = TGT_LEN_DICT[task]
     sum_task_sample_num = sum(train_task_sample_num_dict.values())
     num_steps_per_epoch = NUM_STEP_PER_EPOCH_MAX // args.world_size
 
     src_len_list = []
     tgt_len_list = []
     for task, sample in train_task_sample_num_dict.items():
-        src_len_list.extend([SRC_LEN_DICT[task]] * sample)
-        tgt_len_list.extend([TGT_LEN_DICT[task]] * sample)
+        src_len_list.extend([train_src_len_dict[task]] * sample)
+        tgt_len_list.extend([train_tgt_len_dict[task]] * sample)
     
     if world_rank == 0:
         logger.info(f"target_DataSet:{train_dataset_name_dict}")
         logger.info(f"num_steps_per_epoch:{num_steps_per_epoch}")
     
-    train_dataset_dict = get_multi_task_data(args, train_dataset_name_dict, "train", src_tokenizer, tgt_tokenizer)
+    train_dataset_dict = get_multi_task_data(args, train_dataset_name_dict, "train", src_tokenizer, tgt_tokenizer, train_src_len_dict, train_tgt_len_dict)
     for task, dataset in train_dataset_dict.items():
         if world_rank == 0:
             logger.info(f"train_dataset ({task}):{len(dataset)}")
-    val_dataset = get_data(args, "val", src_tokenizer, tgt_tokenizer)
+    val_dataset = get_data(args, "val", src_tokenizer, tgt_tokenizer, max(src_len_list), max(tgt_len_list))
     if world_rank == 0:
         logger.info(f"val_dataset:{len(val_dataset)}")
     
@@ -218,9 +224,8 @@ def train():
             #累積数分の使用するデータをモデルに通して、勾配累積
             for j, (src_images, _, src_texts, tgt_texts) in enumerate(samples):
                 src_images = src_images.to(local_rank, non_blocking=True)
-
-                src_texts = src_tokenizer(src_texts, padding="max_length", max_length=src_len_list[j], return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
-                tgt_texts = tgt_tokenizer(tgt_texts, padding="max_length", max_length=tgt_len_list[j], return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
+                src_texts = src_texts.to(local_rank, non_blocking=True)
+                tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
 
                 loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, None)
                 loss_per_step += loss.item()

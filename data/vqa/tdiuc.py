@@ -5,8 +5,8 @@ from ..dataset_loader import DatasetLoader
 class Tdiucdataset(DatasetLoader):
     """Vcrのデータセット
     """    
-    def __init__(self,data_dir:str="/data01/tdiuc",phase:str="train",imagesize:tuple[int,int]=(256,256)):
-        super().__init__()
+    def __init__(self,data_dir:str="/data01/tdiuc",phase:str="train",**kwargs):
+        super().__init__(**kwargs)
 
         with open(os.path.join(data_dir,f"{phase}_pngfix.tsv")) as f:
             items = f.read()

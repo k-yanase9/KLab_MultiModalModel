@@ -2,8 +2,8 @@ import os
 from ..dataset_loader import DatasetLoader, CAPTION_SRC_TEXT
 
 class CC12M_Caption(DatasetLoader):
-    def __init__(self, data_dir='/data01/cc12m', phase='train', resize=256):
-        super().__init__(resize)
+    def __init__(self, data_dir='/data01/cc12m', phase='train', **kwargs):
+        super().__init__(**kwargs)
         tsv_path = os.path.join(data_dir, f'{phase}_cut_max_tokens.tsv')
         
         with open(tsv_path, 'r') as f:

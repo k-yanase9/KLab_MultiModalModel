@@ -7,8 +7,8 @@ from ..dataset_loader import DatasetLoader
 class Visual7W_GVQA(DatasetLoader):
     """Visual7Wのデータセット
     """    
-    def __init__(self,data_dir:str="/data01/visual7w",phase:str="train"):
-        super().__init__()
+    def __init__(self,data_dir:str="/data01/visual7w",phase:str="train", **kwargs):
+        super().__init__(**kwargs)
         self.locs = []
 
         tsv_path = os.path.join(data_dir, f'{phase}_gvqa_loc40.tsv')
@@ -27,6 +27,10 @@ class Visual7W_GVQA(DatasetLoader):
         image = Image.open(image).convert('RGB')
         random.shuffle(locs)
         src_text = f'{question} choices: {",".join(locs)}'
+        if self.src_tokenizer is not None:
+            src_text = self.src_tokenizer(src_text, max_length=self.src_len, padding='max_length', return_tensors='pt')['input_ids'][0]
+        if self.tgt_tokenizer is not None:
+            tgt_text = self.tgt_tokenizer(tgt_text, max_length=self.tgt_len, padding='max_length', return_tensors='pt')['input_ids'][0]
         src_image = self.src_transforms(image)
         tgt_image = torch.zeros(1)
 

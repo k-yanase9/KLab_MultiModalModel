@@ -4,8 +4,8 @@ from ..dataset_loader import CLASSIFY_SRC_TEXT, DatasetLoader
 
 
 class Places365_Classify(DatasetLoader):
-    def __init__(self,data_dir='/data01/places365', phase='train'):
-        super().__init__()
+    def __init__(self,data_dir='/data01/places365', phase='train', **kwargs):
+        super().__init__(**kwargs)
         text_tsv_path = os.path.join(data_dir, f'{phase}_text.tsv')
         img_tsv_path = os.path.join(data_dir, f'{phase}_img.tsv')
 

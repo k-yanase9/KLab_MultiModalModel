@@ -7,13 +7,12 @@ import os
 from ..dataset_loader import DatasetLoader
 
 class imSituDataset(DatasetLoader):
-    def __init__(self,data_dir="/data/dataset/imSitu",phase="train",imagesize=(256,256)):
-        super().__init__()
+    def __init__(self,data_dir="/data/dataset/imSitu",phase="train",**kwargs):
+        super().__init__(**kwargs)
         if phase =="val":
             phase = "dev"
         self.data_dir = data_dir
         self.transform = ToTensor()
-        self.imagesize = imagesize
 
         with open(os.path.join(data_dir,"imSituVQA.json")) as f:
             items = json.load(f)

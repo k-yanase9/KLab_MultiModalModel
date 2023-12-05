@@ -4,8 +4,8 @@ from ..dataset_loader import DatasetLoader, DETECTION_SRC_TEXT
 class VisualGenome_Detection(DatasetLoader):
     """VisualGenomeのdetectionデータセット
     """    
-    def __init__(self, data_dir:str="/data01/visual_genome/", phase:str="train"):
-        super().__init__()        
+    def __init__(self, data_dir:str="/data01/visual_genome/", phase:str="train", **kwargs):
+        super().__init__(**kwargs)        
 
         # with open(os.path.join(data_dir,f"{phase}_detect.tsv")) as f:
         with open(os.path.join(data_dir,f"{phase}_detect_fix_cut_max_tokens.tsv")) as f:
