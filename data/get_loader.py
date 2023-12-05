@@ -32,12 +32,12 @@ def get_data(args, phase="train", src_tokenizer=None, tgt_tokenizer=None, src_le
 
     return dataset
 
-def get_distributed_dataloader(args, dataset, batch_size=64, num_workers=4, shuffle=True):
+def get_distributed_dataloader(args, dataset, num_workers=4, shuffle=True):
     sampler = distributed.DistributedSampler(dataset, drop_last=True, shuffle=shuffle)
     if args.stage == 'pretrain':
         dataloader = DataLoader(
             dataset,
-            batch_size=batch_size,
+            batch_size=args.batch_size,
             collate_fn=dataset.datasets[0].collate_fn,
             num_workers=num_workers,
             pin_memory=True,
@@ -47,7 +47,7 @@ def get_distributed_dataloader(args, dataset, batch_size=64, num_workers=4, shuf
     else:
         dataloader = DataLoader(
             dataset, 
-            batch_size=batch_size, 
+            batch_size=args.batch_size, 
             num_workers=num_workers, 
             pin_memory=True, 
             sampler=sampler, 
