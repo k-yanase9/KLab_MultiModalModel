@@ -286,8 +286,8 @@ def train():
             #勾配更新の前準備
             with torch.no_grad():
                 src_images = src_images.to(local_rank, non_blocking=True)
-                src_texts = src_tokenizer(src_texts, padding="max_length", max_length=max(src_len_list), return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
-                tgt_texts = tgt_tokenizer(tgt_texts, padding="max_length", max_length=max(tgt_len_list), return_tensors='pt')['input_ids'].to(local_rank, non_blocking=True)
+                src_texts = src_texts.to(local_rank, non_blocking=True)
+                tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
 
                 loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, None)
 
