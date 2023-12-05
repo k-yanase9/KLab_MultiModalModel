@@ -1,7 +1,7 @@
 # 1ノード8GPU
 
 # Linear
-batch_size=128
+batch_size=400
 dataset="all"
 
 epoch=50
@@ -11,7 +11,6 @@ dec=12
 lr=1e-4
 
 torchrun --nnodes=1 --nproc_per_node=8 multi_task_train.py \
-        --id pe0icm6o \
         --transformer_num_layers $enc \
         --transformer_num_decoder_layers $dec \
         --stage train \
@@ -19,7 +18,7 @@ torchrun --nnodes=1 --nproc_per_node=8 multi_task_train.py \
         --lr $lr \
         --lr_scheduler LinearWarmup \
         -b $batch_size \
-        --start_epoch 35 \
+        --start_epoch 1 \
         --num_epochs $epoch \
         --warmup_rate 0.001 \
         --datasets $dataset \
