@@ -58,6 +58,7 @@ def parse_arguments():
         'vg_cat', 'vg_det', 'vg_loc', 'vg_rel', 'vg_vqa', 'vg_rcap', 'vg_refexp', 
         'all'
         ], help='使用データセットの名前')
+    parser.add_argument('--uncalc_val', action='store_true', help='検証を行わない')
     # Dir setting
     parser.add_argument('--root_dir', type=str, default='/local/', help='データのディレクトリ')
     parser.add_argument('--result_dir', type=str, default='results/', help='結果を保存するディレクトリ')

@@ -185,6 +185,7 @@ def train():
     scheduler = get_scheduler(args, optimizer)
 
     loss_counter = LossCounter()
+    min_val_loss = 100
     if args.start_epoch > 1:
         with open(os.path.join(args.result_dir, 'train.log'), 'r') as f:
             for line in f:
@@ -192,11 +193,13 @@ def train():
                     if 'Train' in line:
                         loss_counter.add("train", float(line.split(',')[1].split(':')[-1].strip()))
                         steps = int(line.split(',')[2].split(':')[-1].strip())
-                    elif 'Val' in line:
+                    elif 'Val' in line and not args.uncalc_val:
                         loss_counter.add("val", float(line.split(',')[1].split(':')[-1].strip()))
-        min_val_loss = min(loss_counter.losses['val'])
+        if not args.uncalc_val: min_val_loss = min(loss_counter.losses['val'])
         if world_rank == 0:
-            logger.info(f'[Loaded] steps : {steps}, Best Val loss : {min_val_loss}')
+            logger.info(f'[Loaded] steps : {steps}')
+            if not args.uncalc_val:
+                logger.info(f'Best Val loss : {min_val_loss}')
         if 'Warmup' in args.lr_scheduler:
             for _ in range(steps):
                 scheduler.step()
@@ -205,7 +208,6 @@ def train():
                 scheduler.step()
     else:
         steps = 0
-        min_val_loss = 100
     for epoch in range(args.start_epoch, args.num_epochs + 1):
         # 学習ループ
         train_loader.set_epoch(epoch)
@@ -274,50 +276,51 @@ def train():
             scheduler.step()
 
         # 検証ループ
-        if args.language_model_train:
-            model.module.language_model.eval()
-        if args.image_model_train:
-            model.module.image_model.eval()
-        model.module.transformer.eval()
-        loss_per_step = torch.tensor(0.0).to(local_rank)
-        accumulation_sample_size = torch.tensor(0).to(local_rank)
-        val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
-        for i, (src_images, _, src_texts, tgt_texts) in enumerate(val_loop):
-            #勾配更新の前準備
-            with torch.no_grad():
-                src_images = src_images.to(local_rank, non_blocking=True)
-                src_texts = src_texts.to(local_rank, non_blocking=True)
-                tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
+        if not args.uncalc_val:
+            if args.language_model_train:
+                model.module.language_model.eval()
+            if args.image_model_train:
+                model.module.image_model.eval()
+            model.module.transformer.eval()
+            loss_per_step = torch.tensor(0.0).to(local_rank)
+            accumulation_sample_size = torch.tensor(0).to(local_rank)
+            val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
+            for i, (src_images, _, src_texts, tgt_texts) in enumerate(val_loop):
+                #勾配更新の前準備
+                with torch.no_grad():
+                    src_images = src_images.to(local_rank, non_blocking=True)
+                    src_texts = src_texts.to(local_rank, non_blocking=True)
+                    tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
 
-                loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, None)
+                    loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, None)
 
-                loss_per_step += loss.item()
-                accumulation_sample_size += sample_size
+                    loss_per_step += loss.item()
+                    accumulation_sample_size += sample_size
 
-        # 他のノードから集める
-        dist.all_reduce(loss_per_step, op=dist.ReduceOp.SUM)
-        dist.all_reduce(accumulation_sample_size, op=dist.ReduceOp.SUM)
+            # 他のノードから集める
+            dist.all_reduce(loss_per_step, op=dist.ReduceOp.SUM)
+            dist.all_reduce(accumulation_sample_size, op=dist.ReduceOp.SUM)
 
-        if world_rank == 0:
-            val_loss = (loss_per_step / accumulation_sample_size).cpu().numpy().copy()
-            loss_counter.add("val", val_loss)
-            logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}')
-            if use_wandb:
-                wandb.log({"epoch": epoch, "val/loss": val_loss})
+            if world_rank == 0:
+                val_loss = (loss_per_step / accumulation_sample_size).cpu().numpy().copy()
+                loss_counter.add("val", val_loss)
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}')
+                if use_wandb:
+                    wandb.log({"epoch": epoch, "val/loss": val_loss})
 
-            if val_loss < min_val_loss:
-                min_val_loss = val_loss
-                print('Best Model and Optimizer saving...')
-                model.module.save()
-                torch.save(optimizer.state_dict(), os.path.join(args.result_dir, 'best.optimizer'))
-                logger.info('Best Model and Optimizer saved')
+                if val_loss < min_val_loss:
+                    min_val_loss = val_loss
+                    print('Best Model and Optimizer saving...')
+                    model.module.save()
+                    torch.save(optimizer.state_dict(), os.path.join(args.result_dir, 'best.optimizer'))
+                    logger.info('Best Model and Optimizer saved')
 
-            if args.save_interval is not None:
-                if (epoch) % args.save_interval == 0:
-                    print(f'Model and Optimizer {epoch} saving...')
-                    model.module.save(result_name=f'epoch_{epoch}.pth')
-                    torch.save(optimizer.state_dict(), os.path.join(args.result_dir, f'epoch_{epoch}.optimizer'))
-                    print(f'Model and Optimizer {epoch} saved')
+        if world_rank == 0 and args.save_interval is not None:
+            if (epoch) % args.save_interval == 0:
+                print(f'Model and Optimizer {epoch} saving...')
+                model.module.save(result_name=f'epoch_{epoch}.pth')
+                torch.save(optimizer.state_dict(), os.path.join(args.result_dir, f'epoch_{epoch}.optimizer'))
+                print(f'Model and Optimizer {epoch} saved')
 
         if epoch == args.stop_epoch:
             if world_rank == 0: 
@@ -325,10 +328,9 @@ def train():
             break
             
     if world_rank == 0: 
-        loss_counter.plot_loss(args.result_dir)
         if use_wandb:
             wandb.finish()
-
+        loss_counter.plot_loss(args.result_dir, val_show=not args.uncalc_val)
 
 def wandb_init(args):
     name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
