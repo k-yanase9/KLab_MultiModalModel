@@ -11,7 +11,6 @@ dec=12
 lr=1e-4
 
 torchrun --nnodes=1 --nproc_per_node=8 multi_task_train.py \
-        --id 3z09hy3q \
         --transformer_num_layers $enc \
         --transformer_num_decoder_layers $dec \
         --stage train \
@@ -19,9 +18,9 @@ torchrun --nnodes=1 --nproc_per_node=8 multi_task_train.py \
         --lr $lr \
         --lr_scheduler LinearWarmup \
         -b $batch_size \
-        --start_epoch 2 \
+        --start_epoch 1 \
         --num_epochs $epoch \
-        --warmup_rate 0.001 \
+        --warmup_rate 0.01 \
         --datasets $dataset \
         --root_dir /local/ \
         --uncalc_val \
