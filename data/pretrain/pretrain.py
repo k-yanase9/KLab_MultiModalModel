@@ -2,16 +2,16 @@ import torch
 import random
 from PIL import Image
 import numpy as np
-from torch.nn.utils.rnn import pad_sequence
 from ..dataset_loader import DatasetLoader
 
+def pad_to_length(array, target_length):
+    array = np.array(array)
+    array = np.pad(array, (0, max(0, target_length - len(array))))
+    return array
+
 class PretrainDatasetLoader(DatasetLoader):
-    def __init__(self, resize=256, src_tokenizer=None, tgt_tokenizer=None, max_source_length=256, max_target_length=256, mask_probability=0.15):
-        super().__init__(resize)
-        self.max_source_length = max_source_length
-        self.max_target_length = max_target_length 
-        self.src_tokenizer = src_tokenizer
-        self.tgt_tokenizer = tgt_tokenizer
+    def __init__(self, src_tokenizer=None, mask_probability=0.15, **kwargs):
+        super().__init__(src_tokenizer=src_tokenizer, **kwargs)
         self.mask_tokens = src_tokenizer.additional_special_tokens_ids
         self.mask_prob = mask_probability
 
@@ -20,8 +20,11 @@ class PretrainDatasetLoader(DatasetLoader):
         src_text = self.tgt_tokenizer.encode_plus(text, return_attention_mask=False, verbose=False)["input_ids"][:-1]
         tgt_text = self.generate_target_ids(src_text)
         tgt_text += [self.tgt_tokenizer.eos_token_id]
-        src_text = torch.from_numpy(np.array(src_text))
-        tgt_text = torch.from_numpy(np.array(tgt_text))
+
+        src_text = pad_to_length(src_text, self.src_len)
+        tgt_text = pad_to_length(tgt_text, self.tgt_len)
+        src_text = torch.from_numpy(src_text)
+        tgt_text = torch.from_numpy(tgt_text)
 
         image = Image.open(image).convert('RGB')#.resize((256,256))
         src_image = self.src_transforms(image)
@@ -30,22 +33,6 @@ class PretrainDatasetLoader(DatasetLoader):
         tgt_image = torch.zeros(1)
 
         return src_image, tgt_image, src_text, tgt_text
-    
-    def collate_fn(self, batch):
-        # バッチ内のテンソルをパッドする
-        src_images, tgt_images, src_texts, tgt_texts = [], [], [], []
-        for src_image, tgt_image, src_text, tgt_text in batch:
-            src_images.append(src_image)
-            tgt_images.append(tgt_image)
-            src_texts.append(src_text)
-            tgt_texts.append(tgt_text)
-
-        src_images = torch.stack(src_images)
-        tgt_images = torch.stack(tgt_images)
-        src_texts = pad_sequence(src_texts, batch_first=True, padding_value=self.src_tokenizer.pad_token_id)
-        tgt_texts = pad_sequence(tgt_texts, batch_first=True, padding_value=self.tgt_tokenizer.pad_token_id)
-
-        return src_images, tgt_images, src_texts, tgt_texts
     
     def generate_target_ids(self, input_id):
         target_id = []
@@ -96,8 +83,11 @@ class ClassifyPretrainDatasetLoader(PretrainDatasetLoader):
         src_text = self.tgt_tokenizer.encode_plus(text, return_attention_mask=False, verbose=False)["input_ids"][:-1]
         tgt_text = self.generate_target_ids(src_text)
         tgt_text += [self.tgt_tokenizer.eos_token_id]
-        src_text = torch.from_numpy(np.array(src_text))
-        tgt_text = torch.from_numpy(np.array(tgt_text))
+        
+        src_text = pad_to_length(src_text, self.src_len)
+        tgt_text = pad_to_length(tgt_text, self.tgt_len)
+        src_text = torch.from_numpy(src_text)
+        tgt_text = torch.from_numpy(tgt_text)
 
         image = Image.open(image).convert('RGB')#.resize((256,256))
         src_image = self.src_transforms(image)
