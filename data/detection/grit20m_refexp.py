@@ -1,10 +1,4 @@
 import os
-from copy import deepcopy
-
-import pandas as pd
-import torch
-from PIL import Image
-from torchvision.transforms import ToTensor
 
 from ..dataset_loader import DatasetLoader
 
@@ -14,10 +8,7 @@ class Grit20M_RefExp(DatasetLoader):
     """    
     def __init__(self,data_dir:str="/data/dataset/grit20m/",phase:str="train", **kwargs):
         super().__init__(**kwargs)
-        if phase == 'train':
-            tsv_path = os.path.join(data_dir,  f"{phase}_ref_exp_cut.tsv")
-        else:
-            tsv_path = os.path.join(data_dir,  f"{phase}_ref_exp.tsv")
+        tsv_path = os.path.join(data_dir,  f"{phase}_ref_exp_cut.tsv")
             
         with open(tsv_path) as f:
             items = f.read()
