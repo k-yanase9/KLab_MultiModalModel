@@ -162,10 +162,6 @@ def train():
     for task, dataset in train_dataset_dict.items():
         if world_rank == 0:
             logger.info(f"train_dataset ({task}):{len(dataset)}")
-    val_dataset = get_data(args, "val", src_tokenizer, tgt_tokenizer, max(src_len_list), max(tgt_len_list))
-    if world_rank == 0:
-        logger.info(f"val_dataset:{len(val_dataset)}")
-    
     train_loader = MultiTaskDataLoader4(
         train_dataset_dict,
         batch_size_dict=train_one_gpu_batch_dict,
@@ -178,7 +174,12 @@ def train():
         shuffle=True,
         pin_memory=True,
     )
-    val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)
+    
+    if not args.uncalc_val:
+        val_dataset = get_data(args, "val", src_tokenizer, tgt_tokenizer, max(src_len_list), max(tgt_len_list))
+        if world_rank == 0:
+            logger.info(f"val_dataset:{len(val_dataset)}")
+        val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)
 
     if 'Warmup' in args.lr_scheduler and args.num_steps is None:
         args.num_steps = args.num_epochs * len(train_loader)
