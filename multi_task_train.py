@@ -24,7 +24,8 @@ FULL_DATASET_NAME_DICT = {
     "loc": ["vg_loc", "openimage_loc", "objects365_loc"],
     "vqa": ["vg_vqa", "vqa2", "tdiuc", "imSitu", "visual7w_vqa"], 
     "gvqa": ["vcr", "visual7w_gvqa"],
-    "classify": ["imagenet", "imagenet21k", "places365", "sun397"]}
+    "classify": ["imagenet", "imagenet21k", "places365", "sun397"]
+}
 # Flow
 ONE_GPU_BATCH_DICT = {"caption": 48, "relation":144, "rcap":48, "refexp":72, "det":48, "cat":72, "loc":96, "vqa": 72, "gvqa":48, "classify": 144} #1gpuのバッチサイズ
 TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
@@ -35,7 +36,7 @@ TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":
 NUM_STEP_PER_EPOCH_MAX = 2400
 # General
 SRC_LEN_DICT = {"caption": 7, "relation":50, "rcap":20, "refexp":184, "det":8, "cat":22, "loc":25, "vqa": 125, "gvqa":256, "classify": 7}
-TGT_LEN_DICT = {"caption": 256, "relation":25, "rcap":256, "refexp":120, "det":256, "cat":17, "loc":126, "vqa": 128, "gvqa":103, "classify": 74}
+TGT_LEN_DICT = {"caption": 256, "relation":25, "rcap":256, "refexp":120, "det":256, "cat":17, "loc":126, "vqa": 128, "gvqa":103, "classify": 18}
 
 #勾配をスケールする関数
 def multiply_grad(optimizer, multiplier):
@@ -118,7 +119,6 @@ def train():
         src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=args.max_source_length, use_fast=True)
 
     # データの設定
-    # 引数の設定
     if args.datasets[0] == 'all':
         train_dataset_name_dict = FULL_DATASET_NAME_DICT
         train_task_sample_num_dict = TASK_SAMPLE_NUM_DICT
