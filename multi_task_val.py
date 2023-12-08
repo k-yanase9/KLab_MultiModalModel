@@ -156,6 +156,7 @@ def train():
         min_val_loss = 100
 
     for epoch in range(args.start_epoch, args.num_epochs + 1):
+        torch.cuda.empty_cache()
         if not os.path.exists(os.path.join(args.result_dir, f'epoch_{epoch}.pth')):
             if world_rank == 0:
                 logger.info(f'epoch_{epoch}.pth is not found. Skip this epoch.')
