@@ -20,6 +20,8 @@ class OpenImage_Localization(DatasetLoader):
         count = 0
 
         for line in lines:
+            if count >= MAX_VAL_DATA_SIZE and phase=='validation':
+                break
             img_name, caption, _, loc  = line.removesuffix('\n').split('\t')
             if img_name in dropimageidlist:
                 continue

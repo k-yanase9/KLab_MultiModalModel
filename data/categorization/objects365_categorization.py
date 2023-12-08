@@ -29,4 +29,4 @@ class Objects365_Categorization(DatasetLoader):
                 self.tgt_texts.append(int(cat_id.split(',')[0]))
             else:
                 self.tgt_texts.append(cat_name)
-                
+            count += 1

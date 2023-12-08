@@ -20,6 +20,8 @@ class OpenImage_Categorization(DatasetLoader):
         count = 0
         
         for line in lines:
+            if count >= MAX_VAL_DATA_SIZE and phase=='validation':
+                break
             img_name, loc, cat_name, cat_id  = line.removesuffix('\n').split('\t')
             if img_name in dropimageidlist:
                 continue
