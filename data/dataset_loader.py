@@ -6,6 +6,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 CLASSIFY_SRC_TEXT = "What is in this image?"
 CAPTION_SRC_TEXT = "What does the image describe?"
 DETECTION_SRC_TEXT = "What objects are in the image?"
+MAX_VAL_DATA_SIZE = 50000
 
 class DatasetLoader(torch.utils.data.Dataset):
     def __init__(self, src_tokenizer=None, tgt_tokenizer=None, src_len=None, tgt_len=None, resize=256):

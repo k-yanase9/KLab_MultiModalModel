@@ -1,18 +1,21 @@
 import os
-from ..dataset_loader import DatasetLoader, CAPTION_SRC_TEXT
+from ..dataset_loader import DatasetLoader, CAPTION_SRC_TEXT, MAX_VAL_DATA_SIZE
 
 class RedCaps_Caption(DatasetLoader):
     def __init__(self, data_dir='/data01/redcaps', phase='train', **kwargs):
         super().__init__(**kwargs)
+        tsv_path = os.path.join(data_dir, f'{phase}.tsv')
         
-        with open(os.path.join(data_dir, f'{phase}.tsv'), 'r') as f:
-            items = f.read().split('\n')
+        with open(tsv_path, 'r') as f:
+            lines = f.readlines()
+        lines = lines[1:]
+        if phase=='val':
+            lines = lines[:MAX_VAL_DATA_SIZE]
 
-        items = items[1:]
-        items = [item.split('\t') for item in items]
-
-        self.images = [os.path.join(data_dir, 'images', item[0]) for item in items]
-        self.src_texts = [CAPTION_SRC_TEXT for _ in range(len(items))]
-        self.tgt_texts = [item[2] for item in items]
-
+        for line in lines:
+            img_name, _, caption = line.removesuffix('\n').split('\t')
+            img_path = os.path.join(data_dir, 'images', img_name)
+            self.images.append(img_path)
+            self.src_texts.append(CAPTION_SRC_TEXT)
+            self.tgt_texts.append(caption)
         
