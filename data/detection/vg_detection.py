@@ -1,18 +1,22 @@
 import os
-from ..dataset_loader import DatasetLoader, DETECTION_SRC_TEXT
+from ..dataset_loader import DatasetLoader, DETECTION_SRC_TEXT, MAX_VAL_DATA_SIZE
 
 class VisualGenome_Detection(DatasetLoader):
     """VisualGenomeのdetectionデータセット
     """    
     def __init__(self, data_dir:str="/data01/visual_genome/", phase:str="train", **kwargs):
-        super().__init__(**kwargs)        
+        super().__init__(**kwargs)
+        tsv_path = os.path.join(data_dir, f"{phase}_detect_fix_cut_max_tokens.tsv")
 
-        # with open(os.path.join(data_dir,f"{phase}_detect.tsv")) as f:
-        with open(os.path.join(data_dir,f"{phase}_detect_fix_cut_max_tokens.tsv")) as f:
-            items = f.readlines()
-        items = [item.rstrip().split("\t") for item in items]
-        items = items[1:]
+        with open(tsv_path) as f:
+            lines = f.readlines()
+        lines = lines[1:]
+        if phase=='val':
+            lines = lines[:MAX_VAL_DATA_SIZE]
 
-        self.tgt_texts = [item[1] for item in items]
-        self.src_texts = [DETECTION_SRC_TEXT]*len(items)
-        self.images = [os.path.join(data_dir,"images_256",f"{item[0]}.png") for item in items]
+        for line in lines:
+            img_name, caption = line.removesuffix('\n').split('\t')
+            img_path = os.path.join(data_dir, f"images_256", f"{img_name}.png")
+            self.images.append(img_path)
+            self.src_texts.append(DETECTION_SRC_TEXT)
+            self.tgt_texts.append(caption)

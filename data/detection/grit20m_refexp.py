@@ -1,7 +1,5 @@
 import os
-
-from ..dataset_loader import DatasetLoader
-
+from ..dataset_loader import DatasetLoader, MAX_VAL_DATA_SIZE
 
 class Grit20M_RefExp(DatasetLoader):
     """Grit20mのReferring Expressionデータセット
@@ -11,12 +9,19 @@ class Grit20M_RefExp(DatasetLoader):
         tsv_path = os.path.join(data_dir,  f"{phase}_ref_exp_cut.tsv")
             
         with open(tsv_path) as f:
-            items = f.read()
-        items = items.split("\n")
-        items = [item.split("\t") for item in items]
-        items = items[1:]
-        self.tgt_texts = [item[2] for item in items]
-        self.src_texts = [item[1] for item in items]
-        self.images = [os.path.join(data_dir,item[0]) for item in items]
+            lines = f.readlines()
+        lines = lines[1:]
+        count = 0
 
-    
+        for line in lines:
+            if count >= MAX_VAL_DATA_SIZE and phase == 'val':
+                break
+            line = line.removesuffix('\n').split('\t')
+            if len(line) < 3:
+                continue
+            img_name, src, tgt = line
+            img_path = os.path.join(data_dir, img_name)
+            self.images.append(img_path)
+            self.src_texts.append(src)
+            self.tgt_texts.append(tgt)
+            count += 1
