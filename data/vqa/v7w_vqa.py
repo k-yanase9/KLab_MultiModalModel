@@ -15,7 +15,8 @@ class Visual7W_VQA(DatasetLoader):
             lines = lines[:MAX_VAL_DATA_SIZE]
 
         for line in lines:
-            image_name, question, answer, dummy1, dummy2, dummy3 = line.removesuffix('\n').split('\t')
-            self.images.append(os.path.join(data_dir, 'images', image_name))
+            img_name, question, answer, dummy1, dummy2, dummy3 = line.removesuffix('\n').split('\t')
+            img_path = os.path.join(data_dir, "images", image_name)
+            self.images.append(img_path)
             self.src_texts.append(question)
             self.tgt_texts.append(answer)
