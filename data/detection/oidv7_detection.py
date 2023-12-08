@@ -27,3 +27,4 @@ class OpenImage_Detection(DatasetLoader):
             self.images.append(img_path)
             self.src_texts.append(DETECTION_SRC_TEXT)
             self.tgt_texts.append(caption)
+            count += 1
