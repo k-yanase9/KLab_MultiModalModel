@@ -1,6 +1,5 @@
 import os
-
-from ..dataset_loader import CLASSIFY_SRC_TEXT, DatasetLoader
+from ..dataset_loader import DatasetLoader, CLASSIFY_SRC_TEXT, MAX_VAL_DATA_SIZE
 
 
 class ImageNet21k_Classify(DatasetLoader):
@@ -12,23 +11,17 @@ class ImageNet21k_Classify(DatasetLoader):
         with open(text_tsv_path, 'r') as f:
             lines = f.readlines()
 
-        for line in lines[1:]:
-            img_name, label = line.removesuffix('\n').split('\t')
-            img_path = os.path.join(data_dir, img_name)
-            class_name = label.split()[0].replace('_', ' ')
-            self.images.append(img_path)
-            self.tgt_texts.append(class_name.strip())
-
         with open(img_tsv_path, 'r') as f:
-            lines = f.readlines()
+            tmp = f.readlines()
 
-        for line in lines[1:]:
+        lines = lines[1:] + tmp[1:]
+        if phase == 'val':
+            lines = lines[:MAX_VAL_DATA_SIZE]
+
+        for line in lines:
             img_name, label = line.removesuffix('\n').split('\t')
             img_path = os.path.join(data_dir, img_name)
             class_name = label.split()[0].replace('_', ' ')
             self.images.append(img_path)
+            self.src_texts.append(CLASSIFY_SRC_TEXT)
             self.tgt_texts.append(class_name.strip())
-
-        self.src_texts = [CLASSIFY_SRC_TEXT] * len(self.images)
-
-        
