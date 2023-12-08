@@ -14,7 +14,7 @@ class OpenImage_Localization(DatasetLoader):
             phase = "validation"
         tsv_path = os.path.join(data_dir,"tsv_fix",f"{phase}_loc_cut_max_tokens.tsv")
 
-       with open(tsv_path) as f:
+        with open(tsv_path) as f:
             lines = f.readlines()
         lines = lines[1:]
         count = 0
