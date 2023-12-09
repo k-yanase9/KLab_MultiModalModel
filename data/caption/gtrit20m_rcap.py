@@ -1,24 +1,20 @@
-import json
 import os
-
-import torch
-from torchvision.transforms import ToTensor
-from ..dataset_loader import DatasetLoader
-
+from ..dataset_loader import DatasetLoader, MAX_VAL_DATA_SIZE
 
 class Grit20M_RegionCaption(DatasetLoader):
-    def __init__(self,data_dir="/data/dataset/grit20m",phase="train"):
-        super().__init__()
-        with open(os.path.join(data_dir,f"{phase}_region_caption.tsv")) as f:
-            items = f.read()
-        
-        items = items.split("\n")
-        items = [item.split("\t") for item in items]
-        items = items[1:]
+    def __init__(self,data_dir="/data/dataset/grit20m",phase="train", **kwargs):
+        super().__init__(**kwargs)
+        tsv_path = os.path.join(data_dir, f'{phase}_region_caption.tsv')
 
+        with open(tsv_path) as f:
+            lines = f.readlines()
+        lines = lines[1:]
+        if phase=='val':
+            lines = lines[:MAX_VAL_DATA_SIZE]
 
-        self.tgt_texts = [item[2] for item in items]
-        self.src_texts = [item[1] for item in items]
-        self.images = [os.path.join(data_dir,item[0]) for item in items]
-    
-
+        for line in lines:
+            img_name, src, tgt = line.removesuffix('\n').split('\t')
+            img_path = os.path.join(data_dir, img_name)
+            self.images.append(img_path)
+            self.src_texts.append(src)
+            self.tgt_texts.append(tgt)

@@ -1,6 +1,5 @@
 import os
-
-from ..dataset_loader import DatasetLoader
+from ..dataset_loader import DatasetLoader, MAX_VAL_DATA_SIZE
 
 #存在しない画像を除外するためのリスト
 dropimageidlist = ["7f1934f5884fad79","429019e83c1c2c94","4f818c006da84c9e","5b86e93f8654118a","673d74b7d39741c3","6dcd3ce37a17f2be","805baf9650a12710"
@@ -9,27 +8,25 @@ dropimageidlist = ["7f1934f5884fad79","429019e83c1c2c94","4f818c006da84c9e","5b8
 class OpenImage_Relation(DatasetLoader):
     """openimageのrelationデータセット
     """    
-    def __init__(self,data_dir:str="/data/dataset/openimage/",phase:str="train"):
-        super().__init__()        
+    def __init__(self,data_dir:str="/data/dataset/openimage/",phase:str="train", **kwargs):
+        super().__init__(**kwargs)        
         if phase=="val":
             phase = "validation"
+        tsv_path = os.path.join(data_dir,"tsv",f"{phase}_40_relation.tsv")
 
-        with open(os.path.join(data_dir,"tsv",f"{phase}_40_relation.tsv")) as f:
-            items = f.read()
+        with open(tsv_path) as f:
+            lines = f.readlines()
+        lines = lines[1:]
+        count = 0
 
-        items = items.split("\n")
-        items = [item.split("\t") for item in items]
-        items = items[1:]
-        self.tgt_texts = [f"{item[1]} {item[5]} {item[3]}" for item in items]
-        self.src_texts = [f"What is the relationship between {item[1]}{item[2]} and {item[3]}{item[4]}?" for item in items]
-        self.images = [os.path.join(data_dir,f"{phase}_256_png",f"{item[0]}.png") for item in items]
-
-        #dropimageidlistに含まれる画像と対応するテキストを除外する
-        drop_intdexs = []
-        for drop_id in dropimageidlist:
-            drop_path = os.path.join(data_dir,f"{phase}_256_png",f"{drop_id}.png")
-            if drop_path in self.images:
-                drop_intdexs.extend([i for i,x in enumerate(self.images) if x == drop_path])
-        self.tgt_texts = [x for i,x in enumerate(self.tgt_texts) if i not in drop_intdexs]
-        self.src_texts = [x for i,x in enumerate(self.src_texts) if i not in drop_intdexs]
-        self.images = [x for i,x in enumerate(self.images) if i not in drop_intdexs]
+        for line in lines:
+            if count >= MAX_VAL_DATA_SIZE and phase=='validation':
+                break
+            img_name, obj1, loc1, obj2, loc2, relation = line.removesuffix('\n').split('\t')
+            if img_name in dropimageidlist:
+                continue
+            img_path = os.path.join(data_dir,f"{phase}_256_png",f"{img_name}.png")
+            self.images.append(img_path)
+            self.src_texts.append(f"What is the relationship between {obj1}{loc1} and {obj2}{loc2}?")
+            self.tgt_texts.append(f"{obj1} {relation} {obj2}")
+            count += 1

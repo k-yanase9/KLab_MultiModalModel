@@ -1,11 +1,10 @@
 from pathlib import Path
-
-from ..dataset_loader import CLASSIFY_SRC_TEXT, DatasetLoader
+from ..dataset_loader import DatasetLoader, CLASSIFY_SRC_TEXT, MAX_VAL_DATA_SIZE
 
 
 class SUN397_Classify(DatasetLoader):
-    def __init__(self, data_dir='/data01/sun397', phase='train', is_tgt_id=False):
-        super().__init__()
+    def __init__(self, data_dir='/data01/sun397', phase='train', is_tgt_id=False, **kwargs):
+        super().__init__(**kwargs)
         self.data_dir = Path(data_dir) / "SUN397_256"
 
         with open(self.data_dir / "ClassName.txt") as f:
@@ -13,8 +12,11 @@ class SUN397_Classify(DatasetLoader):
 
         with open(self.data_dir / f"{phase}.tsv") as f:
             lines = f.readlines()
+        lines = lines[1:]
+        if phase == 'val':
+            lines = lines[:MAX_VAL_DATA_SIZE]
 
-        for line in lines[1:]:
+        for line in lines:
             img_path, class_name = line.split("\t")
             label = '/' + '/'.join(img_path.split('/')[:-1])
             img_path = self.data_dir / img_path

@@ -12,10 +12,11 @@ class LossCounter():
     def add(self, phase, loss):
         self.losses[phase].append(loss)
 
-    def plot_loss(self, result_dir):
+    def plot_loss(self, result_dir, val_show=True):
         # Plot the loss values.
         plt.plot(self.losses['train'], label='Train')
-        plt.plot(self.losses['val'], label='Val')
+        if val_show:
+            plt.plot(self.losses['val'], label='Val')
 
         # Set the title and axis labels.
         plt.title('Loss Curve')

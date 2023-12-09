@@ -31,8 +31,8 @@ def parse_arguments():
     parser.add_argument('--additional_vocab_size', type=int, default=10000, help='予備のボキャブラリサイズ', choices=[0, 1000, 10000, 16384])
     parser.add_argument('--loc_vocab_size', type=int, default=1600, help='位置のボキャブラリサイズ', choices=[1000, 1600])
     parser.add_argument('--vae_ckpt_path', type=str, default='', choices=['', 'checkpoints/vqgan.pt'], help='VAEの重みファイルのパス')
-    parser.add_argument('--max_source_length', type=int, default=512, help='入力文の最大長')
-    parser.add_argument('--max_target_length', type=int, default=512, help='出力文の最大長')
+    parser.add_argument('--max_source_length', type=int, default=256, help='入力文の最大長')
+    parser.add_argument('--max_target_length', type=int, default=128, help='出力文の最大長')
     # Training setting
     parser.add_argument('--multinode', action='store_true', help='マルチノードで学習するかどうか')
     parser.add_argument('--stage', type=str, default='train', choices=['pretrain', 'train', 'classify'], help='事前学習か学習か分類か')
@@ -58,6 +58,7 @@ def parse_arguments():
         'vg_cat', 'vg_det', 'vg_loc', 'vg_rel', 'vg_vqa', 'vg_rcap', 'vg_refexp', 
         'all'
         ], help='使用データセットの名前')
+    parser.add_argument('--uncalc_val', action='store_true', help='検証を行わない')
     # Dir setting
     parser.add_argument('--root_dir', type=str, default='/local/', help='データのディレクトリ')
     parser.add_argument('--result_dir', type=str, default='results/', help='結果を保存するディレクトリ')

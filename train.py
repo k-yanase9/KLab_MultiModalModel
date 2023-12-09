@@ -64,6 +64,7 @@ def train():
     optimizer = get_optimizer(model, args)
     if args.start_epoch > 1:
         optimizer.load_state_dict(torch.load(os.path.join(args.result_dir, f'epoch_{args.start_epoch-1}.optimizer' if args.save_interval is not None else 'best.optimizer')))
+    torch.cuda.empty_cache()
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
     tgt_tokenizer = AutoTokenizer.from_pretrained(
@@ -81,8 +82,8 @@ def train():
         src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=args.max_source_length, use_fast=True)
 
     # データの設定
-    train_dataset = get_data(args, "train", src_tokenizer, tgt_tokenizer)
-    val_dataset = get_data(args, "val", src_tokenizer, tgt_tokenizer)
+    train_dataset = get_data(args, "train", src_tokenizer, tgt_tokenizer, args.max_source_length, args.max_target_length)
+    val_dataset = get_data(args, "val", src_tokenizer, tgt_tokenizer, args.max_source_length, args.max_target_length)
     if world_rank == 0:
         logger.info(f'Train Dataset : {len(train_dataset)}, Val Dataset : {len(val_dataset)}')
     train_loader = get_distributed_dataloader(args, train_dataset, shuffle=True)
@@ -130,29 +131,21 @@ def train():
         pbar = tqdm(total=int(np.ceil(len(train_loader) / args.accumulation_steps)), desc=f'Train (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
         for i, (src_images, tgt_images, src_texts, tgt_texts) in enumerate(train_loader):
             src_images = src_images.to(local_rank, non_blocking=True)
-            # if args.stage == 'pretrain':
-            #     tgt_images = tgt_images.to(local_rank)
-            #     tgt_texts, _ = model.module.image_to_z(tgt_images)
-
             if args.stage == 'pretrain':
+                # tgt_images = tgt_images.to(local_rank)
+                # tgt_texts, _ = model.module.image_to_z(tgt_images)
                 src_texts = src_texts.to(local_rank, non_blocking=True)
                 tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
-                tgt_attention_masks[tgt_texts == 0] = 0
             else:
                 src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
                 src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
                 if args.stage == 'classify':
                     tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                    tgt_attention_masks = None
                 else:
                     tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
                     tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
-                    tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True) 
-            src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
-            src_attention_masks[src_texts == 0] = 0
 
-            loss, preds = model(src_images, src_texts, None, tgt_texts, tgt_attention_masks)
+            loss, preds = model(src_images, src_texts, None, tgt_texts, None)
             loss /= args.accumulation_steps
             scaler.scale(loss).backward()
 
@@ -219,22 +212,16 @@ def train():
                 if args.stage == 'pretrain':
                     src_texts = src_texts.to(local_rank, non_blocking=True)
                     tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                    tgt_attention_masks = torch.ones_like(tgt_texts, device=local_rank, dtype=torch.bool)
-                    tgt_attention_masks[tgt_texts == 0] = 0
                 else:
                     src_inputs = src_tokenizer(src_texts, padding="longest", max_length=args.max_source_length, return_tensors='pt') # ['pt', 'tf', 'np', 'jax']
                     src_texts = src_inputs['input_ids'].to(local_rank, non_blocking=True)
                     if args.stage == 'classify':
                         tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
-                        tgt_attention_masks = None
                     else:
                         tgt_inputs = tgt_tokenizer(tgt_texts, padding="longest", max_length=args.max_target_length, return_tensors='pt')
                         tgt_texts = tgt_inputs['input_ids'].to(local_rank, non_blocking=True)
-                        tgt_attention_masks = tgt_inputs['attention_mask'].to(local_rank, non_blocking=True)
-                src_attention_masks = torch.ones_like(src_texts, device=local_rank, dtype=torch.bool)
-                src_attention_masks[src_texts == 0] = 0
 
-                loss, preds = model(src_images, src_texts, src_attention_masks, tgt_texts, tgt_attention_masks)
+                loss, preds = model(src_images, src_texts, None, tgt_texts, None)
 
                 val_loss += loss.item() * src_images.shape[0]
                 if args.stage == 'classify':
