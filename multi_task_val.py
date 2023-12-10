@@ -1,6 +1,7 @@
 import os
 import pkgutil
 import random
+import gc
 
 import numpy as np
 import torch
@@ -156,7 +157,6 @@ def train():
         min_val_loss = 100
 
     for epoch in range(args.start_epoch, args.num_epochs + 1):
-        torch.cuda.empty_cache()
         if not os.path.exists(os.path.join(args.result_dir, f'epoch_{epoch}.pth')):
             if world_rank == 0:
                 logger.info(f'epoch_{epoch}.pth is not found. Skip this epoch.')
@@ -200,6 +200,10 @@ def train():
             if val_loss < min_val_loss:
                 min_val_loss = val_loss
                 logger.info('Best Model')
+
+        del src_images, src_texts, tgt_texts, loss, preds, sample_size, loss_per_step, accumulation_sample_size
+        gc.collect()
+        torch.cuda.empty_cache()
             
     if world_rank == 0: 
         if use_wandb:
