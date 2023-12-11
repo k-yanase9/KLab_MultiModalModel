@@ -33,7 +33,7 @@ def parse_arguments():
     parser.add_argument('--loc_vocab_size', type=int, default=1600, help='位置のボキャブラリサイズ', choices=[1000, 1600])
     parser.add_argument('--vae_ckpt_path', type=str, default='', choices=['', 'checkpoints/vqgan.pt'], help='VAEの重みファイルのパス')
     parser.add_argument('--max_source_length', type=int, default=256, help='入力文の最大長')
-    parser.add_argument('--max_target_length', type=int, default=128, help='出力文の最大長')
+    parser.add_argument('--max_target_length', type=int, default=256, help='出力文の最大長')
     # Training setting
     parser.add_argument('--multinode', action='store_true', help='マルチノードで学習するかどうか')
     parser.add_argument('--stage', type=str, default='train', choices=['pretrain', 'train', 'classify'], help='事前学習か学習か分類か')

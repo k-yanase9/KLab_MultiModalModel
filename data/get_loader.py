@@ -45,13 +45,13 @@ def get_distributed_dataloader(args, dataset, num_workers=4, shuffle=True):
     return dataloader
 
 
-def get_dataloader(args, dataset, num_workers=4, shuffle=False):
+def get_dataloader(args, dataset, num_workers=4, shuffle=False, drop_last=True):
     dataloader = DataLoader(
         dataset, 
         batch_size=args.batch_size, 
         num_workers=num_workers, 
         pin_memory=True, 
-        drop_last=True, 
+        drop_last=drop_last, 
         shuffle=shuffle)
     
     return dataloader
