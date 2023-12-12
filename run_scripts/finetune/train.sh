@@ -1,7 +1,7 @@
 # 1ノード2GPU
 
 # Linear
-batch_size=150
+batch_size=160
 dataset="hico"
 
 epoch=50
@@ -10,7 +10,7 @@ enc=2
 dec=12
 lr=1e-4
 
-python finetune.py \
+torchrun --nnodes=1 --nproc_per_node=1 finetune.py \
         --transformer_num_layers $enc \
         --transformer_num_decoder_layers $dec \
         --max_source_length 64 \
@@ -24,5 +24,6 @@ python finetune.py \
         --num_epochs $epoch \
         --warmup_rate 0.01 \
         --datasets $dataset \
+        --is_tgt_id \
         --root_dir /local/ \
-        --result_dir results/finetune/all/enc$enc\_dec$dec/Linear$epoch/
+        --result_dir results/finetune/hico/tgt_true/Linear$epoch\_$lr/
