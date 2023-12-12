@@ -95,13 +95,13 @@ def train():
         src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=args.max_source_length, use_fast=True)
 
     # データの設定
-    train_dataset = get_dataset(args.root_dir, args.datasets[0], args.stage, is_tgt_id=True, phase="train", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer, src_len=args.max_source_length, tgt_len=args.max_target_length)
+    train_dataset = get_dataset(args.root_dir, args.datasets[0], args.stage, is_tgt_id=args.is_tgt_id, phase="train", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer, src_len=args.max_source_length, tgt_len=args.max_target_length)
     if world_rank == 0:
         logger.info(f"train_dataset:{len(train_dataset)}")
     train_loader = get_distributed_dataloader(args, train_dataset, shuffle=True)
     
     if not args.uncalc_val:
-        val_dataset = get_dataset(args.root_dir, args.datasets[0], args.stage, is_tgt_id=True, phase="val", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer, src_len=args.max_source_length, tgt_len=args.max_target_length)
+        val_dataset = get_dataset(args.root_dir, args.datasets[0], args.stage, is_tgt_id=args.is_tgt_id, phase="val", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer, src_len=args.max_source_length, tgt_len=args.max_target_length)
         if world_rank == 0:
             logger.info(f"val_dataset:{len(val_dataset)}")
         val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)

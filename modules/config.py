@@ -60,6 +60,7 @@ def parse_arguments():
         'hico', 'vcoco',
         'all'
         ], help='使用データセットの名前')
+    parser.add_argument('--is_tgt_id', action='store_true', help='ターゲットIDを使用するかどうか')
     parser.add_argument('--uncalc_val', action='store_true', help='検証を行わない')
     # Dir setting
     parser.add_argument('--root_dir', type=str, default='/local/', help='データのディレクトリ')
