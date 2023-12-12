@@ -36,7 +36,7 @@ def parse_arguments():
     parser.add_argument('--max_target_length', type=int, default=256, help='出力文の最大長')
     # Training setting
     parser.add_argument('--multinode', action='store_true', help='マルチノードで学習するかどうか')
-    parser.add_argument('--stage', type=str, default='train', choices=['pretrain', 'train', 'classify'], help='事前学習か学習か分類か')
+    parser.add_argument('--stage', type=str, default='train', choices=['pretrain', 'train', 'classify', 'finetune'], help='事前学習か学習か分類か')
     parser.add_argument('--seed', type=int, default=999, help='乱数シード')
     parser.add_argument('--loss', type=str, default='CrossEntropy', choices=['CrossEntropy', 'FocalLoss'], help='損失関数')
     parser.add_argument('--lr', type=float, default=0.01, help='学習率')
@@ -57,6 +57,7 @@ def parse_arguments():
         'openimage_cat', 'openimage_det', 'openimage_loc', 'openimage_rel', 
         'objects365_cat', 'objects365_det', 'objects365_loc', 
         'vg_cat', 'vg_det', 'vg_loc', 'vg_rel', 'vg_vqa', 'vg_rcap', 'vg_refexp', 
+        'hico', 'vcoco',
         'all'
         ], help='使用データセットの名前')
     parser.add_argument('--uncalc_val', action='store_true', help='検証を行わない')
