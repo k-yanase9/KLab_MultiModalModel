@@ -13,6 +13,7 @@ from .localization import *
 from .pretrain import *
 from .relationship import *
 from .vqa import *
+from .hoi import *
 
 def get_dataset_process(item):
     dataset_name, args, phase, src_tokenizer, tgt_tokenizer, src_len, tgt_len = item
@@ -85,6 +86,11 @@ def get_dataset(root_dir="/data01", dataset_name="cc3m", stage="pretrain", **kwa
             dataset = OpenImage_Categorization(data_dir, is_tgt_id=True, **kwargs)
         elif 'mscoco' == dataset_name:
             dataset = COCO_Categorization(data_dir, is_tgt_id=True, **kwargs)
+        else:
+            raise NotImplementedError
+    elif stage == 'finetune':
+        if 'hico' == dataset_name:
+            dataset = HICO_HOI(data_dir, **kwargs)
         else:
             raise NotImplementedError
     else:
