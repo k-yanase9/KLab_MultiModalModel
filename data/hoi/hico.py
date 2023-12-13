@@ -4,12 +4,9 @@ from ..dataset_loader import DatasetLoader, HOI_SRC_TEXT
 class HICO_HOI(DatasetLoader):
     """HICOデータセット
     """
-    def __init__(self, data_dir:str="/data01/hico_det/", phase:str="train", is_tgt_id=False, **kwargs):
+    def __init__(self, data_dir:str="/data01/hico/", phase:str="train", is_tgt_id=False, **kwargs):
         super().__init__(**kwargs)
-        if is_tgt_id:
-            tsv_path = os.path.join(data_dir, f"{phase}_loc40_wo_no_interact.tsv")
-        else:
-            tsv_path = os.path.join(data_dir, f"{phase}_loc40.tsv")
+        tsv_path = os.path.join(data_dir, f"{phase}_loc40.tsv")
         
         with open(tsv_path) as f:
             lines = f.readlines()
