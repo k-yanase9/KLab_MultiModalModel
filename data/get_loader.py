@@ -91,6 +91,8 @@ def get_dataset(root_dir="/data01", dataset_name="cc3m", stage="pretrain", **kwa
     elif stage == 'finetune':
         if 'hico' == dataset_name:
             dataset = HICO_HOI(data_dir, **kwargs)
+        elif 'vcoco' == dataset_name:
+            dataset = VCOCO_HOI(data_dir, **kwargs)
         else:
             raise NotImplementedError
     else:
