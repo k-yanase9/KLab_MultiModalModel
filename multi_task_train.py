@@ -141,6 +141,13 @@ def train():
         train_src_len_dict = {}
         train_tgt_len_dict = {}
         for task, dataset_names in FULL_DATASET_NAME_DICT.items():
+            if task in args.datasets:
+                train_dataset_name_dict[task] = FULL_DATASET_NAME_DICT[task]
+                train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
+                train_one_gpu_batch_dict[task] = ONE_GPU_BATCH_DICT[task]
+                train_src_len_dict[task] = SRC_LEN_DICT[task]
+                train_tgt_len_dict[task] = TGT_LEN_DICT[task]
+                continue
             for dataset_name in dataset_names:
                 if dataset_name in args.datasets:
                     if task in train_dataset_name_dict.keys():
