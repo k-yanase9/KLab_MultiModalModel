@@ -347,12 +347,12 @@ def train():
         loss_counter.plot_loss(args.result_dir, val_show=not args.uncalc_val)
 
 def wandb_init(args):
-    name = f'{args.stage}_{args.transformer_model_init}_worldsize{args.world_size}'
+    name = f'{args.stage}_{"_".join(args.datasets)}_{args.transformer_model_init}_worldsize{args.world_size}'
     if args.id is None:
         args.id = wandb.util.generate_id()
     wandb.init(
         id=args.id,
-        project=f"{args.stage}_"+"_".join(args.datasets), 
+        project=f"mmm_{args.stage}", 
         name=name,
         config=args,
         resume=True if args.start_epoch > 1 else False
