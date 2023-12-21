@@ -18,14 +18,16 @@ class HICO_HOI(DatasetLoader):
             for ann in anns.split("&&"):
                 human_id, human_name, human_loc, hoi_id, hoi_name, obj_id, obj_name, obj_loc = ann.split(',')
                 tgt_text.append(f"{human_name}{human_loc} {hoi_name} {obj_name}{obj_loc}")
-                if is_tgt_id:
-                    break
-
+                break
+            
             img_path = os.path.join(data_dir, img_name)
             self.images.append(img_path)
             if is_tgt_id:
                 self.src_texts.append(f'What is the interaction between {human_name}{human_loc} and {obj_name}{obj_loc}?')
                 self.tgt_texts.append(f'<add_{hoi_id}>')
             else:
+                self.src_texts.append(f'What is the interaction between {human_name}{human_loc} and {obj_name}{obj_loc}?')
+                self.tgt_texts.append(hoi_name)
+            if False:
                 self.src_texts.append(HOI_SRC_TEXT)
                 self.tgt_texts.append(','.join(tgt_text))
