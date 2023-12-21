@@ -71,6 +71,11 @@ def train():
         model.load(result_name=f'task_train.pth', result_path='.')
         if world_rank == 0:
             logger.info('Task trained model loaded')
+    elif args.transformer_model_init == 'few':
+        model.load(result_name=f'few_train.pth', result_path='.')
+        if world_rank == 0:
+            logger.info('Few Task trained model loaded')
+
     model = DDP(model, device_ids=[local_rank])#,find_unused_parameters=True)
     
     scaler = torch.cuda.amp.GradScaler(enabled=True if args.float_type == 'float16' else False)

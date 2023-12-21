@@ -28,7 +28,7 @@ def parse_arguments():
     parser.add_argument('--transformer_num_heads', type=int, default=12, help='メインTransformerのヘッド数')
     parser.add_argument('--transformer_num_layers', type=int, default=2, help='メインTransformerの層数')
     parser.add_argument('--transformer_num_decoder_layers', type=int, default=12, help='メインTransformerのデコーダーの層数')
-    parser.add_argument('--transformer_model_init', type=str, default='random', choices=['random', 'pretrain', 't5-base', 'google/flan-t5-base'], help='メインTransformerの重みの初期化方法')
+    parser.add_argument('--transformer_model_init', type=str, default='random', choices=['random', 'pretrain', 'few', 't5-base', 'google/flan-t5-base'], help='メインTransformerの重みの初期化方法')
     parser.add_argument('--additional_vocab_size', type=int, default=10000, help='予備のボキャブラリサイズ', choices=[0, 1000, 10000, 16384])
     parser.add_argument('--loc_vocab_size', type=int, default=1600, help='位置のボキャブラリサイズ', choices=[1000, 1600])
     parser.add_argument('--vae_ckpt_path', type=str, default='', choices=['', 'checkpoints/vqgan.pt'], help='VAEの重みファイルのパス')
