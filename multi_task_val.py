@@ -118,6 +118,13 @@ def train():
         train_src_len_dict = {}
         train_tgt_len_dict = {}
         for task, dataset_names in FULL_DATASET_NAME_DICT.items():
+            if task in args.datasets:
+                args.datasets.remove(task)
+                args.datasets.extend(dataset_names)
+                train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
+                train_src_len_dict[task] = SRC_LEN_DICT[task]
+                train_tgt_len_dict[task] = TGT_LEN_DICT[task]
+                continue
             for dataset_name in dataset_names:
                 if dataset_name in args.datasets:
                     train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
