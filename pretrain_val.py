@@ -16,22 +16,15 @@ from modules import *
 
 FULL_DATASET_NAME_DICT = {
     "caption": ["redcaps", "cc3m", "cc12m"], 
-    "relation":["vg_rel", "openimage_rel"], 
-    "rcap": ["grit20m_rcap", "vg_rcap"],
-    "refexp": ["grit20m_refexp", "vg_refexp"],
-    "det": ["vg_det", "openimage_det", "objects365_det"],
-    "cat": ["vg_cat", "openimage_cat", "objects365_cat"],
-    "loc": ["vg_loc", "openimage_loc", "objects365_loc"],
-    "vqa": ["vg_vqa", "vqa2", "tdiuc", "imSitu", "visual7w_vqa"], 
-    "gvqa": ["vcr", "visual7w_gvqa"],
-    "classify": ["imagenet", "imagenet21k", "places365", "sun397"]}
-# Flow
-TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
+    "classify": ["imagenet", "imagenet21k", "places365", "sun397"]
+}
 # H100
-TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
+ONE_GPU_BATCH_DICT = {"caption": 128, "classify": 384} #1gpuのバッチサイズ
+TASK_SAMPLE_NUM_DICT = {"caption": 4, "classify": 1} #何回タスクごとにバッチを取得するか
+NUM_STEP_PER_EPOCH_MAX = 42000
 # General
-SRC_LEN_DICT = {"caption": 7, "relation":50, "rcap":20, "refexp":184, "det":8, "cat":22, "loc":25, "vqa": 125, "gvqa":256, "classify": 7}
-TGT_LEN_DICT = {"caption": 256, "relation":25, "rcap":256, "refexp":120, "det":256, "cat":17, "loc":126, "vqa": 128, "gvqa":103, "classify": 74}
+SRC_LEN_DICT = {"caption": 256,  "classify": 18+6}
+TGT_LEN_DICT = {"caption": 96, "classify": 8}
 
 use_wandb = False
 if pkgutil.find_loader("wandb") is not None:
@@ -77,7 +70,7 @@ def train():
     # create model
     model = MyModel(args).to(local_rank)
     model = DDP(model, device_ids=[local_rank])#,find_unused_parameters=True)
-
+    
     torch.cuda.empty_cache()
 
     os.environ['TOKENIZERS_PARALLELISM'] = 'false'
@@ -87,7 +80,7 @@ def train():
         use_fast=True,
         extra_ids=0,
         additional_special_tokens=[f"<extra_id_{i}>" for i in range(100)]
-        + [f"<loc_{i}>" for i in range(args.loc_vocab_size)]
+        + [f"/loc{i}>" for i in range(args.loc_vocab_size)]
         + [f"<add_{i}>" for i in range(args.additional_vocab_size)],
     )
     if args.language_model_train:
@@ -96,32 +89,32 @@ def train():
         src_tokenizer = AutoTokenizer.from_pretrained(args.language_model_name, model_max_length=args.max_source_length, use_fast=True)
 
     # データの設定
-    # 引数の設定
     if args.datasets[0] == 'all':
         train_dataset_name_dict = FULL_DATASET_NAME_DICT
         train_task_sample_num_dict = TASK_SAMPLE_NUM_DICT
+        train_one_gpu_batch_dict = ONE_GPU_BATCH_DICT
         train_src_len_dict = SRC_LEN_DICT
         train_tgt_len_dict = TGT_LEN_DICT
         args.datasets = []
         for v in train_dataset_name_dict.values():
             args.datasets.extend(v)
     else:
+        train_dataset_name_dict = {}
         train_task_sample_num_dict = {}
+        train_one_gpu_batch_dict = {}
         train_src_len_dict = {}
         train_tgt_len_dict = {}
         for task, dataset_names in FULL_DATASET_NAME_DICT.items():
-            if task in args.datasets:
-                args.datasets.remove(task)
-                args.datasets.extend(dataset_names)
-                train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
-                train_src_len_dict[task] = SRC_LEN_DICT[task]
-                train_tgt_len_dict[task] = TGT_LEN_DICT[task]
-                continue
             for dataset_name in dataset_names:
                 if dataset_name in args.datasets:
-                    train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
-                    train_src_len_dict[task] = SRC_LEN_DICT[task]
-                    train_tgt_len_dict[task] = TGT_LEN_DICT[task]
+                    if task in train_dataset_name_dict.keys():
+                        train_dataset_name_dict[task].append(dataset_name)
+                    else:
+                        train_dataset_name_dict[task] = [dataset_name]
+                        train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
+                        train_one_gpu_batch_dict[task] = ONE_GPU_BATCH_DICT[task]
+                        train_src_len_dict[task] = SRC_LEN_DICT[task]
+                        train_tgt_len_dict[task] = TGT_LEN_DICT[task]
 
     src_len_list = []
     tgt_len_list = []
@@ -164,44 +157,45 @@ def train():
         if world_rank == 0:
             logger.info(f'epoch_{epoch}.pth is loaded.')
         # 検証ループ
-        if args.language_model_train:
-            model.module.language_model.eval()
-        if args.image_model_train:
-            model.module.image_model.eval()
-        model.module.transformer.eval()
-        loss_per_step = torch.tensor(0.0).to(local_rank)
-        accumulation_sample_size = torch.tensor(0).to(local_rank)
-        val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
-        for i, (src_images, _, src_texts, tgt_texts) in enumerate(val_loop):
-            #勾配更新の前準備
-            with torch.no_grad():
-                src_images = src_images.to(local_rank, non_blocking=True)
-                src_texts = src_texts.to(local_rank, non_blocking=True)
-                tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
+        if not args.uncalc_val:
+            if args.language_model_train:
+                model.module.language_model.eval()
+            if args.image_model_train:
+                model.module.image_model.eval()
+            model.module.transformer.eval()
+            loss_per_step = torch.tensor(0.0).to(local_rank)
+            accumulation_sample_size = torch.tensor(0).to(local_rank)
+            val_loop = tqdm(val_loader, desc=f'Val (Epoch {epoch}/{args.num_epochs})', disable=(world_rank != 0))
+            for i, (src_images, _, src_texts, tgt_texts) in enumerate(val_loop):
+                #勾配更新の前準備
+                with torch.no_grad():
+                    src_images = src_images.to(local_rank, non_blocking=True)
+                    src_texts = src_texts.to(local_rank, non_blocking=True)
+                    tgt_texts = tgt_texts.to(local_rank, non_blocking=True)
 
-                loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, None)
+                    loss, preds, sample_size = model(src_images, src_texts, None, tgt_texts, None)
 
-                loss_per_step += loss.item()
-                accumulation_sample_size += sample_size
+                    loss_per_step += loss.item()
+                    accumulation_sample_size += sample_size
 
-        # 他のノードから集める
-        dist.all_reduce(loss_per_step, op=dist.ReduceOp.SUM)
-        dist.all_reduce(accumulation_sample_size, op=dist.ReduceOp.SUM)
+            # 他のノードから集める
+            dist.all_reduce(loss_per_step, op=dist.ReduceOp.SUM)
+            dist.all_reduce(accumulation_sample_size, op=dist.ReduceOp.SUM)
 
-        if world_rank == 0:
-            val_loss = (loss_per_step / accumulation_sample_size).cpu().numpy().copy()
-            loss_counter.add("val", val_loss)
-            logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}')
-            if use_wandb:
-                wandb.log({"epoch": epoch, "val/loss": val_loss})
+            if world_rank == 0:
+                val_loss = (loss_per_step / accumulation_sample_size).cpu().numpy().copy()
+                loss_counter.add("val", val_loss)
+                logger.info(f'[Epoch ({epoch}/{args.num_epochs}) Val] Loss : {val_loss}')
+                if use_wandb:
+                    wandb.log({"epoch": epoch, "val/loss": val_loss})
 
-            if val_loss < min_val_loss:
-                min_val_loss = val_loss
-                logger.info('Best Model')
+                if val_loss < min_val_loss:
+                    min_val_loss = val_loss
+                    logger.info('Best Model')
 
-        del src_images, src_texts, tgt_texts, loss, preds, sample_size, loss_per_step, accumulation_sample_size
-        gc.collect()
-        torch.cuda.empty_cache()
+            del src_images, src_texts, tgt_texts, loss, preds, sample_size, loss_per_step, accumulation_sample_size
+            gc.collect()
+            torch.cuda.empty_cache()
             
     if world_rank == 0: 
         if use_wandb:
