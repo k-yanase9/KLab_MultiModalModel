@@ -19,9 +19,9 @@ FULL_DATASET_NAME_DICT = {
     "classify": ["imagenet", "imagenet21k", "places365", "sun397"]
 }
 # H100
-ONE_GPU_BATCH_DICT = {"caption": 100, "classify": 300} #1gpuのバッチサイズ
+ONE_GPU_BATCH_DICT = {"caption": 128, "classify": 384} #1gpuのバッチサイズ
 TASK_SAMPLE_NUM_DICT = {"caption": 4, "classify": 1} #何回タスクごとにバッチを取得するか
-NUM_STEP_PER_EPOCH_MAX = 53912
+NUM_STEP_PER_EPOCH_MAX = 42000
 # General
 SRC_LEN_DICT = {"caption": 256,  "classify": 18+6}
 TGT_LEN_DICT = {"caption": 96, "classify": 8}
@@ -98,7 +98,7 @@ def train():
         use_fast=True,
         extra_ids=0,
         additional_special_tokens=[f"<extra_id_{i}>" for i in range(100)]
-        + [f"<loc_{i}>" for i in range(args.loc_vocab_size)]
+        + [f"/loc{i}>" for i in range(args.loc_vocab_size)]
         + [f"<add_{i}>" for i in range(args.additional_vocab_size)],
     )
     if args.language_model_train:
