@@ -1,7 +1,7 @@
 # 1ノード8GPU H100
 
 # Linear
-batch_size=128
+batch_size=384
 dataset="all"
 
 epoch=20

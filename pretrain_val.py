@@ -19,7 +19,6 @@ FULL_DATASET_NAME_DICT = {
     "classify": ["imagenet", "imagenet21k", "places365", "sun397"]
 }
 # H100
-ONE_GPU_BATCH_DICT = {"caption": 128, "classify": 384} #1gpuのバッチサイズ
 TASK_SAMPLE_NUM_DICT = {"caption": 4, "classify": 1} #何回タスクごとにバッチを取得するか
 NUM_STEP_PER_EPOCH_MAX = 42000
 # General
@@ -92,29 +91,28 @@ def train():
     if args.datasets[0] == 'all':
         train_dataset_name_dict = FULL_DATASET_NAME_DICT
         train_task_sample_num_dict = TASK_SAMPLE_NUM_DICT
-        train_one_gpu_batch_dict = ONE_GPU_BATCH_DICT
         train_src_len_dict = SRC_LEN_DICT
         train_tgt_len_dict = TGT_LEN_DICT
         args.datasets = []
         for v in train_dataset_name_dict.values():
             args.datasets.extend(v)
     else:
-        train_dataset_name_dict = {}
         train_task_sample_num_dict = {}
-        train_one_gpu_batch_dict = {}
         train_src_len_dict = {}
         train_tgt_len_dict = {}
         for task, dataset_names in FULL_DATASET_NAME_DICT.items():
+            if task in args.datasets:
+                args.datasets.remove(task)
+                args.datasets.extend(dataset_names)
+                train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
+                train_src_len_dict[task] = SRC_LEN_DICT[task]
+                train_tgt_len_dict[task] = TGT_LEN_DICT[task]
+                continue
             for dataset_name in dataset_names:
                 if dataset_name in args.datasets:
-                    if task in train_dataset_name_dict.keys():
-                        train_dataset_name_dict[task].append(dataset_name)
-                    else:
-                        train_dataset_name_dict[task] = [dataset_name]
-                        train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
-                        train_one_gpu_batch_dict[task] = ONE_GPU_BATCH_DICT[task]
-                        train_src_len_dict[task] = SRC_LEN_DICT[task]
-                        train_tgt_len_dict[task] = TGT_LEN_DICT[task]
+                    train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
+                    train_src_len_dict[task] = SRC_LEN_DICT[task]
+                    train_tgt_len_dict[task] = TGT_LEN_DICT[task]
 
     src_len_list = []
     tgt_len_list = []
@@ -203,7 +201,7 @@ def train():
         loss_counter.plot_loss(args.result_dir, val_show=not args.uncalc_val)
 
 def wandb_init(args):
-    name = f"{args.stage}_val" + ' '.join(args.datasets) + f'_worldsize{args.world_size}'
+    name = f"{args.stage}_val_" + ' '.join(args.datasets) + f'_worldsize{args.world_size}'
     if args.id is None:
         args.id = wandb.util.generate_id()
     wandb.init(
