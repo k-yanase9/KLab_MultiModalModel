@@ -8,9 +8,21 @@ from tqdm import tqdm
 from transformers import AutoTokenizer
 
 from data import *
+from metrics import *
 from models.model import MyModel
 from modules import *
 
+FULL_DATASET_NAME_DICT = {
+    "caption": ["redcaps", "cc3m", "cc12m"], 
+    "relation":["vg_rel", "openimage_rel"], 
+    "rcap": ["grit20m_rcap", "vg_rcap"],
+    "refexp": ["grit20m_refexp", "vg_refexp"],
+    "det": ["vg_det", "openimage_det", "objects365_det"],
+    "cat": ["vg_cat", "openimage_cat", "objects365_cat"],
+    "loc": ["vg_loc", "openimage_loc", "objects365_loc"],
+    "vqa": ["vg_vqa", "vqa2", "tdiuc", "imSitu", "visual7w_vqa"], 
+    "gvqa": ["vcr", "visual7w_gvqa"],
+    "classify": ["imagenet", "imagenet21k", "places365", "sun397"]}
 
 use_wandb = False
 if pkgutil.find_loader("wandb") is not None:
@@ -71,6 +83,10 @@ def train():
 
         result, results = evaluate_score(gts, preds)
         result['epoch'] = int(epoch)
+
+        if args.datasets[0] in FULL_DATASET_NAME_DICT['loc']:
+            score, scores = calc_loc_score(preds, gts)
+            result['loc_score'] = score
         if use_wandb:
             my_table = wandb.Table(columns=["id", "Inputs", "Ground Truth", "Prediction"]+list(results.keys()))
             for i, contents in enumerate(zip(inputs, gts, preds, *results.values())):
