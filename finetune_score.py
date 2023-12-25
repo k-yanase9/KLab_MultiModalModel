@@ -37,8 +37,8 @@ def train():
         + [f"<add_{i}>" for i in range(args.additional_vocab_size)],
     )
 
-    val_dataset = get_dataset(args.root_dir, args.datasets[0], args.stage, is_tgt_id=args.is_tgt_id, phase="val")
-    test_dataset = get_dataset(args.root_dir, args.datasets[0], args.stage, is_tgt_id=args.is_tgt_id, phase="test")
+    val_dataset = get_dataset(args.root_dir, args.datasets[0], args.stage, is_tgt_id=args.is_tgt_id, phase="val", return_img_path=True)
+    test_dataset = get_dataset(args.root_dir, args.datasets[0], args.stage, is_tgt_id=args.is_tgt_id, phase="test", return_img_path=True)
 
     model.load(result_name=f'best.pth')
     torch.cuda.empty_cache()
@@ -53,7 +53,7 @@ def train():
     preds = []
     gts = []
     val_loop = tqdm(val_loader, desc=f'Val {" ".join(args.datasets)}')
-    for src_images, _, src_texts, tgt_texts in val_loop:
+    for src_images, img_paths, src_texts, tgt_texts in val_loop:
         inputs.extend(src_texts)
         gts.extend(tgt_texts)
         with torch.no_grad():
@@ -65,19 +65,13 @@ def train():
             pred_texts = tgt_tokenizer.batch_decode(outputs)
             preds.extend([pred_text.replace("<pad>", "").replace("</s>", "") for pred_text in pred_texts])
 
-    if use_wandb:
-        my_table = wandb.Table(columns=["id", "Inputs", "Ground Truth", "Prediction"])
-        for i, contents in enumerate(zip(inputs, gts, preds)):
-            my_table.add_data(i+1, *contents)
-        wandb.log({f"val results": my_table})
-    
     total = 0
     correct = 0
     for gt, pred in zip(gts, preds):
         if gt == pred:
             correct += 1
         total += 1
-    acc = correct / total
+    acc = correct / total * 100
         
     print(f"Val Accuracy: {acc}")
     wandb.log({"Val accuracy":acc})
@@ -85,11 +79,13 @@ def train():
     test_loader = get_dataloader(args, test_dataset, shuffle=False, drop_last=False)
     random.seed(999)
     torch.manual_seed(999)
+    image_paths = []
     inputs = []
     preds = []
     gts = []
     test_loop = tqdm(test_loader, desc=f'Test {" ".join(args.datasets)}')
-    for src_images, _, src_texts, tgt_texts in test_loop:
+    for src_images, img_paths, src_texts, tgt_texts in test_loop:
+        image_paths.extend(img_paths)
         inputs.extend(src_texts)
         gts.extend(tgt_texts)
         with torch.no_grad():
@@ -102,8 +98,8 @@ def train():
             preds.extend([pred_text.replace("<pad>", "").replace("</s>", "") for pred_text in pred_texts])
 
     if use_wandb:
-        my_table = wandb.Table(columns=["id", "Inputs", "Ground Truth", "Prediction"])
-        for i, contents in enumerate(zip(inputs, gts, preds)):
+        my_table = wandb.Table(columns=["id", "Img Path", "Src Text", "Ground Truth", "Prediction"])
+        for i, contents in enumerate(zip(image_paths, inputs, gts, preds)):
             my_table.add_data(i+1, *contents)
         wandb.log({f"test results": my_table})
     
@@ -113,10 +109,18 @@ def train():
         if gt == pred:
             correct += 1
         total += 1
-    acc = correct / total
+    acc = correct / total * 100
         
     print(f"Test Accuracy: {acc}")
     wandb.log({"Test accuracy":acc})
+
+    print("Writing results.tsv")
+    write_str = 'img_path\tsrc\tans\tpred\n'
+    for img_path, src, ans, pred in zip(image_paths, inputs, gts, preds):
+        write_str += f'{img_path}\t{src}\t{ans}\t{pred}\n'
+    with open(os.path.join(args.result_dir, 'results.tsv'), 'w') as f:
+        f.write(write_str)
+    print("Done")
 
     wandb.finish()
 
