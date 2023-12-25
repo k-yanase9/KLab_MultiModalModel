@@ -81,11 +81,14 @@ def calc_loc_score(preds, gts):
         _pred_boxes = []
         _gt_boxes = []
         for pred_box in pred_boxes:
-            l1, l2 = pred_box.split('<loc_')
-            left_top, right_bottom = int(l1.rstrip('>')), int(l2.rstrip('>'))
-            _pred_boxes.append([left_top%40*scale, left_top//40*scale, right_bottom%40*scale, right_bottom//40*scale])
+            try:
+                label, l1, l2 = pred_box.split('<loc_')
+                left_top, right_bottom = int(l1.rstrip('>')), int(l2.rstrip('>'))
+                _pred_boxes.append([left_top%40*scale, left_top//40*scale, right_bottom%40*scale, right_bottom//40*scale])
+            except:
+                print(pred_box)
         for gt_box in gt_boxes:
-            l1, l2 = gt_box.split('<loc_')
+            label, l1, l2 = gt_box.split('<loc_')
             left_top, right_bottom = int(l1.rstrip('>')), int(l2.rstrip('>'))
             _gt_boxes.append([left_top%40*scale, left_top//40*scale, right_bottom%40*scale, right_bottom//40*scale])
         
