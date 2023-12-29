@@ -55,6 +55,7 @@ def train():
     for epoch in range(args.start_epoch, args.num_epochs + 1, args.save_interval):
         if not os.path.exists(os.path.join(args.result_dir, f'epoch_{epoch}.pth')):
             print(f'epoch_{epoch}.pth is not found. Skip this epoch.')
+            continue
         model.load(result_name=f'epoch_{epoch}.pth')
         torch.cuda.empty_cache()
         print(f'epoch_{epoch}.pth is loaded.')
