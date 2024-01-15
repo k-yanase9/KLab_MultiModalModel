@@ -71,7 +71,7 @@ def loc_metric(pred_boxes: list[list], gt_boxes: list[list]) -> float:
     return np.sum(pair_ious) / (num_pred + num_missed)
 
 scale = 256 / 40
-def calc_loc_score(preds, gts):
+def calc_loc_score(preds, gts, split_word='<loc_'):
     pred_boxes = []
     gt_boxes = []
     scores = []
@@ -82,13 +82,13 @@ def calc_loc_score(preds, gts):
         _gt_boxes = []
         for pred_box in pred_boxes:
             try:
-                label, l1, l2 = pred_box.split('<loc_')
+                label, l1, l2 = pred_box.split(split_word)
                 left_top, right_bottom = int(l1.rstrip('>')), int(l2.rstrip('>'))
                 _pred_boxes.append([left_top%40*scale, left_top//40*scale, right_bottom%40*scale, right_bottom//40*scale])
             except:
                 print(pred_box)
         for gt_box in gt_boxes:
-            label, l1, l2 = gt_box.split('<loc_')
+            label, l1, l2 = gt_box.split(split_word)
             left_top, right_bottom = int(l1.rstrip('>')), int(l2.rstrip('>'))
             _gt_boxes.append([left_top%40*scale, left_top//40*scale, right_bottom%40*scale, right_bottom//40*scale])
         
