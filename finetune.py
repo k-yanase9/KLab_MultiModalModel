@@ -109,7 +109,7 @@ def train():
         val_dataset = get_dataset(args.root_dir, args.datasets[0], args.stage, is_tgt_id=args.is_tgt_id, phase="val", src_tokenizer=src_tokenizer, tgt_tokenizer=tgt_tokenizer, src_len=args.max_source_length, tgt_len=args.max_target_length)
         if world_rank == 0:
             logger.info(f"val_dataset:{len(val_dataset)}")
-        val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)
+        val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False, drop_last=False)
 
     if 'Warmup' in args.lr_scheduler and args.num_steps is None:
         args.num_steps = args.num_epochs * len(train_loader)

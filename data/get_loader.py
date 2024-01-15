@@ -14,6 +14,7 @@ from .pretrain import *
 from .relationship import *
 from .vqa import *
 from .hoi import *
+from .ocr import *
 
 def get_dataset_process(item):
     dataset_name, args, phase, src_tokenizer, tgt_tokenizer, src_len, tgt_len = item
@@ -33,7 +34,7 @@ def get_data(args, phase="train", src_tokenizer=None, tgt_tokenizer=None, src_le
 
     return dataset
 
-def get_distributed_dataloader(args, dataset, num_workers=4, shuffle=True):
+def get_distributed_dataloader(args, dataset, num_workers=4, shuffle=True, drop_last=True):
     sampler = distributed.DistributedSampler(dataset, drop_last=True, shuffle=shuffle)
     dataloader = DataLoader(
         dataset,
@@ -41,7 +42,7 @@ def get_distributed_dataloader(args, dataset, num_workers=4, shuffle=True):
         num_workers=num_workers,
         pin_memory=True,
         sampler=sampler,
-        drop_last=True,
+        drop_last=drop_last,
     )
     return dataloader
 
@@ -93,6 +94,14 @@ def get_dataset(root_dir="/data01", dataset_name="cc3m", stage="pretrain", **kwa
             dataset = HICO_HOI(data_dir, **kwargs)
         elif 'vcoco' == dataset_name:
             dataset = VCOCO_HOI(data_dir, **kwargs)
+        elif 'icdar' in dataset_name:
+            data_dir = os.path.join(root_dir, 'ICDAR2013')
+            if 'icdar_loc' == dataset_name:
+                dataset = ICDAR_Localization(data_dir, **kwargs)
+            elif 'icdar_read' == dataset_name:
+                dataset = ICDAR_Read(data_dir, **kwargs)
+            else:
+                raise NotImplementedError
         else:
             raise NotImplementedError
     else:
