@@ -7,9 +7,9 @@ from tqdm import tqdm
 from transformers import AutoTokenizer
 
 from data import *
+from metrics import *
 from models.model import MyModel
 from modules import *
-
 
 use_wandb = False
 if pkgutil.find_loader("wandb") is not None:
@@ -65,6 +65,21 @@ def train():
             pred_texts = tgt_tokenizer.batch_decode(outputs)
             preds.extend([pred_text.replace("<pad>", "").replace("</s>", "") for pred_text in pred_texts])
 
+    if '_loc' in args.datasets[0]:
+        score, scores = calc_loc_score(preds, gts, split_word='<loc_')
+        print("Loc Score:", score)
+    if use_wandb:
+        if '_loc' in args.datasets[0]:
+            my_table = wandb.Table(columns=["id", "Img Path", "Src Text", "Ground Truth", "Prediction", "Loc Score"])
+            for i, contents in enumerate(zip(img_paths, inputs, gts, preds, scores)):
+                my_table.add_data(i+1, *contents)
+            wandb.log({"Val Loc":score})
+        else:
+            my_table = wandb.Table(columns=["id", "Img Path", "Src Text", "Ground Truth", "Prediction"])
+            for i, contents in enumerate(zip(img_paths, inputs, gts, preds)):
+                my_table.add_data(i+1, *contents)
+        wandb.log({f"Val Results": my_table})
+
     total = 0
     correct = 0
     for gt, pred in zip(gts, preds):
@@ -97,11 +112,20 @@ def train():
             pred_texts = tgt_tokenizer.batch_decode(outputs)
             preds.extend([pred_text.replace("<pad>", "").replace("</s>", "") for pred_text in pred_texts])
 
+    if '_loc' in args.datasets[0]:
+        score, scores = calc_loc_score(preds, gts, split_word='<loc_')
+        print("Loc Score:", score)
     if use_wandb:
-        my_table = wandb.Table(columns=["id", "Img Path", "Src Text", "Ground Truth", "Prediction"])
-        for i, contents in enumerate(zip(image_paths, inputs, gts, preds)):
-            my_table.add_data(i+1, *contents)
-        wandb.log({f"test results": my_table})
+        if '_loc' in args.datasets[0]:
+            my_table = wandb.Table(columns=["id", "Img Path", "Src Text", "Ground Truth", "Prediction", "Loc Score"])
+            for i, contents in enumerate(zip(image_paths, inputs, gts, preds, scores)):
+                my_table.add_data(i+1, *contents)
+            wandb.log({"Test Loc":score})
+        else:
+            my_table = wandb.Table(columns=["id", "Img Path", "Src Text", "Ground Truth", "Prediction"])
+            for i, contents in enumerate(zip(image_paths, inputs, gts, preds)):
+                my_table.add_data(i+1, *contents)
+        wandb.log({f"Test Results": my_table})
     
     total = 0
     correct = 0
@@ -112,7 +136,8 @@ def train():
     acc = correct / total * 100
         
     print(f"Test Accuracy: {acc}")
-    wandb.log({"Test accuracy":acc})
+    if use_wandb:
+        wandb.log({"Test accuracy":acc})
 
     print("Writing results.tsv")
     write_str = 'img_path\tsrc\tans\tpred\n'
