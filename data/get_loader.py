@@ -96,10 +96,18 @@ def get_dataset(root_dir="/data01", dataset_name="cc3m", stage="pretrain", **kwa
             dataset = VCOCO_HOI(data_dir, **kwargs)
         elif 'icdar' in dataset_name:
             data_dir = os.path.join(root_dir, 'ICDAR2013')
-            if 'icdar_loc' == dataset_name:
+            if 'loc' in dataset_name:
                 dataset = ICDAR_Localization(data_dir, **kwargs)
-            elif 'icdar_read' == dataset_name:
+            elif 'read' in dataset_name:
                 dataset = ICDAR_Read(data_dir, **kwargs)
+            else:
+                raise NotImplementedError
+        elif 'deepfashion2' in dataset_name:
+            data_dir = os.path.join(root_dir, 'DeepFashion2')
+            if 'cat' in dataset_name.lower():
+                dataset = DeepFashion2_Categorization(data_dir, **kwargs)
+            elif 'loc' in dataset_name.lower():
+                dataset = DeepFashion2_Localization(data_dir, **kwargs)
             else:
                 raise NotImplementedError
         else:
