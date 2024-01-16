@@ -91,10 +91,16 @@ def train():
     model = MyModel(args).to(local_rank)
     if args.start_epoch > 1:
         model.load(result_name=f'epoch_{args.start_epoch-1}.pth' if args.save_interval is not None else 'best.pth')
-    elif args.stage == 'train':
+        if world_rank == 0:
+            logger.info(f'epoch_{args.start_epoch-1}.pth loaded')
+    elif args.transformer_model_init == 'pretrain':
         model.load(result_name=f'pretrain.pth', result_path='.')
         if world_rank == 0:
             logger.info('Pretrained model loaded')
+    elif 't5' in args.transformer_model_init:
+        model.load_from_original(args.transformer_model_init)
+        if world_rank == 0:
+            logger.info(f'{args.transformer_model_init} loaded')
     model = DDP(model, device_ids=[local_rank])#,find_unused_parameters=True)
     
     scaler = torch.cuda.amp.GradScaler(enabled=True if args.float_type == 'float16' else False)
@@ -135,6 +141,13 @@ def train():
         train_src_len_dict = {}
         train_tgt_len_dict = {}
         for task, dataset_names in FULL_DATASET_NAME_DICT.items():
+            if task in args.datasets:
+                train_dataset_name_dict[task] = FULL_DATASET_NAME_DICT[task]
+                train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
+                train_one_gpu_batch_dict[task] = ONE_GPU_BATCH_DICT[task]
+                train_src_len_dict[task] = SRC_LEN_DICT[task]
+                train_tgt_len_dict[task] = TGT_LEN_DICT[task]
+                continue
             for dataset_name in dataset_names:
                 if dataset_name in args.datasets:
                     if task in train_dataset_name_dict.keys():
@@ -334,12 +347,12 @@ def train():
         loss_counter.plot_loss(args.result_dir, val_show=not args.uncalc_val)
 
 def wandb_init(args):
-    name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
+    name = f'{args.stage}_{"_".join(args.datasets)}_{args.transformer_model_init}_worldsize{args.world_size}'
     if args.id is None:
         args.id = wandb.util.generate_id()
     wandb.init(
         id=args.id,
-        project=f"{args.stage}_"+"_".join(args.datasets), 
+        project=f"mmm_{args.stage}", 
         name=name,
         config=args,
         resume=True if args.start_epoch > 1 else False

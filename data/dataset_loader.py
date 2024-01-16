@@ -6,15 +6,17 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 CLASSIFY_SRC_TEXT = "What is in this image?"
 CAPTION_SRC_TEXT = "What does the image describe?"
 DETECTION_SRC_TEXT = "What objects are in the image?"
+HOI_SRC_TEXT = "What interactions are in the image?"
 MAX_VAL_DATA_SIZE = 50000
 
 class DatasetLoader(torch.utils.data.Dataset):
-    def __init__(self, src_tokenizer=None, tgt_tokenizer=None, src_len=None, tgt_len=None, resize=256):
+    def __init__(self, src_tokenizer=None, tgt_tokenizer=None, src_len=None, tgt_len=None, resize=256, return_img_path=False):
         self.images, self.tgt_texts, self.src_texts = [], [], []
         self.src_tokenizer = src_tokenizer
         self.tgt_tokenizer = tgt_tokenizer
         self.src_len = src_len
         self.tgt_len = tgt_len
+        self.return_img_path = return_img_path
         self.src_transforms = transforms.Compose(
             [
                 transforms.Resize((resize, resize)),
@@ -30,8 +32,8 @@ class DatasetLoader(torch.utils.data.Dataset):
         )
 
     def __getitem__(self, idx):
-        image, src_text, tgt_text = self.images[idx], self.src_texts[idx], self.tgt_texts[idx]
-        image = Image.open(image).convert('RGB')
+        image_path, src_text, tgt_text = self.images[idx], self.src_texts[idx], self.tgt_texts[idx]
+        image = Image.open(image_path).convert('RGB')
         src_image = self.src_transforms(image)
         tgt_image = torch.zeros(1)
         if self.src_tokenizer is not None:
@@ -39,7 +41,10 @@ class DatasetLoader(torch.utils.data.Dataset):
         if self.tgt_tokenizer is not None:
             tgt_text = self.tgt_tokenizer(tgt_text, max_length=self.tgt_len, padding='max_length', return_tensors='pt')['input_ids'][0]
             
-        return src_image, tgt_image, src_text, tgt_text
+        if self.return_img_path:
+            return src_image, image_path, src_text, tgt_text
+        else:
+            return src_image, tgt_image, src_text, tgt_text
 
     def __len__(self):
         return len(self.images)

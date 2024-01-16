@@ -116,10 +116,10 @@ class MyModel(nn.Module):
         else:
             ignore_index = 0
         if args.loss == 'CrossEntropy':
-            if args.stage == 'train':
-                self.criterion = make_compute_loss_fn(ignore_index,reduction="sum")
-            else:
+            if args.stage == 'classify':
                 self.criterion = nn.CrossEntropyLoss(ignore_index=ignore_index)
+            else:
+                self.criterion = make_compute_loss_fn(ignore_index,reduction="sum")
         elif args.loss == 'FocalLoss':
             self.criterion = FocalLoss(ignore_index=ignore_index)
         else:
@@ -172,21 +172,16 @@ class MyModel(nn.Module):
                     logits = self.classifier(sequence_output[:, 0, :])
                     loss = self.criterion(logits, tgt_texts)
                 preds = torch.argmax(logits, dim=1)
+                return loss, preds
             else:
                 if tgt_attention_masks is None:
                     tgt_attention_masks = torch.ones_like(tgt_texts, device=tgt_texts.device, dtype=torch.bool)
                     tgt_attention_masks[tgt_texts == 0] = 0
                 with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
                     logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=tgt_attention_masks).logits
-                    if self.args.stage == 'train':
-                        loss, sample_size = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
-                    else:
-                        loss = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
+                    loss, sample_size = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
                 preds = torch.argmax(logits, dim=2)
-            if self.args.stage == 'train':
                 return loss, preds, sample_size
-            else:
-                return loss, preds
         else:
             if self.args.stage == 'classify':
                 with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
@@ -257,6 +252,12 @@ class MyModel(nn.Module):
         if self.args.stage == 'classify':
             self.emb_cls_token.load_state_dict(checkpoints['emb_cls_token'])
             self.classifier.load_state_dict(checkpoints['classifier'])
+
+    def load_from_original(self, model_name="google/flan-t5-base"):
+        original_model = T5ForConditionalGeneration.from_pretrained(model_name)
+        tmp_state_dict = original_model.decoder.state_dict()
+        tmp_state_dict.pop('embed_tokens.weight', None)
+        self.transformer.decoder.load_state_dict(tmp_state_dict, strict=False)
 
 class EmbClassToken(nn.Module):
     def __init__(self, dim) -> None:
