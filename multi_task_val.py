@@ -33,14 +33,6 @@ TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":
 SRC_LEN_DICT = {"caption": 7, "relation":50, "rcap":20, "refexp":184, "det":8, "cat":22, "loc":25, "vqa": 125, "gvqa":256, "classify": 7}
 TGT_LEN_DICT = {"caption": 256, "relation":25, "rcap":256, "refexp":120, "det":256, "cat":17, "loc":126, "vqa": 128, "gvqa":103, "classify": 74}
 
-#勾配をスケールする関数
-def multiply_grad(optimizer, multiplier):
-    for group in optimizer.param_groups:
-        for param in group['params']:
-            if param.grad is not None:
-                param.grad.data.mul_(multiplier)
-                
-
 use_wandb = False
 if pkgutil.find_loader("wandb") is not None:
     import wandb
@@ -118,6 +110,13 @@ def train():
         train_src_len_dict = {}
         train_tgt_len_dict = {}
         for task, dataset_names in FULL_DATASET_NAME_DICT.items():
+            if task in args.datasets:
+                args.datasets.remove(task)
+                args.datasets.extend(dataset_names)
+                train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
+                train_src_len_dict[task] = SRC_LEN_DICT[task]
+                train_tgt_len_dict[task] = TGT_LEN_DICT[task]
+                continue
             for dataset_name in dataset_names:
                 if dataset_name in args.datasets:
                     train_task_sample_num_dict[task] = TASK_SAMPLE_NUM_DICT[task]
@@ -133,7 +132,6 @@ def train():
     val_dataset = get_data(args, "val", src_tokenizer, tgt_tokenizer, max(src_len_list), max(tgt_len_list))
     if world_rank == 0:
         logger.info(f"val_dataset:{len(val_dataset)}")
-
     val_loader = get_distributed_dataloader(args, val_dataset, shuffle=False)
 
     loss_counter = LossCounter()
@@ -211,7 +209,7 @@ def train():
         loss_counter.plot_loss(args.result_dir, val_show=not args.uncalc_val)
 
 def wandb_init(args):
-    name = f'worldsize{args.world_size}_' + ' '.join(args.datasets)
+    name = f"{args.stage}_val_" + ' '.join(args.datasets) + f'_worldsize{args.world_size}'
     if args.id is None:
         args.id = wandb.util.generate_id()
     wandb.init(

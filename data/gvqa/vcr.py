@@ -8,9 +8,6 @@ class Vcrdataset(DatasetLoader):
         super().__init__(**kwargs)
         tsv_path = os.path.join(data_dir, f'{phase}_vqa_fix_cut.tsv')
 
-        with open(os.path.join(data_dir,f"{phase}_vqa_fix_cut.tsv")) as f:
-            items = f.read()
-
         with open(tsv_path) as f:
             lines = f.readlines()
         lines = lines[1:]

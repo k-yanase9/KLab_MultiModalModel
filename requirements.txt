@@ -5,3 +5,4 @@ sentencepiece
 pycocotools
 notebook
 pycocoevalcap
+scipy

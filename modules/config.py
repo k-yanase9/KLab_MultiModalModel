@@ -28,14 +28,15 @@ def parse_arguments():
     parser.add_argument('--transformer_num_heads', type=int, default=12, help='メインTransformerのヘッド数')
     parser.add_argument('--transformer_num_layers', type=int, default=2, help='メインTransformerの層数')
     parser.add_argument('--transformer_num_decoder_layers', type=int, default=12, help='メインTransformerのデコーダーの層数')
+    parser.add_argument('--transformer_model_init', type=str, default='random', choices=['random', 'pretrain', 'few', 't5-base', 'google/flan-t5-base'], help='メインTransformerの重みの初期化方法')
     parser.add_argument('--additional_vocab_size', type=int, default=10000, help='予備のボキャブラリサイズ', choices=[0, 1000, 10000, 16384])
     parser.add_argument('--loc_vocab_size', type=int, default=1600, help='位置のボキャブラリサイズ', choices=[1000, 1600])
     parser.add_argument('--vae_ckpt_path', type=str, default='', choices=['', 'checkpoints/vqgan.pt'], help='VAEの重みファイルのパス')
     parser.add_argument('--max_source_length', type=int, default=256, help='入力文の最大長')
-    parser.add_argument('--max_target_length', type=int, default=128, help='出力文の最大長')
+    parser.add_argument('--max_target_length', type=int, default=256, help='出力文の最大長')
     # Training setting
     parser.add_argument('--multinode', action='store_true', help='マルチノードで学習するかどうか')
-    parser.add_argument('--stage', type=str, default='train', choices=['pretrain', 'train', 'classify'], help='事前学習か学習か分類か')
+    parser.add_argument('--stage', type=str, default='train', choices=['pretrain', 'train', 'classify', 'finetune'], help='事前学習か学習か分類か')
     parser.add_argument('--seed', type=int, default=999, help='乱数シード')
     parser.add_argument('--loss', type=str, default='CrossEntropy', choices=['CrossEntropy', 'FocalLoss'], help='損失関数')
     parser.add_argument('--lr', type=float, default=0.01, help='学習率')
@@ -56,8 +57,11 @@ def parse_arguments():
         'openimage_cat', 'openimage_det', 'openimage_loc', 'openimage_rel', 
         'objects365_cat', 'objects365_det', 'objects365_loc', 
         'vg_cat', 'vg_det', 'vg_loc', 'vg_rel', 'vg_vqa', 'vg_rcap', 'vg_refexp', 
-        'all'
+        'hico', 'vcoco', 'icdar_loc', 'icdar_read', 'deepfashion2_cat', 'deepfashion2_loc', 
+        'all',
+        'caption', 'relation', 'rcap', 'refexp', 'det', 'cat', 'loc', 'vqa', 'gvqa', 'classify'
         ], help='使用データセットの名前')
+    parser.add_argument('--is_tgt_id', action='store_true', help='ターゲットIDを使用するかどうか')
     parser.add_argument('--uncalc_val', action='store_true', help='検証を行わない')
     # Dir setting
     parser.add_argument('--root_dir', type=str, default='/local/', help='データのディレクトリ')

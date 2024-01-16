@@ -17,9 +17,9 @@ class PretrainDatasetLoader(DatasetLoader):
 
     def __getitem__(self, idx):
         image, text = self.images[idx], self.src_texts[idx]
-        src_text = self.tgt_tokenizer.encode_plus(text, return_attention_mask=False, verbose=False)["input_ids"][:-1]
+        src_text = self.src_tokenizer.encode_plus(text, return_attention_mask=False, verbose=False)["input_ids"][:-1]
         tgt_text = self.generate_target_ids(src_text)
-        tgt_text += [self.tgt_tokenizer.eos_token_id]
+        tgt_text += [self.src_tokenizer.eos_token_id]
 
         src_text = pad_to_length(src_text, self.src_len)
         tgt_text = pad_to_length(tgt_text, self.tgt_len)
@@ -80,9 +80,9 @@ class ClassifyPretrainDatasetLoader(PretrainDatasetLoader):
         else:
             text = 'An image that shows ' + text + period
 
-        src_text = self.tgt_tokenizer.encode_plus(text, return_attention_mask=False, verbose=False)["input_ids"][:-1]
+        src_text = self.src_tokenizer.encode_plus(text, return_attention_mask=False, verbose=False)["input_ids"][:-1]
         tgt_text = self.generate_target_ids(src_text)
-        tgt_text += [self.tgt_tokenizer.eos_token_id]
+        tgt_text += [self.src_tokenizer.eos_token_id]
         
         src_text = pad_to_length(src_text, self.src_len)
         tgt_text = pad_to_length(tgt_text, self.tgt_len)

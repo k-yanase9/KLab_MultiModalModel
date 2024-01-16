@@ -16,7 +16,8 @@ parser.add_argument("target_dataset_name", type=str, choices=[
     'vcr', 'vqa2', 'imSitu', 'tdiuc', 'visual7w_vqa', 'visual7w_gvqa', 
     'openimage_cat', 'openimage_det', 'openimage_loc', 'openimage_rel', 
     'objects365_cat', 'objects365_det', 'objects365_loc', 
-    'vg_cat', 'vg_det', 'vg_loc', 'vg_rel', 'vg_vqa', 'vg_rcap', 'vg_refexp'
+    'vg_cat', 'vg_det', 'vg_loc', 'vg_rel', 'vg_vqa', 'vg_rcap', 'vg_refexp',
+    'hico', 'vcoco', 'deepfashion2_cat', 'deepfashion2_loc'
 ])
 parser.add_argument("--language_model_name", type=str, default="google/flan-t5-large")
 parser.add_argument("--loc_vocab_size", type=int, default=1600)
