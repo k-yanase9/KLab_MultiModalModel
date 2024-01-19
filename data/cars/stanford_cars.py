@@ -14,9 +14,16 @@ class stanford_cars(DatasetLoader):
     def __init__(self, data_dir:str="/data01/Stanford_Cars", phase:str="train", **kwargs):
         super().__init__(**kwargs)
         
-        with open(os.path.join(data_dir, f'anno_{phase}.csv')) as f:
-            self.data = f.read().splitlines()
-        self.data = [x.split(",") for x in self.data]
+        if phase == "train":
+            with open(os.path.join(data_dir, f'anno_{phase}.csv')) as f:
+                self.data = f.read().splitlines()
+            self.data = [x.split(",") for x in self.data]
+        else:
+            with open(os.path.join(data_dir, f'{phase}_data.tsv')) as f:
+                self.data = f.read().splitlines()
+            self.data=self.data[1:]
+            self.data = [x.split("\t") for x in self.data]
+        
         with open(os.path.join(data_dir, f'names.csv')) as f:
             self.labels = f.read().splitlines()
 
@@ -50,10 +57,11 @@ class stanford_cars(DatasetLoader):
         """
         指定されたディレクト以下の画像パスから一つランダムに返す"""
         img_paths = glob.glob(dir_name + '/*.jpg')
-        return random.choice(img_paths)     
-
+        return random.choice(img_paths)  
+    
     def train_data_proc(self,d):
-        label = self.labels[int(d[5]) - 1]
+        label_id = int(d[5]) - 1
+        label = self.labels[label_id]
         
         #対象ラベルを省いて残りから3つ選ぶ
         sub_label_list = copy.deepcopy(self.labels)
@@ -96,13 +104,22 @@ class stanford_cars(DatasetLoader):
         if y2>1.0:
             y2 = 1.0
         locs = self.return_loc([x1,y1,x2,y2])
-        label_id = int(d[5]) - 1
+        
         return locs,img,label_id
         
+
+    def test_data_proc(self,d):
+        pass
+
     def __getitem__(self, idx):
-        d = self.data[idx] #d[0]:画像名 d[1:5]:bbox d[5]:label
-        locs,img,label_id = self.train_data_proc(d)
-        
+        if self.phase == "train":    
+            d = self.data[idx] #d[0]:画像名 d[1:5]:bbox d[5]:label
+            locs,img,label_id = self.train_data_proc(d)
+        else:
+            d = self.data[idx]
+            locs = d[2].split("&&")
+            img = Image.open(os.path.join(self.data_dir, f"{self.phase}_img",d[0])).convert('RGB')
+            label_id = int(d[1])
         #正規の処理
         src_image = self.src_transforms(img)
         tgt_image = torch.zeros(1)
