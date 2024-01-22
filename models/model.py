@@ -198,8 +198,13 @@ class MyModel(nn.Module):
                         do_sample=do_sample,
                         early_stopping=early_stopping,
                         max_length=self.args.max_target_length,
+                        return_dict_in_generate=True, 
+                        output_scores=True
                     )
-            return generated
+                    scores = self.transformer.compute_transition_scores(
+                        generated.sequences, generated.scores, generated.beam_indices
+                    )
+            return generated, scores
 
     def random_patch_masking(self, batch_size, image_mask_ratio):
         len_keep = int(self.num_patches * image_mask_ratio)

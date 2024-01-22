@@ -57,7 +57,7 @@ def parse_arguments():
         'openimage_cat', 'openimage_det', 'openimage_loc', 'openimage_rel', 
         'objects365_cat', 'objects365_det', 'objects365_loc', 
         'vg_cat', 'vg_det', 'vg_loc', 'vg_rel', 'vg_vqa', 'vg_rcap', 'vg_refexp', 
-        'hico', 'vcoco', 'icdar_loc', 'icdar_read', 'deepfashion2_cat', 'deepfashion2_loc', 
+        'hico', 'vcoco', 'icdar_loc', 'icdar_read', 'deepfashion2_cat', 'deepfashion2_loc', 'deepfashion2_det',
         'all',
         'caption', 'relation', 'rcap', 'refexp', 'det', 'cat', 'loc', 'vqa', 'gvqa', 'classify'
         ], help='使用データセットの名前')

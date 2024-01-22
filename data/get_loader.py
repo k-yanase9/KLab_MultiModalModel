@@ -108,6 +108,8 @@ def get_dataset(root_dir="/data01", dataset_name="cc3m", stage="pretrain", **kwa
                 dataset = DeepFashion2_Categorization(data_dir, **kwargs)
             elif 'loc' in dataset_name.lower():
                 dataset = DeepFashion2_Localization(data_dir, **kwargs)
+            elif 'det' in dataset_name.lower():
+                dataset = DeepFashion2_Detection(data_dir, **kwargs)
             else:
                 raise NotImplementedError
         else:

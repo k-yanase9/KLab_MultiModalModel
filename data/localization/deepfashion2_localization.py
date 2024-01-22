@@ -8,7 +8,7 @@ class DeepFashion2_Localization(DatasetLoader):
         super().__init__(**kwargs)
         if phase=="val":
             phase = "validation"
-        tsv_path = os.path.join(data_dir, f"{phase}_loc40.tsv")
+        tsv_path = os.path.join(data_dir, "40", f"{phase}_loc_all.tsv")
 
         with open(tsv_path) as f:
             lines = f.readlines()
@@ -16,7 +16,7 @@ class DeepFashion2_Localization(DatasetLoader):
 
         for line in lines:
             line = line.removesuffix('\n').split('\t')
-            img_name, cat_id, cat_name, loc  = line
+            img_name, cat_name, loc  = line
             img_path = os.path.join(data_dir, phase, img_name)
             self.images.append(img_path)
             self.src_texts.append(f'Which regions does the text "{cat_name}" describe?')
