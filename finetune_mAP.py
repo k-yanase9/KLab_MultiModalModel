@@ -82,9 +82,13 @@ def train():
                 decoded_token = tgt_tokenizer.batch_decode(generated_token)
                 # print(generated_token, decoded_token)
                 for i in range(0, len(score), 4):
+                    if len(decoded_token[i:i+4]) < 4:
+                        continue
                     label, l1, l2, _ = decoded_token[i:i+4]
                     if label == '<pad>':
                         break
+                    if '<add_' not in label:
+                        continue
                     label_id = label.removeprefix('<add_').removesuffix('>')
                     label = categories[int(label_id)]
                     conf = np.mean(score[i])
