@@ -60,8 +60,8 @@ def train():
             src_images = src_images.to(device, non_blocking=True)
             encoded_src_texts = src_tokenizer(src_texts, padding="max_length", max_length=args.max_source_length, return_tensors="pt", return_attention_mask=False)["input_ids"].to(device, non_blocking=True)
 
-            generates, _ = model(src_images, encoded_src_texts, return_loss=False, num_beams=4)
-            outputs = generates.sequences[:, 1:].cpu()
+            outputs = model(src_images, encoded_src_texts, return_loss=False, num_beams=4)
+            outputs = outputs[:, 1:]
             pred_texts = tgt_tokenizer.batch_decode(outputs)
             preds.extend([pred_text.replace("<pad>", "").replace("</s>", "") for pred_text in pred_texts])
 

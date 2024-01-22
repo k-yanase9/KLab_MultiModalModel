@@ -125,7 +125,7 @@ class MyModel(nn.Module):
         else:
             raise NotImplementedError
 
-    def forward(self, images, src_texts, src_attention_masks=None, tgt_texts=None, tgt_attention_masks=None, return_loss=True, num_beams=1, num_return_sequences=1, do_sample=False, early_stopping=False):
+    def forward(self, images, src_texts, src_attention_masks=None, tgt_texts=None, tgt_attention_masks=None, return_loss=True, return_score=False, num_beams=1, num_return_sequences=1, do_sample=False, early_stopping=False):
         if self.args.float_type == 'bfloat16':
             dtype = torch.bfloat16 
         elif self.args.float_type == 'float16':
@@ -190,21 +190,33 @@ class MyModel(nn.Module):
                     generated = self.classifier(sequence_output[:, 0, :])
             else:
                 with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
-                    generated = self.transformer.generate(
-                        inputs_embeds=concated_embeddings,
-                        attention_mask=concat_attention_mask,
-                        num_beams=num_beams,
-                        num_return_sequences=num_return_sequences,
-                        do_sample=do_sample,
-                        early_stopping=early_stopping,
-                        max_length=self.args.max_target_length,
-                        return_dict_in_generate=True, 
-                        output_scores=True
-                    )
-                    scores = self.transformer.compute_transition_scores(
-                        generated.sequences, generated.scores, generated.beam_indices
-                    )
-            return generated, scores
+                    if return_score:
+                        generated = self.transformer.generate(
+                            inputs_embeds=concated_embeddings,
+                            attention_mask=concat_attention_mask,
+                            num_beams=num_beams,
+                            num_return_sequences=num_return_sequences,
+                            do_sample=do_sample,
+                            early_stopping=early_stopping,
+                            max_length=self.args.max_target_length,
+                            return_dict_in_generate=True, 
+                            output_scores=True
+                        )
+                        scores = self.transformer.compute_transition_scores(
+                            generated.sequences, generated.scores, generated.beam_indices
+                        )
+                        return generated, scores
+                    else:
+                        generated = self.transformer.generate(
+                            inputs_embeds=concated_embeddings,
+                            attention_mask=concat_attention_mask,
+                            num_beams=num_beams,
+                            num_return_sequences=num_return_sequences,
+                            do_sample=do_sample,
+                            early_stopping=early_stopping,
+                            max_length=self.args.max_target_length,
+                        )
+            return generated
 
     def random_patch_masking(self, batch_size, image_mask_ratio):
         len_keep = int(self.num_patches * image_mask_ratio)
