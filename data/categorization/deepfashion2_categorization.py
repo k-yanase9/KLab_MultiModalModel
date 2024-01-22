@@ -8,7 +8,7 @@ class DeepFashion2_Categorization(DatasetLoader):
         super().__init__(**kwargs)
         if phase=="val":
             phase = "validation"
-        tsv_path = os.path.join(data_dir, f"{phase}_loc40.tsv")
+        tsv_path = os.path.join(data_dir, '40', f"{phase}_cat_all.tsv")
 
         with open(tsv_path) as f:
             lines = f.readlines()
