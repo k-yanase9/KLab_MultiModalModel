@@ -10,6 +10,9 @@ from metrics import *
 from models.model import MyModel
 from modules import *
 
+from sklearn.metrics import f1_score
+from sklearn.preprocessing import MultiLabelBinarizer
+
 try:
     import wandb
     use_wandb = True
@@ -103,55 +106,36 @@ def train():
     acc = correct / total * 100
         
     print(f"Val Accuracy: {acc}")
-    wandb.log({"Val accuracy":acc})
-
-    test_loader = get_dataloader(args, test_dataset, shuffle=False, drop_last=False)
-    random.seed(999)
-    torch.manual_seed(999)
-    image_paths = []
-    inputs = []
-    preds = []
-    gts = []
-    test_loop = tqdm(test_loader, desc=f'Test {" ".join(args.datasets)}')
-    for src_images, img_paths, src_texts, tgt_texts in test_loop:
-        image_paths.extend(img_paths)
-        inputs.extend(src_texts)
-        gts.extend(tgt_texts)
-        with torch.no_grad():
-            src_images = src_images.to(device, non_blocking=True)
-            encoded_src_texts = src_tokenizer(src_texts, padding="max_length", max_length=args.max_source_length, return_tensors="pt", return_attention_mask=False)["input_ids"].to(device, non_blocking=True)
-
-            outputs = model(src_images, encoded_src_texts, return_loss=False, num_beams=4)
-            outputs = outputs[:, 1:]
-            pred_texts = tgt_tokenizer.batch_decode(outputs)
-            preds.extend([pred_text.replace("<pad>", "").replace("</s>", "") for pred_text in pred_texts])
-
-    if '_loc' in args.datasets[0]:
-        score, scores = calc_loc_score(preds, gts, split_word='<loc_')
-        print("Loc Score:", score)
     if use_wandb:
         wandb.log({"Val accuracy":acc})
 
-    
-    total = 0
-    correct = 0
-    for gt, pred in zip(gts, preds):
-        if gt == pred:
-            correct += 1
-        total += 1
-    acc = correct / total * 100
-        
-    print(f"Test Accuracy: {acc}")
-    if use_wandb:
-        wandb.log({"Test accuracy":acc})
+    if '_loc' not in args.datasets[0]:
+        mlb = MultiLabelBinarizer()
+        gts_tmp = []
+        preds_tmp = []
+        for gt, pred in zip(gts, preds):
+            tmp = []
+            for i, num in enumerate(gt.split("<add_")):
+                if i == 0:
+                    continue
+                tmp.append(num.rstrip('>'))
+            gts_tmp.append(tmp)
+            tmp = []
+            for i, num in enumerate(pred.split("<add_")):
+                if i == 0:
+                    continue
+                tmp.append(num.rstrip('>'))
+            preds_tmp.append(tmp)
 
-    print("Writing results.tsv")
-    write_str = 'img_path\tsrc\tans\tpred\n'
-    for img_path, src, ans, pred in zip(image_paths, inputs, gts, preds):
-        write_str += f'{img_path}\t{src}\t{ans}\t{pred}\n'
-    with open(os.path.join(args.result_dir, 'results.tsv'), 'w') as f:
-        f.write(write_str)
-    print("Done")
+        gts_binarized = mlb.fit_transform(gts_tmp)
+        preds_binarized = mlb.transform(preds_tmp)
+        micro_f1 = f1_score(gts_binarized, preds_binarized, average='micro')*100
+        macro_f1 = f1_score(gts_binarized, preds_binarized, average='macro')*100
+        print(f"Val Micro F1: {micro_f1}")
+        print(f"Val Macro F1: {macro_f1}")
+        if use_wandb:
+            wandb.log({"Val Micro F1":micro_f1})
+            wandb.log({"Val Macro F1":macro_f1})
 
     wandb.finish()
 
