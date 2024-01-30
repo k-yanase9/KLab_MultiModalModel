@@ -1,5 +1,4 @@
 import os
-import pkgutil
 import random
 
 import torch
@@ -11,12 +10,11 @@ from metrics import *
 from models.model import MyModel
 from modules import *
 
-use_wandb = False
-if pkgutil.find_loader("wandb") is not None:
+try:
     import wandb
-
     use_wandb = True
-
+except ImportError:
+    use_wandb = False
 
 def train():
     args = parse_arguments()
@@ -38,7 +36,7 @@ def train():
     )
 
     val_dataset = get_dataset(args.root_dir, args.datasets[0], args.stage, is_tgt_id=args.is_tgt_id, phase="val", return_img_path=True)
-    test_dataset = get_dataset(args.root_dir, args.datasets[0], args.stage, is_tgt_id=args.is_tgt_id, phase="test", return_img_path=True)
+    print(f"Val Dataset: {len(val_dataset)}")
 
     model.load(result_name=f'best.pth')
     torch.cuda.empty_cache()
@@ -68,6 +66,22 @@ def train():
     if '_loc' in args.datasets[0]:
         score, scores = calc_loc_score(preds, gts, split_word='<loc_')
         print("Loc Score:", score)
+
+    print("Writing results.tsv")
+    if '_loc' in args.datasets[0]:
+        with open(os.path.join(args.result_dir, 'results.tsv'), 'w') as f:
+            write_str = 'img_path\tsrc\tGT\tpred\tLoc_score\n'
+            for img_path, src, ans, pred, score in zip(img_paths, inputs, gts, preds, scores):
+                write_str += f'{img_path}\t{src}\t{ans}\t{pred}\t{score}\n'
+            f.write(write_str)
+    else:
+        with open(os.path.join(args.result_dir, 'results.tsv'), 'w') as f:
+            write_str = 'img_path\tsrc\tGT\tpred\n'
+            for img_path, src, ans, pred in zip(img_paths, inputs, gts, preds):
+                write_str += f'{img_path}\t{src}\t{ans}\t{pred}\n'
+            f.write(write_str)
+    print("Done")
+        
     if use_wandb:
         if '_loc' in args.datasets[0]:
             my_table = wandb.Table(columns=["id", "Img Path", "Src Text", "Ground Truth", "Prediction", "Loc Score"])
@@ -116,16 +130,8 @@ def train():
         score, scores = calc_loc_score(preds, gts, split_word='<loc_')
         print("Loc Score:", score)
     if use_wandb:
-        if '_loc' in args.datasets[0]:
-            my_table = wandb.Table(columns=["id", "Img Path", "Src Text", "Ground Truth", "Prediction", "Loc Score"])
-            for i, contents in enumerate(zip(image_paths, inputs, gts, preds, scores)):
-                my_table.add_data(i+1, *contents)
-            wandb.log({"Test Loc":score})
-        else:
-            my_table = wandb.Table(columns=["id", "Img Path", "Src Text", "Ground Truth", "Prediction"])
-            for i, contents in enumerate(zip(image_paths, inputs, gts, preds)):
-                my_table.add_data(i+1, *contents)
-        wandb.log({f"Test Results": my_table})
+        wandb.log({"Val accuracy":acc})
+
     
     total = 0
     correct = 0
