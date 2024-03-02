@@ -50,11 +50,13 @@ def train():
     val_loader = get_dataloader(args, val_dataset, shuffle=False, drop_last=False)
     random.seed(999)
     torch.manual_seed(999)
+    paths = []
     inputs = []
     preds = []
     gts = []
     val_loop = tqdm(val_loader, desc=f'Val {" ".join(args.datasets)}')
     for src_images, img_paths, src_texts, tgt_texts in val_loop:
+        paths.extend(img_paths)
         inputs.extend(src_texts)
         gts.extend(tgt_texts)
         with torch.no_grad():
@@ -74,13 +76,13 @@ def train():
     if '_loc' in args.datasets[0]:
         with open(os.path.join(args.result_dir, 'results.tsv'), 'w') as f:
             write_str = 'img_path\tsrc\tGT\tpred\tLoc_score\n'
-            for img_path, src, ans, pred, score in zip(img_paths, inputs, gts, preds, scores):
-                write_str += f'{img_path}\t{src}\t{ans}\t{pred}\t{score}\n'
+            for img_path, src, ans, pred, loc in zip(paths, inputs, gts, preds, scores):
+                write_str += f'{img_path}\t{src}\t{ans}\t{pred}\t{loc}\n'
             f.write(write_str)
     else:
         with open(os.path.join(args.result_dir, 'results.tsv'), 'w') as f:
             write_str = 'img_path\tsrc\tGT\tpred\n'
-            for img_path, src, ans, pred in zip(img_paths, inputs, gts, preds):
+            for img_path, src, ans, pred in zip(paths, inputs, gts, preds):
                 write_str += f'{img_path}\t{src}\t{ans}\t{pred}\n'
             f.write(write_str)
     print("Done")
@@ -88,12 +90,12 @@ def train():
     if use_wandb:
         if '_loc' in args.datasets[0]:
             my_table = wandb.Table(columns=["id", "Img Path", "Src Text", "Ground Truth", "Prediction", "Loc Score"])
-            for i, contents in enumerate(zip(img_paths, inputs, gts, preds, scores)):
+            for i, contents in enumerate(zip(paths, inputs, gts, preds, scores)):
                 my_table.add_data(i+1, *contents)
             wandb.log({"Val Loc":score})
         else:
             my_table = wandb.Table(columns=["id", "Img Path", "Src Text", "Ground Truth", "Prediction"])
-            for i, contents in enumerate(zip(img_paths, inputs, gts, preds)):
+            for i, contents in enumerate(zip(paths, inputs, gts, preds)):
                 my_table.add_data(i+1, *contents)
         wandb.log({f"Val Results": my_table})
 
