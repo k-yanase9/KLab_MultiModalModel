@@ -98,7 +98,7 @@ def train():
         use_fast=True,
         extra_ids=0,
         additional_special_tokens=[f"<extra_id_{i}>" for i in range(100)]
-        + [f"/loc{i}>" for i in range(args.loc_vocab_size)]
+        + [f"<loc_{i}>" for i in range(args.loc_vocab_size)]
         + [f"<add_{i}>" for i in range(args.additional_vocab_size)],
     )
     if args.language_model_train:
