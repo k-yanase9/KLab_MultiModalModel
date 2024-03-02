@@ -6,3 +6,4 @@ pycocotools
 notebook
 pycocoevalcap
 scipy
+scikit-learn

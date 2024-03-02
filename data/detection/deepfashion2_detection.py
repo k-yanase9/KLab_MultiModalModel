@@ -9,9 +9,9 @@ class DeepFashion2_Detection(DatasetLoader):
         if phase=="val":
             phase = "validation"
         if is_tgt_id:
-            tsv_path = os.path.join(data_dir, f"{phase}_det_id.tsv")
+            tsv_path = os.path.join(data_dir, '40', f"{phase}_det_id_all.tsv")
         else:
-            tsv_path = os.path.join(data_dir, f"{phase}_det_words.tsv")
+            tsv_path = os.path.join(data_dir, '40', f"{phase}_det_words_all.tsv")
 
         with open(tsv_path) as f:
             lines = f.readlines()

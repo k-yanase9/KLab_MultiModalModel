@@ -36,9 +36,9 @@ class DatasetLoader(torch.utils.data.Dataset):
         image = Image.open(image_path).convert('RGB')
         src_image = self.src_transforms(image)
         tgt_image = torch.zeros(1)
-        if self.src_tokenizer is not None:
+        if self.src_len is not None:
             src_text = self.src_tokenizer(src_text, max_length=self.src_len, padding='max_length', return_tensors='pt')['input_ids'][0]
-        if self.tgt_tokenizer is not None:
+        if self.tgt_len is not None:
             tgt_text = self.tgt_tokenizer(tgt_text, max_length=self.tgt_len, padding='max_length', return_tensors='pt')['input_ids'][0]
             
         if self.return_img_path:

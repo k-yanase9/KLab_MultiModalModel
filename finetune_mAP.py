@@ -73,7 +73,7 @@ def train():
             src_images = src_images.to(device, non_blocking=True)
             encoded_src_texts = src_tokenizer(src_texts, padding="max_length", max_length=args.max_source_length, return_tensors="pt", return_attention_mask=False)["input_ids"].to(device, non_blocking=True)
 
-            generates, scores = model(src_images, encoded_src_texts, None, return_loss=False, num_beams=4)
+            generates, scores = model(src_images, encoded_src_texts, None, return_loss=False, return_score=True, num_beams=4)
             generated_tokens = generates.sequences[:, 1:].cpu()
             scores = scores.cpu().numpy()
 
