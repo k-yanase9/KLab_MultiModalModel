@@ -116,7 +116,7 @@ class MyModel(nn.Module):
         else:
             ignore_index = 0
         if args.loss == 'CrossEntropy':
-            if args.stage == 'classify':
+            if args.stage in ['pretrain','classify']:
                 self.criterion = nn.CrossEntropyLoss(ignore_index=ignore_index)
             else:
                 self.criterion = make_compute_loss_fn(ignore_index,reduction="sum")
@@ -179,9 +179,15 @@ class MyModel(nn.Module):
                     tgt_attention_masks[tgt_texts == 0] = 0
                 with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
                     logits = self.transformer(inputs_embeds=concated_embeddings, labels=tgt_texts, attention_mask=concat_attention_mask, decoder_attention_mask=tgt_attention_masks).logits
-                    loss, sample_size = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
+                    if self.args.stage == 'pretrain':
+                        loss = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
+                    else:
+                        loss, sample_size = self.criterion(logits.view(-1,logits.shape[2]), tgt_texts.view(-1))
                 preds = torch.argmax(logits, dim=2)
-                return loss, preds, sample_size
+                if self.args.stage == 'pretrain':
+                    return loss, preds
+                else:
+                    return loss, preds, sample_size
         else:
             if self.args.stage == 'classify':
                 with torch.autocast(device_type='cuda', dtype=dtype, enabled=True):
