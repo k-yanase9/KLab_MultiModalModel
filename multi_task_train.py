@@ -31,14 +31,14 @@ FULL_DATASET_NAME_DICT = {
 # TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
 # NUM_STEP_PER_EPOCH_MAX = 5120
 # # H100
-# ONE_GPU_BATCH_DICT = {"caption": 120, "relation":360, "rcap":90, "refexp":180, "det":120, "cat":360, "loc":240, "vqa": 180, "gvqa":125, "classify": 360} #1gpuのバッチサイズ
-# TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
-# NUM_STEP_PER_EPOCH_MAX = 2400
+ONE_GPU_BATCH_DICT = {"caption": 120, "relation":360, "rcap":90, "refexp":180, "det":120, "cat":360, "loc":240, "vqa": 180, "gvqa":125, "classify": 360} #1gpuのバッチサイズ
+TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
+NUM_STEP_PER_EPOCH_MAX = 2400
 
 # 4090
-ONE_GPU_BATCH_DICT = {"caption": 20, "relation":60, "rcap":15, "refexp":30, "det":20, "cat":60, "loc":40, "vqa": 30, "gvqa":20, "classify": 60} #1gpuのバッチサイズ
-TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
-NUM_STEP_PER_EPOCH_MAX = 13200
+# ONE_GPU_BATCH_DICT = {"caption": 20, "relation":60, "rcap":15, "refexp":30, "det":20, "cat":60, "loc":40, "vqa": 30, "gvqa":20, "classify": 60} #1gpuのバッチサイズ
+# TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
+# NUM_STEP_PER_EPOCH_MAX = 13200
 
 
 # General

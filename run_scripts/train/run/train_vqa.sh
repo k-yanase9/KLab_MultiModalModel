@@ -2,7 +2,7 @@
 
 # Linear
 batch_size=400
-dataset="caption classify "
+dataset="vqa"
 
 epoch=50
 
@@ -26,4 +26,4 @@ torchrun --nnodes=1 --nproc_per_node=8 multi_task_train.py \
         --root_dir /localdata/ \
         --uncalc_val \
         --save_interval 1 \
-        --result_dir results/train/cap_clssify/enc$enc\_dec$dec/Linear$epoch\_$lr/
+        --result_dir results/train/vqa/enc$enc\_dec$dec/Linear$epoch\_$lr/

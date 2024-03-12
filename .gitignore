@@ -3,10 +3,12 @@ __pycache__/
 core
 core-python3*
 
+#run script
+run.sh
+
 # IPython Notebook
 .ipynb_checkpoints
 try.ipynb
-work.ipynb
 vqgan.ipynb
 
 # search files
