@@ -93,7 +93,7 @@ def train():
             for i, contents in enumerate(zip(inputs, gts, preds, *results.values())):
                 my_table.add_data(i+1, *contents)
             wandb.log({f"results_ep{epoch}": my_table})
-        wandb.log(result)
+            wandb.log(result)
 
         del src_images, src_texts, outputs
         gc.collect()
