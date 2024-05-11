@@ -21,5 +21,5 @@ torchrun --nnodes=1 --nproc_per_node=2 multi_task_val.py \
         --num_epochs $epoch \
         --warmup_rate 0.01 \
         --datasets $dataset \
-        --root_dir /data01/ \
-        --result_dir /home/k-yanase/qnap5/k-yanase/Klab_MultiModalModel/task_train/vqa/
+        --root_dir /home/k-yanase/data01 \
+        --result_dir results/train/vqa/enc$enc\_dec$dec/Linear$epoch\_$lr/

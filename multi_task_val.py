@@ -217,7 +217,7 @@ def wandb_init(args):
         args.id = wandb.util.generate_id()
     wandb.init(
         id=args.id,
-        project=f"{args.stage}_val", 
+        project=f"gfm1.0_{args.stage}", 
         name=name,
         config=args,
         resume=True if args.start_epoch > 1 else False
