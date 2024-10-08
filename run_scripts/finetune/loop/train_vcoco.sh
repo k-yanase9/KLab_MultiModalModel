@@ -18,7 +18,7 @@ lr=1e-4
  if [ "$model" = "random" ]; then
                 cp /home/k-yanase/src/KLab_MultiModalModel/pretrain.pth task_train.pth
         else    
-                cp /home/k-yanase/qnap5/k-yanase/Klab_MultiModalModel/task_train/$model/epoch_50.pth task_train.pth
+                cp /home/k-yanase/qnap5/k-yanase/Klab_MultiModalModel/task_train_model/$model/epoch_50.pth task_train.pth
         fi
 
 
