@@ -2,7 +2,7 @@ import os
 from .pretrain import PretrainDatasetLoader
 
 class CC12M_Pretrain(PretrainDatasetLoader):
-    def __init__(self, data_dir='/data01/cc12m/', phase='train', **kwargs):
+    def __init__(self, data_dir='/home/data/cc12m/', phase='train', **kwargs):
         super().__init__(**kwargs)
         tsv_path = os.path.join(data_dir, f'{phase}_replaced_person.tsv')
 

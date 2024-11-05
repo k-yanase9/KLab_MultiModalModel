@@ -30,10 +30,12 @@ FULL_DATASET_NAME_DICT = {
 # ONE_GPU_BATCH_DICT = {"caption": 48, "relation":144, "rcap":48, "refexp":72, "det":48, "cat":72, "loc":96, "vqa": 72, "gvqa":48, "classify": 144} #1gpuのバッチサイズ
 # TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
 # NUM_STEP_PER_EPOCH_MAX = 5120
+
 # # H100
 # ONE_GPU_BATCH_DICT = {"caption": 120, "relation":360, "rcap":90, "refexp":180, "det":120, "cat":360, "loc":240, "vqa": 180, "gvqa":125, "classify": 360} #1gpuのバッチサイズ
 # TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
 # NUM_STEP_PER_EPOCH_MAX = 2400
+
 # # A100 40
 ONE_GPU_BATCH_DICT = {"caption": 60, "relation":180, "rcap":45, "refexp":90, "det":60, "cat":180, "loc":120, "vqa": 90, "gvqa":60, "classify": 180} #1gpuのバッチサイズ
 TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
@@ -58,10 +60,10 @@ def multiply_grad(optimizer, multiplier):
                 
 
 use_wandb = False
-if pkgutil.find_loader("wandb") is not None:
-    import wandb
+# if pkgutil.find_loader("wandb") is not None:
+#     import wandb
 
-    use_wandb = True
+#     use_wandb = True
 
 
 def train():

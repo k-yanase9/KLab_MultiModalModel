@@ -2,7 +2,7 @@ import os
 from .pretrain import ClassifyPretrainDatasetLoader
 
 class ImageNet21k_Pretrain(ClassifyPretrainDatasetLoader):
-    def __init__(self, data_dir='/data01/imagenet21k/', phase='train', **kwargs):
+    def __init__(self, data_dir='/home/data/imagenet21k/', phase='train', **kwargs):
         super().__init__(**kwargs)
         text_tsv_path = os.path.join(data_dir, f'text_{phase}_256fix.tsv')
         img_tsv_path = os.path.join(data_dir, f'img_{phase}_256fix.tsv')

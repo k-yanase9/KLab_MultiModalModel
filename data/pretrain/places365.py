@@ -2,7 +2,7 @@ from .pretrain import ClassifyPretrainDatasetLoader
 import os
 
 class Places365_Pretrain(ClassifyPretrainDatasetLoader):
-    def __init__(self, data_dir='/data01/places365', phase='train', **kwargs):
+    def __init__(self, data_dir='/home/data/places365', phase='train', **kwargs):
         super().__init__(**kwargs)
         text_tsv_path = os.path.join(data_dir, f'{phase}_text.tsv')
         img_tsv_path = os.path.join(data_dir, f'{phase}_img.tsv')

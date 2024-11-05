@@ -1,5 +1,6 @@
 import os
 import pkgutil
+import socket
 import random
 
 import numpy as np
@@ -23,16 +24,38 @@ if pkgutil.find_loader("wandb") is not None:
 def train():
     args = parse_arguments()
     if args.multinode:
-        port_num = 27971
-        host_list_file = os.environ["PJM_O_NODEINF"]
-        args.world_size = int(os.environ["OMPI_COMM_WORLD_SIZE"])
-        world_rank = int(os.environ["OMPI_COMM_WORLD_RANK"])
-        local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK'])
-        with open(host_list_file) as f:
-            host = f.readlines()
-        host[0] = host[0].rstrip("\n")
-        dist_url = "tcp://" + host[0] + ":" + str(port_num)
-        dist.init_process_group(backend="nccl", init_method=dist_url, rank=world_rank, world_size=args.world_size)
+        # port_num = 27971
+        # host_list_file = os.environ["PJM_O_NODEINF"]
+        # args.world_size = int(os.environ["OMPI_COMM_WORLD_SIZE"])
+        # world_rank = int(os.environ["OMPI_COMM_WORLD_RANK"])
+        # local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK'])
+        # with open(host_list_file) as f:
+        #     host = f.readlines()
+        # host[0] = host[0].rstrip("\n")
+        # dist_url = "tcp://" + host[0] + ":" + str(port_num)
+        # dist.init_process_group(backend="nccl", init_method=dist_url, rank=world_rank, world_size=args.world_size)
+        world_rank = int(os.environ['SLURM_PROCID'])
+        args.world_size = int(os.environ['SLURM_NPROCS'])
+        os.environ['MASTER_ADDR'] = os.getenv('MASTER_ADDR', 'localhost')
+        os.environ['MASTER_PORT'] = os.getenv('MASTER_PORT', '12345')
+
+        hostname = socket.gethostname()
+    
+        # ホスト名に基づいてNCCLのネットワークインターフェース名を設定
+        if hostname == "a100-40gbx4-01":
+            nccl_ifname = "eno1"
+        elif hostname == "a100-40gbx4-02":
+            nccl_ifname = "enp193s0f0"
+        if hostname == "a100-80gbx4-01":
+            nccl_ifname = "eno1"
+        elif hostname == "a100-80gbx4-02":
+            nccl_ifname = "enp97s0f0"
+        else:
+            nccl_ifname = "default"
+
+        os.environ["NCCL_SOCKET_IFNAME"] = nccl_ifname
+        dist.init_process_group("nccl", rank=world_rank, world_size=args.world_size)
+        local_rank = int(os.getenv('SLURM_LOCALID', '0'))
     else:
         dist.init_process_group(backend="nccl")
         args.world_size = torch.cuda.device_count()  # GPU数
@@ -273,15 +296,12 @@ def train():
 
 
 def wandb_init(args):
-    if args.stage == 'classify':
-        name = f'enc{args.transformer_num_layers}_{args.language_model_name.split("/")[-1]}'
-    else:
-        name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
+    name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
     if args.id is None:
         args.id = wandb.util.generate_id()
     wandb.init(
         id=args.id,
-        project=f"{args.stage}_"+"_".join(args.datasets), 
+        project=f"{args.stage}", 
         name=name,
         config=args,
         resume=True if args.start_epoch > 1 else False

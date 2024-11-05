@@ -68,9 +68,22 @@ if pkgutil.find_loader("wandb") is not None:
 def train():
     args = parse_arguments()
     if args.multinode:
-        world_rank = int(os.environ['SLURM_PROCID'])
-        args.world_size = int(os.environ['SLURM_NPROCS'])
-        port_num = 27971
+        #srun
+        # world_rank = int(os.environ['SLURM_PROCID'])
+        # args.world_size = int(os.environ['SLURM_NPROCS'])
+        # local_rank = int(os.getenv('SLURM_LOCALID', '0'))
+        #torchrun
+        # world_rank = int(os.environ['RANK'])
+        # world_size = int(os.environ['WORLD_SIZE'])
+        # local_rank = int(os.environ['LOCAL_RANK'])
+        # os.environ["NCCL_IB_HCA"] = "mlx5_0"
+        #mpi
+        world_rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
+        args.world_size = int(os.environ['OMPI_COMM_WORLD_SIZE'])
+        local_rank = int(os.getenv('OMPI_COMM_WORLD_LOCAL_RANK', '0'))
+
+        print(world_rank, args.world_size, local_rank)
+        
         os.environ['MASTER_ADDR'] = os.getenv('MASTER_ADDR', 'localhost')
         os.environ['MASTER_PORT'] = os.getenv('MASTER_PORT', '12345')
 
@@ -86,7 +99,6 @@ def train():
 
         os.environ["NCCL_SOCKET_IFNAME"] = nccl_ifname
         dist.init_process_group("nccl", rank=world_rank, world_size=args.world_size)
-        local_rank = int(os.getenv('SLURM_LOCALID', '0'))
         # torch.cuda.set_device(local_rank)
 
     else:
@@ -371,7 +383,7 @@ def train():
 
 def wandb_init(args):
     # name = f'{args.stage}_{"_".join(args.datasets)}_{args.transformer_model_init}_worldsize{args.world_size}'
-    name = f'worldsize{args.world_size}_nomuiti'
+    name = f'worldsize{args.world_size}_mpirun_50'
     if args.id is None:
         args.id = wandb.util.generate_id()
     wandb.init(

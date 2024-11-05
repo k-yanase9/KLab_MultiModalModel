@@ -2,7 +2,7 @@ import os
 from .pretrain import ClassifyPretrainDatasetLoader
 
 class ImageNet_Pretrain(ClassifyPretrainDatasetLoader):
-    def __init__(self, data_dir='/data01/imagenet', phase='train', **kwargs):
+    def __init__(self, data_dir='/home/data/imagenet', phase='train', **kwargs):
         super().__init__(**kwargs)
         img_folder_path = os.path.join(data_dir, f'{phase}_256')
 

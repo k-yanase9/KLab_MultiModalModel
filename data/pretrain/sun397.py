@@ -3,7 +3,7 @@ from .pretrain import ClassifyPretrainDatasetLoader
 # from torchvision.datasets import SUN397
 
 class SUN397_Pretrain(ClassifyPretrainDatasetLoader):
-    def __init__(self, args, data_dir='/data01/sun397', phase='train', **kwargs):
+    def __init__(self, args, data_dir='/home/data/sun397', phase='train', **kwargs):
         super().__init__(**kwargs)
         self.data_dir = Path(data_dir) / "SUN397_256"
 

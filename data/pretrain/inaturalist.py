@@ -3,7 +3,7 @@ from .pretrain import ClassifyPretrainDatasetLoader
 from torchvision.datasets import INaturalist
 
 class INaturalist_Pretrain(ClassifyPretrainDatasetLoader):
-    def __init__(self, data_dir='/data01/inaturalist', phase='train', **kwargs):
+    def __init__(self, data_dir='/home/data/inaturalist', phase='train', **kwargs):
         super().__init__(**kwargs)
         if phase == 'train':
             version = '2021_train'
