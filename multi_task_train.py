@@ -41,6 +41,11 @@ ONE_GPU_BATCH_DICT = {"caption": 60, "relation":180, "rcap":45, "refexp":90, "de
 TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
 NUM_STEP_PER_EPOCH_MAX = 4800
 
+# 6000ada 
+# ONE_GPU_BATCH_DICT = {"caption": 72, "relation":216, "rcap":54, "refexp":108, "det":72, "cat":216, "loc":144, "vqa": 108, "gvqa":62, "classify": 216} #1gpuのバッチサイズ
+# TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
+# NUM_STEP_PER_EPOCH_MAX = 4800
+
 # 4090
 # ONE_GPU_BATCH_DICT = {"caption": 20, "relation":60, "rcap":15, "refexp":30, "det":20, "cat":60, "loc":40, "vqa": 30, "gvqa":20, "classify": 60} #1gpuのバッチサイズ
 # TASK_SAMPLE_NUM_DICT = {"caption": 6, "relation":2, "rcap":6, "refexp":4, "det":6, "cat":2, "loc":3, "vqa": 4, "gvqa":1, "classify": 2} #何回タスクごとにバッチを取得するか
@@ -60,10 +65,10 @@ def multiply_grad(optimizer, multiplier):
                 
 
 use_wandb = False
-# if pkgutil.find_loader("wandb") is not None:
-#     import wandb
+if pkgutil.find_loader("wandb") is not None:
+    import wandb
 
-#     use_wandb = True
+    use_wandb = True
 
 
 def train():
@@ -360,12 +365,12 @@ def train():
         loss_counter.plot_loss(args.result_dir, val_show=not args.uncalc_val)
 
 def wandb_init(args):
-    name = f'{args.stage}_{"_".join(args.datasets)}_{args.transformer_model_init}_worldsize{args.world_size}'
+    name = f'enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}_worldsize{args.world_size}'
     if args.id is None:
         args.id = wandb.util.generate_id()
     wandb.init(
         id=args.id,
-        project=f"gfm1.0_{args.stage}", 
+        project=f"{args.stage}", 
         name=name,
         config=args,
         resume=True if args.start_epoch > 1 else False

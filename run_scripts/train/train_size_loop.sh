@@ -4,8 +4,9 @@
 DEFAULT_ENC=2
 DEFAULT_DEC=12
 DEFAULT_BATCH_SIZE=32
-DEFAULT_EPOCH=20
-DEFAULT_DATASET="cc3m cc12m imagenet imagenet21k places365 redcaps sun397"
+DEFAULT_EPOCH=50
+DEFAULT_DATASET="all"
+lr=1e-4
 
 # コマンドライン引数の解析
 while [[ $# -gt 0 ]]; do
@@ -52,19 +53,19 @@ echo "Batch size: $batch_size"
 echo "Epochs: $epoch"
 echo "Dataset: $dataset"
 
-# トレーニングコマンドの実行
-torchrun --nnodes=1 --nproc_per_node=8 train.py \
-        --transformer_num_layers "$enc" \
-        --transformer_num_decoder_layers "$dec" \
-        --stage pretrain \
+torchrun --nnodes=1 --nproc_per_node=8 multi_task_train.py \
+        --transformer_num_layers $enc \
+        --transformer_num_decoder_layers $dec \
+        --transformer_model_init random \
+        --stage train \
         --loss CrossEntropy \
-        --lr 1e-4 \
+        --lr $lr \
         --lr_scheduler LinearWarmup \
-        -b "$batch_size" \
+        -b $batch_size \
         --start_epoch 1 \
-        --num_epochs "$epoch" \
-        --warmup_rate 0.001 \
-        --datasets "$dataset" \
+        --num_epochs $epoch \
+        --warmup_rate 0.01 \
+        --datasets $dataset \
         --root_dir /home/data/ \
-        --save_interval 1 \
-        --result_dir "results/enc${enc}_dec${dec}/pretrain"
+        --save_interval 2 \
+        --result_dir "results/enc${enc}_dec${dec}/alltask_random"
