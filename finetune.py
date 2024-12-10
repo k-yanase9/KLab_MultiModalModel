@@ -256,12 +256,12 @@ def train():
         loss_counter.plot_loss(args.result_dir, val_show=not args.uncalc_val)
 
 def wandb_init(args):
-    name = f'{"_".join(args.datasets)}_{args.transformer_model_init}'
+    name = f'{args.datasets}_enc{args.transformer_num_layers}_dec{args.transformer_num_decoder_layers}'
     if args.id is None:
         args.id = wandb.util.generate_id()
     wandb.init(
         id=args.id,
-        project=f"{args.stage}", 
+        project=f"finetune_alltask_random", 
         name=name,
         config=args,
         resume=True if args.start_epoch > 1 else False

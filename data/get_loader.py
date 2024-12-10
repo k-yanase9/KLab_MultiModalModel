@@ -89,7 +89,7 @@ def get_dataset(root_dir="/data01", dataset_name="cc3m", stage="pretrain", **kwa
             dataset = COCO_Categorization(data_dir, is_tgt_id=True, **kwargs)
         else:
             raise NotImplementedError
-    elif stage == 'finetune':
+    elif stage == 'finetune' or stage == 'zeroshot':
         if 'hico' == dataset_name:
             dataset = HICO_HOI(data_dir, **kwargs)
         elif 'vcoco' == dataset_name:

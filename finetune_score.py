@@ -13,15 +13,15 @@ from modules import *
 from sklearn.metrics import f1_score
 from sklearn.preprocessing import MultiLabelBinarizer
 
-# try:
-#     import wandb
-#     use_wandb = True
-# except ImportError:
-#     use_wandb = False
+try:
+    import wandb
+    use_wandb = True
+except ImportError:
+    use_wandb = False
 
 def train():
     args = parse_arguments()
-    # if use_wandb: wandb_init(args)
+    if use_wandb: wandb_init(args)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = MyModel(args).to(device)
     torch.cuda.empty_cache()
@@ -40,8 +40,10 @@ def train():
 
     val_dataset = get_dataset(args.root_dir, args.datasets[0], args.stage, is_tgt_id=args.is_tgt_id, phase="val", return_img_path=True)
     print(f"Val Dataset: {len(val_dataset)}")
-
-    model.load(result_name=f'best.pth')
+    if args.stage=="zeroshot":
+        model.load(result_name=f'task_train.pth',result_path="./")
+    else:
+        model.load(result_name=f'best.pth')
     torch.cuda.empty_cache()
     # 検証ループ
     if args.image_model_train:
@@ -87,17 +89,17 @@ def train():
             f.write(write_str)
     print("Done")
         
-    # if use_wandb:
-    #     if '_loc' in args.datasets[0]:
-    #         my_table = wandb.Table(columns=["id", "Img Path", "Src Text", "Ground Truth", "Prediction", "Loc Score"])
-    #         for i, contents in enumerate(zip(paths, inputs, gts, preds, scores)):
-    #             my_table.add_data(i+1, *contents)
-    #         wandb.log({"Val Loc":score})
-    #     else:
-    #         my_table = wandb.Table(columns=["id", "Img Path", "Src Text", "Ground Truth", "Prediction"])
-    #         for i, contents in enumerate(zip(paths, inputs, gts, preds)):
-    #             my_table.add_data(i+1, *contents)
-    #     wandb.log({f"Val Results": my_table})
+    if use_wandb:
+        if '_loc' in args.datasets[0]:
+            my_table = wandb.Table(columns=["id", "Img Path", "Src Text", "Ground Truth", "Prediction", "Loc Score"])
+            for i, contents in enumerate(zip(paths, inputs, gts, preds, scores)):
+                my_table.add_data(i+1, *contents)
+            wandb.log({"Val Loc":score})
+        else:
+            my_table = wandb.Table(columns=["id", "Img Path", "Src Text", "Ground Truth", "Prediction"])
+            for i, contents in enumerate(zip(paths, inputs, gts, preds)):
+                my_table.add_data(i+1, *contents)
+        wandb.log({f"Val Results": my_table})
 
     total = 0
     correct = 0
@@ -108,8 +110,8 @@ def train():
     acc = correct / total * 100
         
     print(f"Val Accuracy: {acc}")
-    # if use_wandb:
-    #     wandb.log({"Val accuracy":acc})
+    if use_wandb:
+        wandb.log({"Val accuracy":acc})
 
     if '_loc' not in args.datasets[0]:
         mlb = MultiLabelBinarizer()
@@ -138,28 +140,28 @@ def train():
             f.write(f"Val Macro F1: {macro_f1}")
         print(f"Val Micro F1: {micro_f1}")
         print(f"Val Macro F1: {macro_f1}")
-#         if use_wandb:
-#             wandb.log({"Val Micro F1":micro_f1})
-#             wandb.log({"Val Macro F1":macro_f1})
+        if use_wandb:
+            wandb.log({"Val Micro F1":micro_f1})
+            wandb.log({"Val Macro F1":macro_f1})
 
-#     wandb.finish()
+    wandb.finish()
 
-# def wandb_init(args):
-#     name = ' '.join(args.datasets)
-#     if args.id is None:
-#         args.id = wandb.util.generate_id()
-#     wandb.init(
-#         id=args.id,
-#         project=f"{args.stage}_score", 
-#         name=name,
-#         config=args,
-#         resume=True if args.start_epoch > 1 else False
-#     )
-#     wandb.define_metric("epoch")
-#     wandb.define_metric("iter")
-#     wandb.define_metric("iter/*", step_metric="iter")
-#     wandb.define_metric("train/*", step_metric="epoch")
-#     wandb.define_metric("val/*", step_metric="epoch")
+def wandb_init(args):
+    name = ' '.join(args.datasets)
+    if args.id is None:
+        args.id = wandb.util.generate_id()
+    wandb.init(
+        id=args.id,
+        project=f"{args.stage}_score", 
+        name=name,
+        config=args,
+        resume=True if args.start_epoch > 1 else False
+    )
+    wandb.define_metric("epoch")
+    wandb.define_metric("iter")
+    wandb.define_metric("iter/*", step_metric="iter")
+    wandb.define_metric("train/*", step_metric="epoch")
+    wandb.define_metric("val/*", step_metric="epoch")
 
 
 if __name__ == "__main__":
