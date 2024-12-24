@@ -41,6 +41,7 @@ def train():
     val_dataset = get_dataset(args.root_dir, args.datasets[0], args.stage, is_tgt_id=args.is_tgt_id, phase="val", return_img_path=True)
     print(f"Val Dataset: {len(val_dataset)}")
     if args.stage=="zeroshot":
+        os.makedirs(args.result_dir,exist_ok=True)
         model.load(result_name=f'task_train.pth',result_path="./")
     else:
         model.load(result_name=f'best.pth')
@@ -72,6 +73,8 @@ def train():
 
     if '_loc' in args.datasets[0]:
         score, scores = calc_loc_score(preds, gts, split_word='<loc_')
+        with open(os.path.join(args.result_dir, 'score.txt'), 'w') as f:
+            f.write(f"GIoU: {score}\n")
         print("Loc Score:", score)
 
     print("Writing results.tsv")

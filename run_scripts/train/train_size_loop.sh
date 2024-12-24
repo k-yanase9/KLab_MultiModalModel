@@ -6,6 +6,7 @@ DEFAULT_DEC=12
 DEFAULT_BATCH_SIZE=32
 DEFAULT_EPOCH=50
 DEFAULT_DATASET="all"
+DEFAULT_STARTEPOCH="1"
 lr=1e-4
 
 # コマンドライン引数の解析
@@ -31,6 +32,10 @@ while [[ $# -gt 0 ]]; do
             dataset="$2"
             shift 2
             ;;
+        --start_epoch)
+            start_epoch="$2"
+            shift 2
+            ;;
         *)
             echo "Unknown option: $1"
             exit 1
@@ -44,6 +49,7 @@ dec=${dec:-$DEFAULT_DEC}
 batch_size=${batch_size:-$DEFAULT_BATCH_SIZE}
 epoch=${epoch:-$DEFAULT_EPOCH}
 dataset=${dataset:-"$DEFAULT_DATASET"}
+start_epoch=${start_epoch:-"$DEFAULT_STARTEPOCH"}
 
 # 値の表示（オプション）
 echo "Using configuration:"
@@ -62,7 +68,7 @@ torchrun --nnodes=1 --nproc_per_node=8 multi_task_train.py \
         --lr $lr \
         --lr_scheduler LinearWarmup \
         -b $batch_size \
-        --start_epoch 1 \
+        --start_epoch  $start_epoch\
         --num_epochs $epoch \
         --warmup_rate 0.01 \
         --datasets $dataset \

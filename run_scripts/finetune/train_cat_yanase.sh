@@ -12,8 +12,8 @@ dec=$2
 model=$3
 
 # 固定パラメータ
-batch_size=160
-dataset="vcoco"
+batch_size=64
+dataset="deepfashion2_cat"
 lr=1e-4
 epoch=50
 modelsize="enc${enc}_dec${dec}"
